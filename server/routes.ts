@@ -41,7 +41,7 @@ async function generateAutomaticSchedule(
   // Calcola il numero di giorni nel periodo
   const start = parseISO(startDate);
   const end = parseISO(endDate);
-  const days: string[] = [];
+  const days = [];
   
   // Crea un array di tutte le date nel periodo
   let currentDate = start;
