@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   username: z.string().min(1, {
@@ -29,10 +30,17 @@ const formSchema = z.object({
 });
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Se l'utente è già autenticato, reindirizza alla dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -48,14 +56,14 @@ export default function Login() {
     
     try {
       await login(values.username, values.password);
-      navigate("/");
+      // La reindirizzazione avverrà nell'useEffect quando isAuthenticated diventa true
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Errore di accesso",
         description: "Credenziali non valide. Riprova.",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   }
@@ -131,10 +139,10 @@ export default function Login() {
                   </a>
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
                   {isLoading ? (
                     <>
-                      <span className="material-icons animate-spin mr-2">sync</span>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Accesso in corso...
                     </>
                   ) : (

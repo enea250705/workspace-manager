@@ -81,8 +81,10 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
   
   // Create user mutation
   const createUserMutation = useMutation({
-    mutationFn: (userData: UserFormValues) => 
-      apiRequest("POST", "/api/users", userData),
+    mutationFn: async (userData: UserFormValues) => {
+      const response = await apiRequest("POST", "/api/users", userData);
+      return await response.json();
+    },
     onSuccess: (data) => {
       onSubmit(data);
       form.reset();
