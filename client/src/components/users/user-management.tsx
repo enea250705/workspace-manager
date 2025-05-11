@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { UserForm } from "./user-form";
+import { User } from "@shared/schema";
+import { Loader2, Search, Edit, UserPlus, CheckCircle, XCircle } from "lucide-react";
 
 export function UserManagement() {
   const { toast } = useToast();
@@ -19,13 +21,22 @@ export function UserManagement() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
   const usersPerPage = 5;
   
   // Fetch all users
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
+    queryFn: async ({ queryKey }) => {
+      const res = await fetch(queryKey[0] as string, {
+        credentials: "include"
+      });
+      if (!res.ok) {
+        throw new Error("Error fetching users");
+      }
+      return res.json();
+    }
   });
   
   // Update user mutation
@@ -40,7 +51,8 @@ export function UserManagement() {
         description: "L'utente è stato aggiornato con successo.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Failed to update user:", error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'aggiornamento dell'utente.",
@@ -50,7 +62,7 @@ export function UserManagement() {
   });
   
   // Toggle user active status
-  const toggleUserStatus = (user: any) => {
+  const toggleUserStatus = (user: User) => {
     updateUserMutation.mutate({
       id: user.id,
       isActive: !user.isActive,
@@ -59,7 +71,7 @@ export function UserManagement() {
   
   // Filter users based on search and filters
   const filteredUsers = users
-    .filter((user: any) => {
+    .filter((user: User) => {
       const nameMatch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        user.email.toLowerCase().includes(searchTerm.toLowerCase());
       const roleMatch = roleFilter === "all" || user.role === roleFilter;
@@ -69,7 +81,7 @@ export function UserManagement() {
       
       return nameMatch && roleMatch && statusMatch;
     })
-    .sort((a: any, b: any) => a.name.localeCompare(b.name));
+    .sort((a: User, b: User) => a.name.localeCompare(b.name));
   
   // Paginate users
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
@@ -79,16 +91,16 @@ export function UserManagement() {
   );
   
   // Handle edit user
-  const handleEditUser = (user: any) => {
+  const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setIsEditUserDialogOpen(true);
   };
   
   // Format last login date
-  const formatLastLogin = (lastLogin: string | null) => {
+  const formatLastLogin = (lastLogin: string | Date | null | undefined) => {
     if (!lastLogin) return "Mai";
     
-    const date = new Date(lastLogin);
+    const date = typeof lastLogin === 'string' ? new Date(lastLogin) : lastLogin;
     const today = new Date();
     const diffTime = Math.abs(today.getTime() - date.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -100,7 +112,7 @@ export function UserManagement() {
     } else if (diffDays < 7) {
       return `${diffDays} giorni fa`;
     } else {
-      return formatDate(lastLogin);
+      return formatDate(date.toISOString());
     }
   };
   
@@ -108,11 +120,11 @@ export function UserManagement() {
     <Card className="shadow-sm">
       <CardContent className="p-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-condensed font-medium">Gestione Utenti</h2>
+          <h2 className="text-xl font-bold">Gestione Utenti</h2>
           <Dialog open={isNewUserDialogOpen} onOpenChange={setIsNewUserDialogOpen}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-1">
-                <span className="material-icons text-sm">person_add</span>
+                <UserPlus className="h-4 w-4 mr-2" />
                 Nuovo Utente
               </Button>
             </DialogTrigger>
@@ -140,7 +152,7 @@ export function UserManagement() {
           <div className="flex-1 min-w-[240px]">
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-2">
-                <span className="material-icons text-gray-400 text-sm">search</span>
+                <Search className="h-4 w-4 text-gray-400" />
               </span>
               <Input
                 type="text"
@@ -196,12 +208,12 @@ export function UserManagement() {
         <div className="overflow-x-auto">
           {isLoading ? (
             <div className="py-8 text-center">
-              <span className="material-icons animate-spin text-primary">sync</span>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
               <p className="mt-2 text-sm text-gray-500">Caricamento utenti...</p>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="py-8 text-center">
-              <span className="material-icons text-4xl text-gray-400">person_off</span>
+              <XCircle className="h-12 w-12 mx-auto text-gray-400" />
               <p className="mt-2 text-gray-500">Nessun utente trovato</p>
             </div>
           ) : (
@@ -217,14 +229,14 @@ export function UserManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {paginatedUsers.map((user: any) => (
+                {paginatedUsers.map((user: User) => (
                   <tr key={user.id}>
                     <td className="px-4 py-3">{user.name}</td>
                     <td className="px-4 py-3">{user.email}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         user.role === "admin" 
-                          ? "bg-primary bg-opacity-10 text-primary" 
+                          ? "bg-primary/10 text-primary" 
                           : "bg-gray-100 text-gray-600"
                       }`}>
                         {user.role === "admin" ? "Amministratore" : "Dipendente"}
@@ -233,7 +245,7 @@ export function UserManagement() {
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center">
                         <span className={`w-2 h-2 rounded-full ${
-                          user.isActive ? "bg-success" : "bg-error"
+                          user.isActive ? "bg-green-500" : "bg-red-500"
                         } mr-1`}></span>
                         {user.isActive ? "Attivo" : "Disattivato"}
                       </span>
@@ -246,7 +258,7 @@ export function UserManagement() {
                         className="h-8 w-8"
                         onClick={() => handleEditUser(user)}
                       >
-                        <span className="material-icons text-sm">edit</span>
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -254,9 +266,11 @@ export function UserManagement() {
                         className="h-8 w-8 ml-2"
                         onClick={() => toggleUserStatus(user)}
                       >
-                        <span className="material-icons text-sm">
-                          {user.isActive ? "block" : "check_circle"}
-                        </span>
+                        {user.isActive ? (
+                          <XCircle className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        )}
                       </Button>
                     </td>
                   </tr>

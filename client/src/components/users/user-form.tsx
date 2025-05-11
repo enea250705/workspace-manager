@@ -23,22 +23,28 @@ import {
 } from "@/components/ui/select";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { insertUserSchema, User } from "@shared/schema";
+import { Eye, EyeOff } from "lucide-react";
 
-// Form schema
+// Form schema - estendere lo schema esistente con validazione aggiuntiva
 const userFormSchema = z.object({
   name: z.string().min(2, { message: "Il nome deve contenere almeno 2 caratteri" }),
   email: z.string().email({ message: "Email non valida" }),
   username: z.string().min(3, { message: "L'username deve contenere almeno 3 caratteri" }),
   password: z.string().min(6, { message: "La password deve contenere almeno 6 caratteri" }).optional(),
-  role: z.enum(["admin", "employee"]),
+  role: z.enum(["admin", "employee"], {
+    required_error: "Seleziona un ruolo",
+  }),
   position: z.string().optional(),
   phone: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
+type UserFormValues = z.infer<typeof userFormSchema>;
+
 type UserFormProps = {
-  user?: any;
-  onSubmit: (data: any) => void;
+  user?: User;
+  onSubmit: (data: UserFormValues) => void;
   onCancel: () => void;
   isEdit?: boolean;
 };
@@ -47,7 +53,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
   const [showPassword, setShowPassword] = useState(false);
   
   // Initialize form with default values or user data
-  const form = useForm<z.infer<typeof userFormSchema>>({
+  const form = useForm<UserFormValues>({
     resolver: zodResolver(
       isEdit 
         ? userFormSchema.omit({ password: true }) 
@@ -57,7 +63,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
       name: user.name,
       email: user.email,
       username: user.username,
-      role: user.role,
+      role: user.role as "admin" | "employee",
       position: user.position || "",
       phone: user.phone || "",
       isActive: user.isActive,
@@ -75,12 +81,14 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
   
   // Create user mutation
   const createUserMutation = useMutation({
-    mutationFn: (userData: any) => apiRequest("POST", "/api/users", userData),
+    mutationFn: (userData: UserFormValues) => 
+      apiRequest("POST", "/api/users", userData),
     onSuccess: (data) => {
       onSubmit(data);
       form.reset();
     },
     onError: (error) => {
+      console.error("Error creating user:", error);
       form.setError("root", { 
         message: "Si è verificato un errore durante la creazione dell'utente" 
       });
@@ -88,7 +96,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
   });
   
   // Handle form submission
-  const handleSubmit = (values: z.infer<typeof userFormSchema>) => {
+  const handleSubmit = (values: UserFormValues) => {
     if (isEdit) {
       onSubmit(values);
     } else {
@@ -172,9 +180,11 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
                         className="absolute inset-y-0 right-0 pr-3 flex items-center"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        <span className="material-icons text-gray-400 text-sm">
-                          {showPassword ? "visibility_off" : "visibility"}
-                        </span>
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
                       </button>
                     </div>
                   </FormControl>
@@ -218,7 +228,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
               <FormItem>
                 <FormLabel>Posizione (opzionale)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Posizione" {...field} />
+                  <Input placeholder="Posizione" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -233,7 +243,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
             <FormItem>
               <FormLabel>Telefono (opzionale)</FormLabel>
               <FormControl>
-                <Input placeholder="+39 XXX XXX XXXX" {...field} />
+                <Input placeholder="+39 XXX XXX XXXX" {...field} value={field.value || ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
