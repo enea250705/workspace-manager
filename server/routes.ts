@@ -235,9 +235,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       secret: process.env.SESSION_SECRET || "keyboard cat",
       resave: false,
       saveUninitialized: false,
-      store: new MemorySessionStore({
-        checkPeriod: 86400000 // prune expired entries every 24h
-      })
+      store: storage.sessionStore,
+      cookie: {
+        maxAge: 86400000, // 24 ore
+        secure: false
+      }
     })
   );
   
