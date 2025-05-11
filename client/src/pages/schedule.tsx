@@ -112,6 +112,9 @@ export default function Schedule() {
   // State for showing schedule builder
   const [showScheduleBuilder, setShowScheduleBuilder] = useState(false);
   
+  // State for creating a new schedule
+  const [creatingNewSchedule, setCreatingNewSchedule] = useState(false);
+  
   // Handle publish schedule
   const handlePublish = () => {
     if (existingSchedule?.id) {
@@ -125,6 +128,14 @@ export default function Schedule() {
         variant: "default",
       });
     }
+  };
+  
+  // Handle new weekly schedule
+  const handleNewWeeklySchedule = () => {
+    setCreatingNewSchedule(true);
+    setCustomStartDate(null);
+    setCustomEndDate(null);
+    setShowDatePicker(true);
   };
 
   // Handle auto-generate schedule
@@ -168,12 +179,27 @@ export default function Schedule() {
     // Show the schedule builder immediately
     setShowScheduleBuilder(true);
     
+    // If we're creating a new schedule, invalidate the existing schedule query
+    if (creatingNewSchedule) {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+    }
+    
     // Create the schedule in the background
     createScheduleMutation.mutate({
-      startDate: format(startDateToUse, "yyyy-MM-dd"),
-      endDate: format(endOfWeek, "yyyy-MM-dd"),
+      startDate: format(customStartDate, "yyyy-MM-dd"),
+      endDate: format(customEndDate, "yyyy-MM-dd"),
       isPublished: false,
       createdBy: user?.id,
+    }, {
+      onSuccess: () => {
+        // Reset the creating new schedule flag
+        setCreatingNewSchedule(false);
+        
+        // Refresh data
+        if (customStartDate) {
+          setSelectedWeek(customStartDate);
+        }
+      }
     });
   };
 
@@ -374,15 +400,7 @@ export default function Schedule() {
                   variant="outline"
                   size="sm"
                   className="mr-2"
-                  onClick={() => {
-                    // Reset date selections
-                    setCustomStartDate(null);
-                    setCustomEndDate(null);
-                    // Show date picker for new schedule
-                    setShowDatePicker(true);
-                    // Hide the current schedule builder
-                    queryClient.setQueryData(["/api/schedules", { startDate: format(selectedWeek, "yyyy-MM-dd") }], null);
-                  }}
+                  onClick={handleNewWeeklySchedule}
                 >
                   <span className="material-icons text-sm mr-1">add</span>
                   Nuovo turno settimanale
