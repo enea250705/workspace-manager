@@ -254,7 +254,7 @@ export function ScheduleBuilder({
   
   // Handle cell click to toggle shift status
   const handleCellClick = (userId: number, timeIndex: number, day: string) => {
-    if (!scheduleId || isPublished) return;
+    if (!scheduleId) return;
     
     const newGridData = { ...gridData };
     const userDayData = newGridData[day][userId];
@@ -593,7 +593,6 @@ export function ScheduleBuilder({
               variant="default"
               size="sm"
               className="flex items-center gap-1"
-              disabled={isPublished}
               onClick={onPublish}
             >
               <span className="material-icons text-sm">publish</span>

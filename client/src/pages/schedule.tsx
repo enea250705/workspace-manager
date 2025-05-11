@@ -96,11 +96,7 @@ export default function Schedule() {
       apiRequest("POST", `/api/schedules/${scheduleId}/publish`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      toast({
-        title: "Pubblicazione completata! 🎉",
-        description: "I turni sono stati pubblicati con successo e gli utenti sono stati notificati.",
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules/1/shifts"] });
     },
     onError: () => {
       toast({
@@ -153,14 +149,14 @@ export default function Schedule() {
       // Pubblica immediatamente lo schedule
       publishScheduleMutation.mutate(existingSchedule.id);
       
-      // Mostra un toast di successo immediatamente
+      // Mostra un toast di successo solo all'amministratore
       toast({
         title: "Turni pubblicati con successo!",
-        description: "Tutti i dipendenti riceveranno una notifica.",
+        description: "La pianificazione è stata registrata nel sistema.",
         variant: "default",
       });
       
-      // Prima di pubblicare, prepara le email di notifica per tutti i dipendenti
+      // Non invia notifiche ai dipendenti, commenta il codice esistente
       if (users && users.length > 0) {
         const employeeUsers = users.filter((user: any) => 
           user.role === "employee" && user.isActive && user.email
