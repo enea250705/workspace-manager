@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { Layout } from "@/components/layout/layout";
 import { TimeOffRequestForm } from "@/components/time-off/time-off-form";
 import { TimeOffList } from "@/components/time-off/time-off-list";
-import { TimeOffApproval } from "@/components/time-off/time-off-approval";
+import { UnifiedTimeOffApproval } from "@/components/time-off/unified-approval";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -50,7 +50,7 @@ export default function TimeOff() {
               </TabsList>
 
               <TabsContent value="approve" className="space-y-6">
-                <TimeOffApproval />
+                <UnifiedTimeOffApproval />
               </TabsContent>
 
               <TabsContent value="request" className="space-y-6">

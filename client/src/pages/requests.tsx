@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout/layout";
-import { RequestApproval, CompletedRequests } from "@/components/requests/request-approval";
+import { CompletedRequests } from "@/components/requests/request-approval";
+import { UnifiedTimeOffApproval } from "@/components/time-off/unified-approval";
 
 export default function Requests() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -32,7 +33,7 @@ export default function Requests() {
   return (
     <Layout>
       <div className="space-y-6">
-        <RequestApproval />
+        <UnifiedTimeOffApproval />
         <CompletedRequests />
       </div>
     </Layout>
