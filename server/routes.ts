@@ -948,5 +948,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Message routes
+  app.get("/api/messages/received", isAuthenticated, async (req, res) => {
+    try {
+      const messages = await storage.getUserReceivedMessages((req.user as any).id);
+      res.json(messages);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get received messages" });
+    }
+  });
+  
+  app.get("/api/messages/sent", isAuthenticated, async (req, res) => {
+    try {
+      const messages = await storage.getUserSentMessages((req.user as any).id);
+      res.json(messages);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get sent messages" });
+    }
+  });
+  
+  app.get("/api/messages/:id", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      const message = await storage.getMessage(messageId);
+      
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      const userId = (req.user as any).id;
+      // Verify that the user is either the sender or receiver of the message
+      if (message.fromUserId !== userId && message.toUserId !== userId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // If the user is the receiver and the message is unread, mark it as read
+      if (message.toUserId === userId && !message.isRead) {
+        await storage.markMessageAsRead(messageId);
+      }
+      
+      res.json(message);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get message" });
+    }
+  });
+  
+  app.post("/api/messages", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { toUserId, subject, content, relatedToShiftId } = req.body;
+      
+      if (!toUserId || !subject || !content) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Verify that recipient exists
+      const recipient = await storage.getUser(toUserId);
+      if (!recipient) {
+        return res.status(404).json({ message: "Recipient not found" });
+      }
+      
+      const message = await storage.createMessage({
+        fromUserId: userId,
+        toUserId,
+        subject,
+        content,
+        relatedToShiftId
+      });
+      
+      // Create a notification for the recipient
+      await storage.createNotification({
+        userId: toUserId,
+        type: "new_message",
+        message: `Hai ricevuto un nuovo messaggio: ${subject}`,
+        isRead: false,
+        data: { messageId: message.id }
+      });
+      
+      res.status(201).json(message);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create message" });
+    }
+  });
+  
+  app.post("/api/messages/:id/mark-read", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      const message = await storage.getMessage(messageId);
+      
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      // Only the recipient can mark a message as read
+      if (message.toUserId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const updatedMessage = await storage.markMessageAsRead(messageId);
+      res.json(updatedMessage);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to mark message as read" });
+    }
+  });
+  
+  app.delete("/api/messages/:id", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      const message = await storage.getMessage(messageId);
+      
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      const userId = (req.user as any).id;
+      // Only sender or recipient can delete a message
+      if (message.fromUserId !== userId && message.toUserId !== userId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const success = await storage.deleteMessage(messageId);
+      res.json({ success });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+  
   return httpServer;
 }

@@ -15,6 +15,7 @@ import Documents from "@/pages/documents";
 import Requests from "@/pages/requests";
 import MySchedule from "@/pages/my-schedule";
 import MyDocuments from "@/pages/my-documents";
+import Messages from "@/pages/messages";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/requests" component={Requests} />
       <Route path="/my-schedule" component={MySchedule} />
       <Route path="/my-documents" component={MyDocuments} />
+      <Route path="/messages" component={Messages} />
       <Route component={NotFound} />
     </Switch>
   );
