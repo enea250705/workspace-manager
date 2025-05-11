@@ -124,6 +124,27 @@ export default function Schedule() {
     enabled: user?.role === "admin",
   });
   
+  // Handler per aprire il selettore settimane
+  const handleChangeWeek = () => {
+    setShowWeekSelector(true);
+  };
+  
+  // Handler per selezionare una settimana specifica
+  const handleSelectSchedule = (scheduleId: number) => {
+    setShowWeekSelector(false);
+    
+    // Ottieni i dettagli della programmazione selezionata
+    const selectedSchedule = allSchedules.find((s: any) => s.id === scheduleId);
+    if (selectedSchedule) {
+      // Aggiorna lo stato per mostrare la settimana selezionata
+      setSelectedWeek(new Date(selectedSchedule.startDate));
+      
+      // Forza il ricaricamento dei dati
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/schedules/${scheduleId}/shifts`] });
+    }
+  };
+  
   // Handle publish schedule
   const handlePublish = () => {
     if (existingSchedule?.id) {
@@ -396,6 +417,7 @@ export default function Schedule() {
               onPublish={() => {}}
               onAutoGenerate={() => {}}
               onExportPdf={handleExportPdf}
+              onChangeWeek={handleChangeWeek}
             />
           </div>
         ) : existingSchedule ? (
@@ -426,6 +448,7 @@ export default function Schedule() {
               onPublish={handlePublish}
               onAutoGenerate={handleAutoGenerate}
               onExportPdf={handleExportPdf}
+              onChangeWeek={handleChangeWeek}
             />
           </div>
         ) : (
