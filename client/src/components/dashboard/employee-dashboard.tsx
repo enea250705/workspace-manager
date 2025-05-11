@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatHours } from "@/lib/utils";
+import { formatDate } from "@/lib/date-utils";
+import { formatHours } from "@/lib/utils";
 import { Link } from "wouter";
 
 export function EmployeeDashboard() {
