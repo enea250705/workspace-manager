@@ -447,8 +447,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Schedule management routes
+  // Ottieni tutte le programmazioni
+  app.get("/api/schedules/all", isAuthenticated, async (req, res) => {
+    try {
+      const schedules = await storage.getAllSchedules();
+      res.json(schedules);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get schedules" });
+    }
+  });
+
+  // Ottieni una programmazione specifica per data o l'attuale
   app.get("/api/schedules", isAuthenticated, async (req, res) => {
     try {
+      // Se viene fornito un ID specifico, restituisce quella programmazione
+      if (req.query.id) {
+        const scheduleId = parseInt(req.query.id as string);
+        const schedule = await storage.getSchedule(scheduleId);
+        return res.json(schedule || null);
+      }
+      
+      // Altrimenti cerca per intervallo di date
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date();
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
       

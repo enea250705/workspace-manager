@@ -19,6 +19,7 @@ type ScheduleBuilderProps = {
   onPublish: () => void;
   onAutoGenerate: () => void;
   onExportPdf: () => void;
+  onChangeWeek: () => void;
 };
 
 export function ScheduleBuilder({
@@ -447,6 +448,7 @@ export function ScheduleBuilder({
               variant="outline"
               size="sm"
               className="flex items-center gap-1"
+              onClick={onChangeWeek}
             >
               <span className="material-icons text-sm">calendar_today</span>
               Cambia Settimana
