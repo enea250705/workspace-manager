@@ -13,6 +13,7 @@ import Schedule from "@/pages/schedule";
 import Users from "@/pages/users";
 import Documents from "@/pages/documents";
 import Requests from "@/pages/requests";
+import TimeOff from "@/pages/time-off";
 import MySchedule from "@/pages/my-schedule";
 import MyDocuments from "@/pages/my-documents";
 import Messages from "@/pages/messages";
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/users" component={Users} />
       <Route path="/documents" component={Documents} />
       <Route path="/requests" component={Requests} />
+      <Route path="/time-off" component={TimeOff} />
       <Route path="/my-schedule" component={MySchedule} />
       <Route path="/my-documents" component={MyDocuments} />
       <Route path="/messages" component={Messages} />
