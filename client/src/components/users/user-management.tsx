@@ -9,21 +9,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { UserForm } from "./user-form";
+import { BulkUsersForm } from "./bulk-users-form";
 import { User } from "@shared/schema";
-import { Loader2, Search, Edit, UserPlus, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Search, Edit, UserPlus, CheckCircle, XCircle, Upload, Users } from "lucide-react";
 
 export function UserManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isNewUserDialogOpen, setIsNewUserDialogOpen] = useState(false);
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
-  const usersPerPage = 5;
+  const usersPerPage = 10;
   
   // Fetch all users
   const { data: users = [], isLoading } = useQuery<User[]>({
@@ -121,30 +123,57 @@ export function UserManagement() {
       <CardContent className="p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Gestione Utenti</h2>
-          <Dialog open={isNewUserDialogOpen} onOpenChange={setIsNewUserDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-1">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Nuovo Utente
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Aggiungi Nuovo Utente</DialogTitle>
-              </DialogHeader>
-              <UserForm 
-                onSubmit={(userData) => {
-                  setIsNewUserDialogOpen(false);
-                  queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                  toast({
-                    title: "Utente creato",
-                    description: "Il nuovo utente è stato creato con successo.",
-                  });
-                }}
-                onCancel={() => setIsNewUserDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Dialog open={isBulkAddDialogOpen} onOpenChange={setIsBulkAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-1" variant="outline">
+                  <Users className="h-4 w-4 mr-2" />
+                  Importa Multipli
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Importa Utenti in Blocco</DialogTitle>
+                </DialogHeader>
+                <BulkUsersForm 
+                  onSubmit={(result) => {
+                    setIsBulkAddDialogOpen(false);
+                    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                    toast({
+                      title: "Utenti importati",
+                      description: `${result.createdCount} utenti sono stati creati con successo.`,
+                    });
+                  }}
+                  onCancel={() => setIsBulkAddDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog open={isNewUserDialogOpen} onOpenChange={setIsNewUserDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-1">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Nuovo Utente
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Aggiungi Nuovo Utente</DialogTitle>
+                </DialogHeader>
+                <UserForm 
+                  onSubmit={(userData) => {
+                    setIsNewUserDialogOpen(false);
+                    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                    toast({
+                      title: "Utente creato",
+                      description: "Il nuovo utente è stato creato con successo.",
+                    });
+                  }}
+                  onCancel={() => setIsNewUserDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
         
         {/* Search & Filter */}

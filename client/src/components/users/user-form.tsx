@@ -91,9 +91,16 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
     },
     onError: (error) => {
       console.error("Error creating user:", error);
-      form.setError("root", { 
-        message: "Si è verificato un errore durante la creazione dell'utente" 
-      });
+      // Check if error contains duplicate username error message
+      if (error instanceof Error && error.message.includes("username")) {
+        form.setError("username", { 
+          message: "Username già in uso. Scegli un username diverso." 
+        });
+      } else {
+        form.setError("root", { 
+          message: "Si è verificato un errore durante la creazione dell'utente" 
+        });
+      }
     },
   });
   
