@@ -1,92 +1,93 @@
-import { useState, useRef, ChangeEvent } from "react";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 const formSchema = z.object({
   type: z.string(),
+  userId: z.coerce.number().min(1, "Seleziona un dipendente"),
   period: z.string().min(1, "Il periodo è obbligatorio"),
-  userId: z.string().min(1, "Seleziona un dipendente"),
-  file: z.any().refine((file) => file instanceof File, "Seleziona un file PDF")
+  file: z
+    .instanceof(FileList)
+    .refine((files) => files.length > 0, "Il file è obbligatorio")
+    .refine(
+      (files) => files[0].size <= MAX_FILE_SIZE,
+      "Il file deve essere inferiore a 5MB"
+    )
+    .refine(
+      (files) => files[0].type === "application/pdf",
+      "Il file deve essere in formato PDF"
+    ),
 });
 
-export function DocumentUpload() {
+type FormValues = z.infer<typeof formSchema>;
+
+export function DocumentUpload({ users }: { users: any[] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
-  // Carica lista utenti per il menu a tendina
-  const { data: users = [] } = useQuery<any[]>({
-    queryKey: ["/api/users"],
-    select: (data) => data.filter(user => user.isActive)
-  });
-  
-  const form = useForm<z.infer<typeof formSchema>>({
+  const [isUploading, setIsUploading] = useState(false);
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       type: "payslip",
       period: "",
-      userId: "",
     },
   });
-  
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      form.setValue("file", file);
-    }
-  };
-  
-  const resetFileInput = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    // Rimuovi il file dal form senza passare null che causa un errore di tipo
-    form.setValue("file", undefined as any);
-  };
-  
-  // Funzione per convertire un file in base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+
+  const uploadMutation = useMutation({
+    mutationFn: async (data: FormValues) => {
+      setIsUploading(true);
+      
+      const file = data.file[0];
       const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          // Rimuove la parte 'data:application/pdf;base64,' dall'inizio
-          const base64 = reader.result.split(",")[1];
-          resolve(base64);
-        } else {
-          reject(new Error("Impossibile convertire il file in base64"));
-        }
-      };
-      reader.onerror = (error) => reject(error);
-    });
-  };
-  
-  const uploadDocument = useMutation({
-    mutationFn: async (data: z.infer<typeof formSchema>) => {
-      const { file, ...rest } = data;
-      const fileData = await fileToBase64(file);
       
-      // Crea un nome file basato sul tipo e periodo
-      const fileName = `${data.type === "payslip" ? "BustaPaga" : "CUD"}_${data.period.replace(/[\/\\:*?"<>|]/g, "_")}.pdf`;
-      
-      return apiRequest("POST", "/api/documents", {
-        ...rest,
-        userId: parseInt(data.userId),
-        filename: fileName,
-        fileData
+      return new Promise((resolve, reject) => {
+        reader.onloadend = async () => {
+          try {
+            // Remove the data:application/pdf;base64, prefix
+            const base64Data = (reader.result as string).split(",")[1];
+            
+            const payload = {
+              type: data.type,
+              userId: data.userId,
+              period: data.period,
+              filename: file.name,
+              fileData: base64Data,
+            };
+            
+            const response = await apiRequest("POST", "/api/documents", payload);
+            resolve(response);
+          } catch (err) {
+            reject(err);
+          } finally {
+            setIsUploading(false);
+          }
+        };
+        
+        reader.onerror = () => {
+          setIsUploading(false);
+          reject(new Error("Errore nella lettura del file"));
+        };
+        
+        reader.readAsDataURL(file);
       });
     },
     onSuccess: () => {
@@ -94,16 +95,10 @@ export function DocumentUpload() {
         title: "Documento caricato",
         description: "Il documento è stato caricato con successo",
       });
-      
-      // Reset del form e del file
       form.reset({
         type: "payslip",
         period: "",
-        userId: "",
       });
-      resetFileInput();
-      
-      // Invalida la cache dei documenti
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
     },
     onError: () => {
@@ -114,11 +109,16 @@ export function DocumentUpload() {
       });
     },
   });
-  
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    uploadDocument.mutate(values);
+
+  function onSubmit(values: FormValues) {
+    uploadMutation.mutate(values);
   }
-  
+
+  // Determina il placeholder per il periodo in base al tipo di documento
+  const periodPlaceholder = form.watch("type") === "payslip" 
+    ? "es. Maggio 2025" 
+    : "es. 2024";
+
   return (
     <Card className="bg-white">
       <CardHeader>
@@ -133,7 +133,10 @@ export function DocumentUpload() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo di documento</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleziona il tipo di documento" />
@@ -141,89 +144,88 @@ export function DocumentUpload() {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="payslip">Busta paga</SelectItem>
-                      <SelectItem value="tax_document">CUD / Documento fiscale</SelectItem>
+                      <SelectItem value="tax_document">CUD</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
-            <FormField
-              control={form.control}
-              name="period"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {form.watch("type") === "payslip" ? "Mese e anno (es. Maggio 2025)" : "Anno di riferimento (es. 2024)"}
-                  </FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder={form.watch("type") === "payslip" ? "Maggio 2025" : "2024"} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
+
             <FormField
               control={form.control}
               name="userId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Dipendente</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value?.toString()}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleziona un dipendente" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {users.map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
+                      {users
+                        .filter(user => user.role !== "admin")
+                        .map(user => (
+                          <SelectItem key={user.id} value={user.id.toString()}>
+                            {user.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
-              name="file"
-              render={({ field: { ref, ...field } }) => (
+              name="period"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Documento PDF</FormLabel>
+                  <FormLabel>
+                    {form.watch("type") === "payslip" ? "Mese e anno" : "Anno"}
+                  </FormLabel>
                   <FormControl>
-                    <div className="flex flex-col space-y-2">
-                      <Input
-                        {...field}
-                        value={undefined}
-                        onChange={handleFileChange}
-                        ref={fileInputRef}
-                        type="file"
-                        accept="application/pdf"
-                      />
-                      {selectedFile && (
-                        <div className="text-sm text-gray-500">
-                          File selezionato: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
-                        </div>
-                      )}
-                    </div>
+                    <Input
+                      placeholder={periodPlaceholder}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
+            <FormField
+              control={form.control}
+              name="file"
+              render={({ field: { onChange, value, ...fieldProps } }) => (
+                <FormItem>
+                  <FormLabel>File PDF</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => onChange(e.target.files)}
+                      {...fieldProps}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <Button
               type="submit"
               className="w-full"
-              disabled={uploadDocument.isPending}
+              disabled={isUploading || uploadMutation.isPending}
             >
-              {uploadDocument.isPending ? (
+              {isUploading || uploadMutation.isPending ? (
                 <>
                   <span className="material-icons animate-spin mr-2">sync</span>
                   Caricamento in corso...

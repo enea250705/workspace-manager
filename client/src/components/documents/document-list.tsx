@@ -1,81 +1,54 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { downloadPdf, generatePayslipFilename, generateTaxDocFilename } from "@/lib/pdf-utils";
 import { apiRequest } from "@/lib/queryClient";
-import { downloadPDF } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export function DocumentList() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isAdmin = user?.role === "admin";
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [pdfPreviewData, setPdfPreviewData] = useState<string | null>(null);
-  const [previewDocument, setPreviewDocument] = useState<any | null>(null);
+  const isAdmin = user?.role === 'admin';
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   
-  // Carica documenti 
-  const { data: documents = [], isLoading } = useQuery<any[]>({
+  // Carica documenti
+  const { data: documents = [], isLoading } = useQuery({
     queryKey: ["/api/documents"],
   });
   
-  // Carica lista utenti per mostrare i nomi (solo per admin)
-  const { data: users = [] } = useQuery<any[]>({
+  // Carica informazioni utenti per mostrare i nomi (solo per admin)
+  const { data: users = [] } = useQuery({
     queryKey: ["/api/users"],
-    enabled: isAdmin
+    enabled: isAdmin,
   });
   
-  // Filtra documenti per tipo
-  const payslips = documents.filter(doc => doc.type === "payslip");
-  const taxDocuments = documents.filter(doc => doc.type === "tax_document");
+  // Filtra documenti in base al ruolo
+  const filteredDocuments = isAdmin
+    ? documents
+    : documents.filter((doc: any) => doc.userId === user?.id);
+    
+  // Ordina per data di caricamento (più recenti prima)
+  const sortedDocuments = [...filteredDocuments].sort((a: any, b: any) => 
+    new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+  );
   
-  // Ottiene il nome utente dalla userId
-  const getUserName = (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    return user?.name || `Utente #${userId}`;
-  };
-  
-  // Funzione per ottenere il tipo documento in italiano
-  const getDocumentTypeLabel = (type: string) => {
-    switch (type) {
-      case "payslip":
-        return "Busta paga";
-      case "tax_document":
-        return "CUD / Documento fiscale";
-      default:
-        return type;
-    }
-  };
-  
-  // Funzione per aprire anteprima documento
-  const handlePreview = (document: any) => {
-    setPreviewDocument(document);
-    setPdfPreviewData(document.fileData);
-  };
-  
-  // Funzione per scaricare il documento
-  const handleDownload = (document: any) => {
-    downloadPDF(document.filename, document.fileData);
-  };
-  
-  // Mutazione per eliminare un documento (solo admin)
-  const deleteDocument = useMutation({
-    mutationFn: (documentId: number) => {
-      return apiRequest("DELETE", `/api/documents/${documentId}`);
-    },
+  // Mutazione per eliminare un documento (solo per admin)
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/documents/${id}`),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       toast({
         title: "Documento eliminato",
         description: "Il documento è stato eliminato con successo",
       });
-      setConfirmDeleteId(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
     },
     onError: () => {
       toast({
@@ -83,37 +56,89 @@ export function DocumentList() {
         description: "Si è verificato un errore durante l'eliminazione del documento",
         variant: "destructive",
       });
-      setConfirmDeleteId(null);
     },
   });
   
-  if (isLoading) {
-    return (
-      <Card className="bg-white animate-pulse">
-        <CardHeader>
-          <div className="h-6 w-48 bg-gray-200 rounded"></div>
-        </CardHeader>
-        <CardContent>
-          <div className="h-8 w-full bg-gray-200 rounded mb-4"></div>
-          <div className="space-y-4">
-            <div className="h-20 w-full bg-gray-200 rounded"></div>
-            <div className="h-20 w-full bg-gray-200 rounded"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Funzione per scaricare un documento
+  const handleDownload = (document: any) => {
+    const { type, period, fileData, userId } = document;
+    const employeeName = isAdmin 
+      ? users.find((u: any) => u.id === userId)?.name || `Utente ${userId}`
+      : user?.name || "";
+      
+    let filename = "";
+    if (type === "payslip") {
+      filename = generatePayslipFilename(period, employeeName);
+    } else if (type === "tax_document") {
+      filename = generateTaxDocFilename(period, employeeName);
+    } else {
+      filename = `documento_${period}.pdf`;
+    }
+    
+    downloadPdf(filename, fileData);
+  };
   
-  if (documents.length === 0) {
+  // Funzione per eliminare un documento (solo admin)
+  const handleDelete = (id: number) => {
+    if (confirm("Sei sicuro di voler eliminare questo documento?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+  
+  // Funzione per ottenere il nome dell'utente (solo per admin)
+  const getUserName = (userId: number) => {
+    if (!isAdmin) return "";
+    const user = users.find((u: any) => u.id === userId);
+    return user ? user.name : `Utente ${userId}`;
+  };
+  
+  // Funzione per preview documento
+  const handlePreview = (document: any) => {
+    setSelectedDocument(document);
+    setPreviewOpen(true);
+  };
+  
+  // Formatta il tipo di documento
+  const formatDocumentType = (type: string) => {
+    switch (type) {
+      case "payslip":
+        return "Busta paga";
+      case "tax_document":
+        return "CUD";
+      default:
+        return type;
+    }
+  };
+  
+  if (isLoading) {
     return (
       <Card className="bg-white">
         <CardHeader>
           <CardTitle>I tuoi documenti</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-gray-500 py-8">
-            <span className="material-icons text-4xl mb-2">description</span>
-            <p>Non ci sono documenti disponibili al momento.</p>
+          <div className="flex justify-center py-8">
+            <span className="material-icons animate-spin text-primary">sync</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (sortedDocuments.length === 0) {
+    return (
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle>{isAdmin ? "Documenti" : "I tuoi documenti"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <span className="material-icons text-4xl text-gray-400 mb-2">description</span>
+            <p className="text-gray-500">
+              {isAdmin 
+                ? "Non ci sono documenti caricati nel sistema"
+                : "Non ci sono documenti disponibili per te al momento"}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -124,197 +149,103 @@ export function DocumentList() {
     <>
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle>
-            {isAdmin ? "Gestione documenti" : "I tuoi documenti"}
-          </CardTitle>
+          <CardTitle>{isAdmin ? "Documenti" : "I tuoi documenti"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="payslips" className="w-full">
-            <TabsList className="w-full mb-4">
-              <TabsTrigger value="payslips" className="flex-1">
-                Buste paga <span className="ml-1 text-xs bg-gray-100 px-2 py-0.5 rounded-full">{payslips.length}</span>
-              </TabsTrigger>
-              <TabsTrigger value="tax" className="flex-1">
-                CUD <span className="ml-1 text-xs bg-gray-100 px-2 py-0.5 rounded-full">{taxDocuments.length}</span>
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="payslips">
-              {payslips.length > 0 ? (
-                <div className="space-y-4">
-                  {payslips.map(doc => (
-                    <DocumentItem 
-                      key={doc.id}
-                      document={doc}
-                      isAdmin={isAdmin}
-                      getUserName={getUserName}
-                      onPreview={handlePreview}
-                      onDownload={handleDownload}
-                      onDelete={() => setConfirmDeleteId(doc.id)}
-                    />
-                  ))}
+          <div className="space-y-4">
+            {sortedDocuments.map((doc: any) => (
+              <div 
+                key={doc.id} 
+                className="p-4 border rounded-md"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <div className="flex items-center">
+                      <span className="material-icons text-primary mr-2">
+                        {doc.type === "payslip" ? "receipt" : "description"}
+                      </span>
+                      <span className="font-medium">
+                        {formatDocumentType(doc.type)}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm">
+                      <span className="text-gray-500">Periodo:</span> {doc.period}
+                    </div>
+                    {isAdmin && (
+                      <div className="mt-1 text-sm">
+                        <span className="text-gray-500">Dipendente:</span> {getUserName(doc.userId)}
+                      </div>
+                    )}
+                    <div className="mt-1 text-xs text-gray-500">
+                      Caricato il {format(parseISO(doc.uploadedAt), "d MMMM yyyy", { locale: it })}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                    PDF
+                  </Badge>
                 </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  <p>Nessuna busta paga disponibile.</p>
+                
+                <div className="flex gap-2 justify-end mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                    onClick={() => handlePreview(doc)}
+                  >
+                    <span className="material-icons text-sm mr-1">visibility</span>
+                    Anteprima
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-green-600 border-green-300 hover:bg-green-50"
+                    onClick={() => handleDownload(doc)}
+                  >
+                    <span className="material-icons text-sm mr-1">download</span>
+                    Scarica
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                      onClick={() => handleDelete(doc.id)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <span className="material-icons text-sm mr-1">delete</span>
+                      Elimina
+                    </Button>
+                  )}
                 </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="tax">
-              {taxDocuments.length > 0 ? (
-                <div className="space-y-4">
-                  {taxDocuments.map(doc => (
-                    <DocumentItem 
-                      key={doc.id}
-                      document={doc}
-                      isAdmin={isAdmin}
-                      getUserName={getUserName}
-                      onPreview={handlePreview}
-                      onDownload={handleDownload}
-                      onDelete={() => setConfirmDeleteId(doc.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  <p>Nessun documento fiscale disponibile.</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
       
-      {/* Dialog conferma eliminazione */}
-      <Dialog open={confirmDeleteId !== null} onOpenChange={() => setConfirmDeleteId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Conferma eliminazione</DialogTitle>
-          </DialogHeader>
-          <p>Sei sicuro di voler eliminare questo documento? Questa azione non può essere annullata.</p>
-          <DialogFooter className="flex flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setConfirmDeleteId(null)}
-              className="w-full sm:w-auto"
-            >
-              Annulla
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => confirmDeleteId && deleteDocument.mutate(confirmDeleteId)}
-              className="w-full sm:w-auto"
-              disabled={deleteDocument.isPending}
-            >
-              {deleteDocument.isPending ? (
-                <>
-                  <span className="material-icons animate-spin mr-2">sync</span>
-                  Eliminazione in corso...
-                </>
-              ) : (
-                "Elimina"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Dialog anteprima PDF */}
-      <Dialog open={pdfPreviewData !== null} onOpenChange={() => setPdfPreviewData(null)}>
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl h-[80vh]">
           <DialogHeader>
             <DialogTitle>
-              {previewDocument && (
+              {selectedDocument && (
                 <>
-                  {getDocumentTypeLabel(previewDocument.type)} - {previewDocument.period}
-                  {isAdmin && <span className="font-normal ml-2">({getUserName(previewDocument.userId)})</span>}
+                  {formatDocumentType(selectedDocument.type)} - {selectedDocument.period}
                 </>
               )}
             </DialogTitle>
           </DialogHeader>
           
-          <div className="flex-1 h-full overflow-hidden">
-            {pdfPreviewData && (
+          {selectedDocument && (
+            <div className="h-full max-h-[calc(80vh-80px)] overflow-auto">
               <iframe
-                src={`data:application/pdf;base64,${pdfPreviewData}`}
-                className="w-full h-full border rounded-md"
+                src={`data:application/pdf;base64,${selectedDocument.fileData}`}
+                className="w-full h-full min-h-[500px]"
+                title="Anteprima PDF"
               />
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              onClick={() => previewDocument && handleDownload(previewDocument)}
-              className="w-full sm:w-auto"
-            >
-              <span className="material-icons mr-2">download</span>
-              Scarica PDF
-            </Button>
-          </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-interface DocumentItemProps {
-  document: any;
-  isAdmin: boolean;
-  getUserName: (userId: number) => string;
-  onPreview: (document: any) => void;
-  onDownload: (document: any) => void;
-  onDelete: () => void;
-}
-
-function DocumentItem({ document, isAdmin, getUserName, onPreview, onDownload, onDelete }: DocumentItemProps) {
-  const uploadDate = parseISO(document.uploadedAt);
-  
-  return (
-    <div className="p-4 border rounded-md">
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="font-medium text-lg">
-            {document.period}
-            {isAdmin && (
-              <span className="text-sm font-normal text-gray-500 ml-2">
-                ({getUserName(document.userId)})
-              </span>
-            )}
-          </div>
-          <div className="text-sm text-gray-500 mt-1">
-            Caricato il {format(uploadDate, "d MMMM yyyy", { locale: it })}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-blue-600"
-            onClick={() => onPreview(document)}
-          >
-            <span className="material-icons text-lg">visibility</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-green-600"
-            onClick={() => onDownload(document)}
-          >
-            <span className="material-icons text-lg">download</span>
-          </Button>
-          {isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-red-600"
-              onClick={onDelete}
-            >
-              <span className="material-icons text-lg">delete</span>
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
