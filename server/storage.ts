@@ -21,6 +21,7 @@ export interface IStorage {
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
   getSchedule(id: number): Promise<Schedule | undefined>;
   getScheduleByDateRange(startDate: Date, endDate: Date): Promise<Schedule | undefined>;
+  getAllSchedules(): Promise<Schedule[]>;
   publishSchedule(id: number): Promise<Schedule | undefined>;
   
   // Shift management
@@ -551,6 +552,15 @@ export class DatabaseStorage implements IStorage {
       );
     
     return schedule;
+  }
+  
+  async getAllSchedules(): Promise<Schedule[]> {
+    const allSchedules = await db
+      .select()
+      .from(schedules)
+      .orderBy(desc(schedules.startDate));
+    
+    return allSchedules;
   }
   
   async publishSchedule(id: number): Promise<Schedule | undefined> {

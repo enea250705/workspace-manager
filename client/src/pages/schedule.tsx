@@ -115,6 +115,15 @@ export default function Schedule() {
   // State for creating a new schedule
   const [creatingNewSchedule, setCreatingNewSchedule] = useState(false);
   
+  // State for week selector dialog
+  const [showWeekSelector, setShowWeekSelector] = useState(false);
+  
+  // State for available schedules
+  const { data: allSchedules = [] } = useQuery({
+    queryKey: ["/api/schedules/all"],
+    enabled: user?.role === "admin",
+  });
+  
   // Handle publish schedule
   const handlePublish = () => {
     if (existingSchedule?.id) {
