@@ -178,58 +178,70 @@ export function ScheduleBuilder({
       }
     });
     
-    // Add approved time-off requests to the grid
-    if (timeOffRequests && timeOffRequests.length > 0) {
-      timeOffRequests.forEach((request: any) => {
-        const userId = request.userId;
-        const startDate = new Date(request.startDate);
-        const endDate = new Date(request.endDate);
-        
-        // Check each day in the week to see if it falls within the time-off period
-        weekDays.forEach(day => {
-          const dayDate = new Date(day.dateStr);
-          if (dayDate >= startDate && dayDate <= endDate) {
-            if (newGridData[day.name] && newGridData[day.name][userId]) {
-              // Mark all cells for this day as time-off
-              // For full day, mark all cells; for half day, mark morning or afternoon
-              if (request.duration === "full_day") {
-                newGridData[day.name][userId].cells = newGridData[day.name][userId].cells.map(() => ({
+    setGridData(newGridData);
+  }, [shifts, users, scheduleId, weekDays, timeSlots]);
+    
+  // Add approved time-off requests to the grid in a separate useEffect
+  useEffect(() => {
+    if (!timeOffRequests || timeOffRequests.length === 0 || !gridData || Object.keys(gridData).length === 0) return;
+    
+    // Make a deep copy of gridData to prevent issues
+    const newGridData = JSON.parse(JSON.stringify(gridData));
+    let hasChanges = false;
+    
+    timeOffRequests.forEach((request: any) => {
+      const userId = request.userId;
+      const startDate = new Date(request.startDate);
+      const endDate = new Date(request.endDate);
+      
+      // Check each day in the week to see if it falls within the time-off period
+      weekDays.forEach(day => {
+        const dayDate = new Date(day.dateStr);
+        if (dayDate >= startDate && dayDate <= endDate) {
+          if (newGridData[day.name] && newGridData[day.name][userId]) {
+            hasChanges = true;
+            // Mark all cells for this day as time-off
+            // For full day, mark all cells; for half day, mark morning or afternoon
+            if (request.duration === "full_day") {
+              newGridData[day.name][userId].cells = newGridData[day.name][userId].cells.map(() => ({
+                type: request.type === "vacation" ? "vacation" : "leave",
+                isTimeOff: true,
+                requestId: request.id
+              }));
+              newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} approvato`;
+            } else if (request.duration === "morning") {
+              // Mark first half of the day
+              const halfDay = Math.floor(timeSlots.length / 2);
+              for (let i = 0; i < halfDay; i++) {
+                newGridData[day.name][userId].cells[i] = {
                   type: request.type === "vacation" ? "vacation" : "leave",
                   isTimeOff: true,
                   requestId: request.id
-                }));
-                newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} approvato`;
-              } else if (request.duration === "morning") {
-                // Mark first half of the day
-                const halfDay = Math.floor(timeSlots.length / 2);
-                for (let i = 0; i < halfDay; i++) {
-                  newGridData[day.name][userId].cells[i] = {
-                    type: request.type === "vacation" ? "vacation" : "leave",
-                    isTimeOff: true,
-                    requestId: request.id
-                  };
-                }
-                newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} mattina`;
-              } else if (request.duration === "afternoon") {
-                // Mark second half of the day
-                const halfDay = Math.floor(timeSlots.length / 2);
-                for (let i = halfDay; i < timeSlots.length; i++) {
-                  newGridData[day.name][userId].cells[i] = {
-                    type: request.type === "vacation" ? "vacation" : "leave",
-                    isTimeOff: true,
-                    requestId: request.id
-                  };
-                }
-                newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} pomeriggio`;
+                };
               }
+              newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} mattina`;
+            } else if (request.duration === "afternoon") {
+              // Mark second half of the day
+              const halfDay = Math.floor(timeSlots.length / 2);
+              for (let i = halfDay; i < timeSlots.length; i++) {
+                newGridData[day.name][userId].cells[i] = {
+                  type: request.type === "vacation" ? "vacation" : "leave",
+                  isTimeOff: true,
+                  requestId: request.id
+                };
+              }
+              newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} pomeriggio`;
             }
           }
-        });
+        }
       });
-    }
+    });
     
-    setGridData(newGridData);
-  }, [shifts, timeOffRequests, users, scheduleId, timeSlots, weekDays]);
+    // Only update if there were actual changes
+    if (hasChanges) {
+      setGridData(newGridData);
+    }
+  }, [timeOffRequests, gridData, weekDays, timeSlots]);
   
   // Handle cell click to toggle shift status
   const handleCellClick = (userId: number, timeIndex: number, day: string) => {
