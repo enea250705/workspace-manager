@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
