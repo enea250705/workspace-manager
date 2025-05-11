@@ -269,6 +269,9 @@ export function ScheduleBuilder({
       newType = "vacation";
     } else if (currentCell.type === "vacation") {
       newType = "leave";
+    } else if (currentCell.type === "leave") {
+      // Se è già "leave", torniamo a cella vuota
+      newType = "";
     }
     
     // Find consecutive cells of the same type (if any)
@@ -315,7 +318,7 @@ export function ScheduleBuilder({
         userId,
         day,
         startTime: timeSlots[timeIndex],
-        endTime: timeSlots[timeIndex],  // Ora usa lo stesso indice per evitare di aggiungere mezz'ora
+        endTime: timeSlots[timeIndex + 1],  // Ora usiamo l'indice + 1 per creare uno slot di 30 minuti
         type: newType,
         notes: userDayData.notes,
         area: ""
@@ -543,7 +546,7 @@ export function ScheduleBuilder({
                                     ? "leave" 
                                     : ""
                                 }
-                                onClick={() => handleCellClick(user.id, index, day.name)}
+                                onClick={() => !isPublished && handleCellClick(user.id, index, day.name)}
                                 style={{ cursor: isPublished ? "default" : "pointer" }}
                               >
                                 {cell.type === "work" && "X"}
