@@ -25,22 +25,22 @@ export function MessageList() {
   
   // Fetch messages (received and sent)
   const { 
-    data: receivedMessages = [],
+    data: receivedMessages = [] as Message[],
     isLoading: isLoadingReceived,
     refetch: refetchReceived
-  } = useQuery({
+  } = useQuery<Message[]>({
     queryKey: ["/api/messages/received"],
-    queryFn: getQueryFn({ on401: "throw" }),
+    queryFn: getQueryFn<Message[]>({ on401: "throw" }),
     enabled: activeTab === "received"
   });
   
   const { 
-    data: sentMessages = [],
+    data: sentMessages = [] as Message[],
     isLoading: isLoadingSent,
     refetch: refetchSent
-  } = useQuery({
+  } = useQuery<Message[]>({
     queryKey: ["/api/messages/sent"],
-    queryFn: getQueryFn({ on401: "throw" }),
+    queryFn: getQueryFn<Message[]>({ on401: "throw" }),
     enabled: activeTab === "sent"
   });
   
@@ -50,9 +50,7 @@ export function MessageList() {
   // Mark message as read
   const markAsReadMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      return apiRequest(`/api/messages/${messageId}/mark-read`, {
-        method: "POST"
-      });
+      return apiRequest(`/api/messages/${messageId}/mark-read`, "POST");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/received"] });
@@ -71,9 +69,7 @@ export function MessageList() {
   // Delete message
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      return apiRequest(`/api/messages/${messageId}`, {
-        method: "DELETE"
-      });
+      return apiRequest(`/api/messages/${messageId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/received"] });
@@ -191,14 +187,14 @@ export function MessageList() {
                   <div className="flex justify-center p-6">
                     <Spinner />
                   </div>
-                ) : messages.length === 0 ? (
+                ) : Array.isArray(messages) && messages.length === 0 ? (
                   <div className="text-center p-6 text-muted-foreground">
                     <MessageSquare className="mx-auto h-12 w-12 opacity-20" />
                     <p className="mt-2">Nessun messaggio {activeTab === "received" ? "ricevuto" : "inviato"}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {messages.map((message: Message) => (
+                    {Array.isArray(messages) && messages.map((message: Message) => (
                       <div
                         key={message.id}
                         className={`p-3 rounded-md cursor-pointer border transition-colors ${
@@ -321,7 +317,7 @@ export function MessageList() {
 
 // Utility function to generate query function
 function getQueryFn<T>({ on401 }: { on401: "throw" | "returnNull" } = { on401: "throw" }) {
-  return async function ({ queryKey }: { queryKey: (string | number)[] }): Promise<T> {
+  return async function ({ queryKey }: any): Promise<T> {
     const path = queryKey[0];
     if (typeof path !== "string") throw new Error("Invalid path");
 

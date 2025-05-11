@@ -88,10 +88,7 @@ export function MessageComposer({
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      return apiRequest("/api/messages", {
-        method: "POST",
-        body: JSON.stringify(data)
-      });
+      return apiRequest("/api/messages", "POST", data);
     },
     onSuccess: () => {
       toast({
