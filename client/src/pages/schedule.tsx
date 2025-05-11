@@ -364,17 +364,35 @@ export default function Schedule() {
             />
           </div>
         ) : existingSchedule ? (
-          <ScheduleBuilder
-            scheduleId={existingSchedule?.id || null}
-            users={users || []}
-            startDate={existingSchedule?.startDate ? new Date(existingSchedule.startDate) : selectedWeek}
-            endDate={existingSchedule?.endDate ? new Date(existingSchedule.endDate) : endOfWeek}
-            shifts={shifts || []}
-            isPublished={existingSchedule?.isPublished || false}
-            onPublish={handlePublish}
-            onAutoGenerate={handleAutoGenerate}
-            onExportPdf={handleExportPdf}
-          />
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">
+                Pianificazione Turni: {dateRangeText}
+              </h3>
+              <div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mr-2"
+                  onClick={() => setShowDatePicker(true)}
+                >
+                  <span className="material-icons text-sm mr-1">add</span>
+                  Nuovo turno settimanale
+                </Button>
+              </div>
+            </div>
+            <ScheduleBuilder
+              scheduleId={existingSchedule?.id || null}
+              users={users || []}
+              startDate={existingSchedule?.startDate ? new Date(existingSchedule.startDate) : selectedWeek}
+              endDate={existingSchedule?.endDate ? new Date(existingSchedule.endDate) : endOfWeek}
+              shifts={shifts || []}
+              isPublished={existingSchedule?.isPublished || false}
+              onPublish={handlePublish}
+              onAutoGenerate={handleAutoGenerate}
+              onExportPdf={handleExportPdf}
+            />
+          </div>
         ) : (
           <div>
             {showDatePicker ? (
