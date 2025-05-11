@@ -561,12 +561,17 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAllSchedules(): Promise<Schedule[]> {
-    const allSchedules = await db
-      .select()
-      .from(schedules)
-      .orderBy(desc(schedules.startDate));
-    
-    return allSchedules;
+    try {
+      const allSchedules = await db
+        .select()
+        .from(schedules)
+        .orderBy(schedules.startDate, 'desc');
+      
+      return allSchedules;
+    } catch (error) {
+      console.error("Error in getAllSchedules:", error);
+      return [];
+    }
   }
   
   async publishSchedule(id: number): Promise<Schedule | undefined> {

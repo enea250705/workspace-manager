@@ -120,7 +120,7 @@ export default function Schedule() {
   const [showWeekSelector, setShowWeekSelector] = useState(false);
   
   // State for available schedules
-  const { data: allSchedules = [] } = useQuery({
+  const { data: allSchedules = [] } = useQuery<any[]>({
     queryKey: ["/api/schedules/all"],
     enabled: user?.role === "admin",
   });

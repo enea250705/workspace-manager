@@ -451,8 +451,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/schedules/all", isAuthenticated, async (req, res) => {
     try {
       const schedules = await storage.getAllSchedules();
+      console.log("Retrieved all schedules:", schedules);
       res.json(schedules);
     } catch (err) {
+      console.error("Error getting all schedules:", err);
       res.status(500).json({ message: "Failed to get schedules" });
     }
   });
