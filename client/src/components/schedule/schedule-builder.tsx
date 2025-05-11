@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,7 +39,14 @@ export function ScheduleBuilder({
   const timeSlots = generateTimeSlots(4, 24);
   
   // Initialize days of the week
-  const weekDays = [];
+  type WeekDay = {
+    date: Date;
+    name: string;
+    shortName: string;
+    dateStr: string;
+  };
+  
+  const weekDays: WeekDay[] = [];
   for (let i = 0; i < 7; i++) {
     const date = addDays(startDate, i);
     weekDays.push({
@@ -113,7 +120,7 @@ export function ScheduleBuilder({
   // Fetch approved time-off requests
   const { data: timeOffRequests = [] } = useQuery({
     queryKey: ["/api/time-off-requests"],
-    select: (data) => data.filter((req: any) => req.status === "approved"),
+    select: (data: any) => data.filter((req: any) => req.status === "approved"),
   });
 
   // Initialize grid data based on shifts and time-off requests
