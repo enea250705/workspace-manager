@@ -7,9 +7,13 @@ import { ScheduleBuilder } from "@/components/schedule/schedule-builder";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 
 // Date utilities
-import { format, startOfWeek, addDays } from "date-fns";
+import { format, startOfWeek, addDays, isBefore } from "date-fns";
 import { it } from "date-fns/locale";
 
 export default function Schedule() {
@@ -32,11 +36,17 @@ export default function Schedule() {
     }
   }, [isLoading, isAuthenticated, navigate, user]);
 
-  // Calculate end of week (Sunday)
-  const endOfWeek = addDays(selectedWeek, 6);
+  // State for custom date selection
+  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
+  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // Calculate end of week (Sunday) - use custom dates if selected
+  const startDateToUse = customStartDate || selectedWeek;
+  const endOfWeek = customEndDate || addDays(selectedWeek, 6);
 
   // Format date range for display
-  const dateRangeText = `${format(selectedWeek, "d MMMM", { locale: it })} - ${format(
+  const dateRangeText = `${format(startDateToUse, "d MMMM", { locale: it })} - ${format(
     endOfWeek,
     "d MMMM yyyy",
     { locale: it }
@@ -293,16 +303,55 @@ export default function Schedule() {
   // State to show schedule builder without creating a schedule yet
   const [showScheduleBuilder, setShowScheduleBuilder] = useState(false);
   
+  // Handle date selection
+  const handleDateChange = (type: 'start' | 'end', date: Date | undefined) => {
+    if (!date) return;
+    if (type === 'start') {
+      setCustomStartDate(date);
+      // If end date is before start date, update it
+      if (customEndDate && isBefore(customEndDate, date)) {
+        setCustomEndDate(addDays(date, 6));
+      } else if (!customEndDate) {
+        // Default to a week range
+        setCustomEndDate(addDays(date, 6));
+      }
+    } else {
+      setCustomEndDate(date);
+    }
+  };
+  
   // Create new schedule if none exists for the selected week
   const handleCreateSchedule = () => {
     if (createScheduleMutation.isPending) return;
+    
+    // If no custom dates selected, show date picker
+    if (!customStartDate || !customEndDate) {
+      setShowDatePicker(true);
+      return;
+    }
     
     // Show the schedule builder immediately
     setShowScheduleBuilder(true);
     
     // Create the schedule in the background
     createScheduleMutation.mutate({
-      startDate: format(selectedWeek, "yyyy-MM-dd"),
+      startDate: format(startDateToUse, "yyyy-MM-dd"),
+      endDate: format(endOfWeek, "yyyy-MM-dd"),
+      isPublished: false,
+      createdBy: user?.id,
+    });
+  };
+  
+  // Confirm date selection and create schedule
+  const handleDateConfirm = () => {
+    setShowDatePicker(false);
+    
+    // Show the schedule builder immediately
+    setShowScheduleBuilder(true);
+    
+    // Create the schedule in the background
+    createScheduleMutation.mutate({
+      startDate: format(startDateToUse, "yyyy-MM-dd"),
       endDate: format(endOfWeek, "yyyy-MM-dd"),
       isPublished: false,
       createdBy: user?.id,
@@ -365,29 +414,91 @@ export default function Schedule() {
             onExportPdf={handleExportPdf}
           />
         ) : (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <div className="text-center">
-              <span className="material-icons text-gray-400 text-5xl mb-4">event_busy</span>
-              <h3 className="text-lg font-medium mb-2">
-                Nessuna pianificazione per la settimana {dateRangeText}
-              </h3>
-              <p className="text-gray-500 mb-6">
-                Crea una nuova pianificazione per questa settimana per iniziare a gestire i turni.
-              </p>
-              <Button onClick={handleCreateSchedule} disabled={createScheduleMutation.isPending}>
-                {createScheduleMutation.isPending ? (
-                  <>
-                    <span className="material-icons animate-spin mr-2">sync</span>
-                    Creazione in corso...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-icons mr-2">add</span>
-                    Crea Pianificazione
-                  </>
-                )}
-              </Button>
-            </div>
+          <div>
+            {showDatePicker ? (
+              <Card className="bg-white border border-gray-200">
+                <CardHeader>
+                  <CardTitle>Seleziona il periodo della pianificazione</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <div>
+                      <Label className="mb-2 block">Data di inizio</Label>
+                      <Calendar
+                        mode="single"
+                        selected={customStartDate || undefined}
+                        onSelect={(date) => handleDateChange('start', date)}
+                        disabled={(date) => 
+                          date < new Date()
+                        }
+                        className="border border-gray-200 rounded-md"
+                      />
+                      <div className="text-sm text-gray-500 mt-1">
+                        {customStartDate ? format(customStartDate, "EEEE d MMMM yyyy", { locale: it }) : "Seleziona una data"}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="mb-2 block">Data di fine</Label>
+                      <Calendar
+                        mode="single"
+                        selected={customEndDate || undefined}
+                        onSelect={(date) => handleDateChange('end', date)}
+                        disabled={(date) => 
+                          customStartDate ? date < customStartDate : false
+                        }
+                        className="border border-gray-200 rounded-md"
+                      />
+                      <div className="text-sm text-gray-500 mt-1">
+                        {customEndDate ? format(customEndDate, "EEEE d MMMM yyyy", { locale: it }) : "Seleziona una data"}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-end gap-2 border-t p-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowDatePicker(false);
+                      setCustomStartDate(null);
+                      setCustomEndDate(null);
+                    }}
+                  >
+                    Annulla
+                  </Button>
+                  <Button 
+                    onClick={handleDateConfirm}
+                    disabled={!customStartDate || !customEndDate}
+                  >
+                    Conferma e Crea
+                  </Button>
+                </CardFooter>
+              </Card>
+            ) : (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+                <div className="text-center">
+                  <span className="material-icons text-gray-400 text-5xl mb-4">event_busy</span>
+                  <h3 className="text-lg font-medium mb-2">
+                    Nessuna pianificazione per la settimana {dateRangeText}
+                  </h3>
+                  <p className="text-gray-500 mb-6">
+                    Crea una nuova pianificazione per iniziare a gestire i turni.
+                  </p>
+                  <Button onClick={handleCreateSchedule} disabled={createScheduleMutation.isPending}>
+                    {createScheduleMutation.isPending ? (
+                      <>
+                        <span className="material-icons animate-spin mr-2">sync</span>
+                        Creazione in corso...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-icons mr-2">add</span>
+                        Crea Pianificazione
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
