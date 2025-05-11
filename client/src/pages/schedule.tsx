@@ -507,8 +507,8 @@ export default function Schedule() {
                       <Label className="mb-2 block">Data di inizio</Label>
                       <Calendar
                         mode="single"
-                        selected={customStartDate || undefined}
-                        onSelect={(date) => handleDateChange('start', date)}
+                        selected={customStartDate || new Date()}
+                        onSelect={(date) => date && handleDateChange('start', date)}
                         disabled={(date) => 
                           date < new Date()
                         }
@@ -522,8 +522,8 @@ export default function Schedule() {
                       <Label className="mb-2 block">Data di fine</Label>
                       <Calendar
                         mode="single"
-                        selected={customEndDate || undefined}
-                        onSelect={(date) => handleDateChange('end', date)}
+                        selected={customEndDate || new Date()}
+                        onSelect={(date) => date && handleDateChange('end', date)}
                         disabled={(date) => 
                           !customStartDate || date < customStartDate
                         }

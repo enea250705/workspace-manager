@@ -481,7 +481,9 @@ export function ExcelGrid({
             };
           } else {
             // Estendi il blocco corrente
-            currentBlock.end = index;
+            if (currentBlock) {
+              currentBlock.end = index;
+            }
           }
         } else if (currentBlock) {
           // Fine di un blocco
