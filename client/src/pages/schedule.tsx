@@ -595,10 +595,7 @@ export default function Schedule() {
             <DialogTitle>Generazione Automatica Turni</DialogTitle>
           </DialogHeader>
           <ScheduleAutoGenerator
-            startDate={customStartDate!}
-            endDate={customEndDate!}
-            users={users}
-            onGenerateSuccess={() => {
+            onScheduleGenerated={(scheduleData) => {
               setShowAutoGenerator(false);
               queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
             }}

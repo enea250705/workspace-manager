@@ -1,72 +1,148 @@
-import { useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { Layout } from "@/components/layout/layout";
-import { ScheduleViewer } from "@/components/schedule/schedule-viewer";
-import { TimeOffRequest } from "@/components/requests/time-off-request";
-import { useToast } from "@/hooks/use-toast";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { format, addDays, startOfWeek, endOfWeek } from "date-fns";
+import { it } from "date-fns/locale";
+import { EmployeeScheduleViewer } from "@/components/schedule/employee-schedule-viewer";
 
 export default function MySchedule() {
-  const { user, isLoading, isAuthenticated } = useAuth();
-  const [, navigate] = useLocation();
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/login");
+  const { user } = useAuth();
+  const [date, setDate] = useState<Date>(new Date());
+  
+  // Calcola date della settimana
+  const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+  
+  // Carica tutti i programmi dei turni pubblicati
+  const { data: schedules = [] } = useQuery<any[]>({
+    queryKey: ["/api/schedules/all"],
+  });
+  
+  // Filtra i programmi pubblicati più recenti
+  const publishedSchedules = schedules
+    .filter(schedule => schedule.isPublished)
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  
+  // Trova il programma che contiene la settimana corrente o se non esiste, quello più recente
+  const currentSchedule = publishedSchedules.find(
+    schedule => 
+      new Date(schedule.startDate) <= date && 
+      new Date(schedule.endDate) >= date
+  ) || publishedSchedules[0];
+  
+  // Carica i turni dell'utente corrente dal programma attuale
+  const { data: userShifts = [] } = useQuery<any[]>({
+    queryKey: [`/api/schedules/${currentSchedule?.id}/shifts/user/${user?.id}`],
+    enabled: !!currentSchedule?.id && !!user?.id,
+  });
+  
+  // Carica tutti i turni per il programma corrente (può servire per calcoli o visualizzazioni aggiuntive)
+  const { data: allShifts = [] } = useQuery<any[]>({
+    queryKey: [`/api/schedules/${currentSchedule?.id}/shifts`],
+    enabled: !!currentSchedule?.id,
+  });
+  
+  // Funzione che genera le date per la settimana visualizzata
+  const generateWeekDates = () => {
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      dates.push(addDays(weekStart, i));
     }
-  }, [isLoading, isAuthenticated, navigate]);
-
-  // Fetch the published schedule
-  const { data: schedule, isLoading: isScheduleLoading } = useQuery({
-    queryKey: ["/api/schedules"],
-  });
-
-  // Fetch shifts for the current user if schedule exists
-  const { data: shifts = [], isLoading: isShiftsLoading } = useQuery({
-    queryKey: [`/api/schedules/${schedule?.id}/shifts`],
-    enabled: !!schedule?.id,
-  });
-
-  // Handle PDF download
-  const handleDownloadPdf = () => {
-    toast({
-      title: "Download PDF",
-      description: "Funzionalità in sviluppo. Sarà disponibile presto.",
-    });
+    return dates;
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center">
-          <span className="material-icons text-primary animate-spin text-4xl">sync</span>
-          <p className="mt-4 text-gray-600">Caricamento...</p>
-        </div>
-      </div>
-    );
-  }
-
+  
+  // Le date della settimana visualizzata
+  const weekDates = generateWeekDates();
+  
   return (
     <Layout>
-      <div className="space-y-6">
-        {isScheduleLoading || isShiftsLoading ? (
-          <div className="flex items-center justify-center h-64 bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="text-center">
-              <span className="material-icons text-primary animate-spin text-4xl">sync</span>
-              <p className="mt-4 text-gray-600">Caricamento turni...</p>
-            </div>
-          </div>
-        ) : (
-          <ScheduleViewer 
-            schedule={schedule} 
-            shifts={shifts} 
-            onDownloadPdf={handleDownloadPdf} 
-          />
-        )}
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-bold mb-6">I Miei Turni</h1>
         
-        <TimeOffRequest />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Colonna sinistra con calendario */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Calendario</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={date => date && setDate(date)}
+                  className="rounded-md"
+                  locale={it}
+                />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Riepilogo Turni</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentSchedule ? (
+                  <div className="space-y-4">
+                    <div className="text-sm">
+                      <div className="font-medium">Periodo:</div>
+                      <div>
+                        {format(new Date(currentSchedule.startDate), "d MMMM", { locale: it })} - {format(new Date(currentSchedule.endDate), "d MMMM yyyy", { locale: it })}
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm">
+                      <div className="font-medium">Pubblicato:</div>
+                      <div>
+                        {format(new Date(currentSchedule.publishedAt), "d MMMM yyyy, HH:mm", { locale: it })}
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm">
+                      <div className="font-medium">Totale ore settimanali:</div>
+                      <div>
+                        {userShifts
+                          .filter(shift => shift.type === "work")
+                          .reduce((total, shift) => {
+                            const startHour = parseInt(shift.startTime.split(':')[0]);
+                            const startMin = parseInt(shift.startTime.split(':')[1]);
+                            const endHour = parseInt(shift.endTime.split(':')[0]);
+                            const endMin = parseInt(shift.endTime.split(':')[1]);
+                            
+                            let hours = endHour - startHour;
+                            let minutes = endMin - startMin;
+                            
+                            if (minutes < 0) {
+                              hours -= 1;
+                              minutes += 60;
+                            }
+                            
+                            return total + hours + (minutes / 60);
+                          }, 0).toFixed(1)} ore
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">
+                    Nessun turno pubblicato disponibile.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Colonna destra con visualizzatore turni */}
+          <div className="md:col-span-2">
+            <EmployeeScheduleViewer
+              schedule={currentSchedule}
+              shifts={allShifts}
+              userShifts={userShifts}
+            />
+          </div>
+        </div>
       </div>
     </Layout>
   );
