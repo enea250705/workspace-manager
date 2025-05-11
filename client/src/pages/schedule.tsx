@@ -163,10 +163,19 @@ export default function Schedule() {
   
   // Handle new weekly schedule
   const handleNewWeeklySchedule = () => {
+    // Imposta lo stato per la creazione di una nuova pianificazione
     setCreatingNewSchedule(true);
-    setCustomStartDate(null);
-    setCustomEndDate(null);
+    
+    // Imposta date predefinite per il nuovo calendario (a partire dalla prossima settimana)
+    const nextWeekStart = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 7);
+    setCustomStartDate(nextWeekStart);
+    setCustomEndDate(addDays(nextWeekStart, 6));
+    
+    // Mostra il selettore di date per consentire all'utente di modificarle
     setShowDatePicker(true);
+    
+    // Forza il reset dello schedule esistente
+    queryClient.removeQueries({ queryKey: ["/api/schedules"] });
   };
 
   // Handle auto-generate schedule
@@ -210,19 +219,26 @@ export default function Schedule() {
     // Show the schedule builder immediately
     setShowScheduleBuilder(true);
     
-    // If we're creating a new schedule, invalidate the existing schedule query
+    // Se stiamo creando un nuovo schedule, rimuoviamo le query esistenti per evitare conflitti
     if (creatingNewSchedule) {
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      queryClient.removeQueries({ queryKey: ["/api/schedules"] });
     }
     
-    // Create the schedule in the background
-    createScheduleMutation.mutate({
+    // Crea un nuovo schedule con date personalizzate
+    const newScheduleData = {
       startDate: format(customStartDate, "yyyy-MM-dd"),
       endDate: format(customEndDate, "yyyy-MM-dd"),
       isPublished: false,
       createdBy: user?.id,
-    }, {
-      onSuccess: () => {
+    };
+    
+    console.log("Creando nuovo schedule:", newScheduleData);
+    
+    // Create the schedule in the background
+    createScheduleMutation.mutate(newScheduleData, {
+      onSuccess: (response) => {
+        console.log("Schedule creato con successo:", response);
+        
         // Reset the creating new schedule flag
         setCreatingNewSchedule(false);
         
@@ -230,6 +246,24 @@ export default function Schedule() {
         if (customStartDate) {
           setSelectedWeek(customStartDate);
         }
+        
+        // Forza il refresh dei dati
+        queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
+        
+        // Mostra messaggio di successo
+        toast({
+          title: "Pianificazione creata",
+          description: "La nuova pianificazione è stata creata con successo",
+        });
+      },
+      onError: (error) => {
+        console.error("Errore nella creazione dello schedule:", error);
+        toast({
+          title: "Errore",
+          description: "Si è verificato un errore durante la creazione della pianificazione",
+          variant: "destructive",
+        });
       }
     });
   };

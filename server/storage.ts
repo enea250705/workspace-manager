@@ -562,10 +562,13 @@ export class DatabaseStorage implements IStorage {
   
   async getAllSchedules(): Promise<Schedule[]> {
     try {
+      // Importa e usa l'operatore desc da drizzle-orm
+      const { desc } = await import('drizzle-orm');
+      
       const allSchedules = await db
         .select()
         .from(schedules)
-        .orderBy(schedules.startDate, 'desc');
+        .orderBy(desc(schedules.startDate));
       
       return allSchedules;
     } catch (error) {
