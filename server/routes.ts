@@ -548,12 +548,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const shifts = await storage.getShifts(scheduleId);
         res.json(shifts);
       } else {
-        // Employees can only see their own shifts
+        // Employees can only see their own shifts and only for published schedules
+        const schedule = await storage.getSchedule(scheduleId);
+        if (!schedule || !schedule.isPublished) {
+          return res.status(403).json({ message: "Not authorized to view this schedule" });
+        }
+        
         const shifts = await storage.getUserShifts((req.user as any).id, scheduleId);
         res.json(shifts);
       }
     } catch (err) {
       res.status(500).json({ message: "Failed to get shifts" });
+    }
+  });
+  
+  app.get("/api/schedules/:scheduleId/shifts/user/:userId", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.scheduleId);
+      const userId = parseInt(req.params.userId);
+      
+      // Verifica che l'utente stia accedendo solo ai propri turni o sia un amministratore
+      if ((req.user as any).role !== "admin" && (req.user as any).id !== userId) {
+        return res.status(403).json({ message: "Not authorized to view these shifts" });
+      }
+      
+      // Se non è admin, verifica che il programma sia pubblicato
+      if ((req.user as any).role !== "admin") {
+        const schedule = await storage.getSchedule(scheduleId);
+        if (!schedule || !schedule.isPublished) {
+          return res.status(403).json({ message: "Schedule not published" });
+        }
+      }
+      
+      const shifts = await storage.getUserShifts(userId, scheduleId);
+      res.json(shifts);
+    } catch (err) {
+      console.error("Error fetching user shifts:", err);
+      res.status(500).json({ message: "Failed to retrieve user shifts" });
     }
   });
   
