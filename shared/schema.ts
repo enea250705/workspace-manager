@@ -98,7 +98,7 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  type: text("type").notNull(), // schedule_update, request_response, document_upload
+  type: text("type").notNull(), // schedule_update, request_response, document_upload, new_message
   message: text("message").notNull(),
   isRead: boolean("is_read").notNull().default(false),
   data: json("data"),
@@ -107,6 +107,24 @@ export const notifications = pgTable("notifications", {
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,
+  createdAt: true,
+});
+
+// Messages schema
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  fromUserId: integer("from_user_id").notNull(),
+  toUserId: integer("to_user_id").notNull(),
+  subject: text("subject").notNull(),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  relatedToShiftId: integer("related_to_shift_id"),
+  createdAt: timestamp("created_at").notNull(),
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  isRead: true,
   createdAt: true,
 });
 
@@ -128,3 +146,6 @@ export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;

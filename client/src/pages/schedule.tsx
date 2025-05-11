@@ -619,6 +619,18 @@ export default function Schedule() {
           emailsData={bulkEmailsData}
         />
       )}
+      
+      {/* Dialog per la generazione automatica */}
+      <Dialog open={showAutoGenerator} onOpenChange={setShowAutoGenerator}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Generazione automatica turni</DialogTitle>
+          </DialogHeader>
+          <ScheduleAutoGenerator 
+            onScheduleGenerated={handleScheduleGenerated}
+          />
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

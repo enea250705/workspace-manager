@@ -1,11 +1,12 @@
 import {
-  users, schedules, shifts, timeOffRequests, documents, notifications,
+  users, schedules, shifts, timeOffRequests, documents, notifications, messages,
   type User, type InsertUser,
   type Schedule, type InsertSchedule,
   type Shift, type InsertShift,
   type TimeOffRequest, type InsertTimeOffRequest,
   type Document, type InsertDocument,
-  type Notification, type InsertNotification
+  type Notification, type InsertNotification,
+  type Message, type InsertMessage
 } from "@shared/schema";
 
 export interface IStorage {
@@ -50,6 +51,14 @@ export interface IStorage {
   getUserNotifications(userId: number): Promise<Notification[]>;
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
   markAllUserNotificationsAsRead(userId: number): Promise<boolean>;
+  
+  // Messages
+  createMessage(message: InsertMessage): Promise<Message>;
+  getMessage(id: number): Promise<Message | undefined>;
+  getUserReceivedMessages(userId: number): Promise<Message[]>;
+  getUserSentMessages(userId: number): Promise<Message[]>;
+  markMessageAsRead(id: number): Promise<Message | undefined>;
+  deleteMessage(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -59,6 +68,7 @@ export class MemStorage implements IStorage {
   private timeOffRequests: Map<number, TimeOffRequest>;
   private documents: Map<number, Document>;
   private notifications: Map<number, Notification>;
+  private messages: Map<number, Message>;
   
   private userCurrentId: number;
   private scheduleCurrentId: number;
@@ -66,6 +76,7 @@ export class MemStorage implements IStorage {
   private timeOffRequestCurrentId: number;
   private documentCurrentId: number;
   private notificationCurrentId: number;
+  private messageCurrentId: number;
   
   constructor() {
     this.users = new Map();
@@ -74,6 +85,7 @@ export class MemStorage implements IStorage {
     this.timeOffRequests = new Map();
     this.documents = new Map();
     this.notifications = new Map();
+    this.messages = new Map();
     
     this.userCurrentId = 1;
     this.scheduleCurrentId = 1;
@@ -81,6 +93,7 @@ export class MemStorage implements IStorage {
     this.timeOffRequestCurrentId = 1;
     this.documentCurrentId = 1;
     this.notificationCurrentId = 1;
+    this.messageCurrentId = 1;
     
     // Create default admin user
     this.createUser({
