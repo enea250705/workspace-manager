@@ -430,4 +430,408 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { eq, and, lte, gte } from "drizzle-orm";
+import { db } from "./db";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
+
+const PostgresSessionStore = connectPg(session);
+
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.SessionStore;
+  
+  constructor() {
+    // Create PostgreSQL session store
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
+    
+    // Create default users if they don't exist
+    this.initializeDefaultUsers();
+  }
+  
+  private async initializeDefaultUsers() {
+    // Check if admin exists
+    const adminExists = await this.getUserByUsername("admin");
+    if (!adminExists) {
+      await this.createUser({
+        username: "admin",
+        password: "admin123",
+        name: "Amministratore",
+        email: "admin@azienda.it",
+        role: "admin",
+        position: null,
+        phone: null,
+        isActive: true
+      });
+    }
+    
+    // Check if employee exists
+    const employeeExists = await this.getUserByUsername("employee");
+    if (!employeeExists) {
+      await this.createUser({
+        username: "employee",
+        password: "employee123",
+        name: "Dipendente Demo",
+        email: "dipendente@azienda.it",
+        role: "employee",
+        position: "Cameriere",
+        phone: "+39123456789",
+        isActive: true
+      });
+    }
+  }
+  
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+  
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const now = new Date();
+    const newUser = {
+      ...insertUser,
+      lastLogin: now
+    };
+    
+    const [user] = await db.insert(users).values(newUser).returning();
+    return user;
+  }
+  
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+  
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+  
+  async createSchedule(scheduleData: InsertSchedule): Promise<Schedule> {
+    const now = new Date();
+    const newSchedule = {
+      ...scheduleData,
+      isPublished: false,
+      publishedAt: null,
+      updatedAt: now
+    };
+    
+    const [schedule] = await db.insert(schedules).values(newSchedule).returning();
+    return schedule;
+  }
+  
+  async getSchedule(id: number): Promise<Schedule | undefined> {
+    const [schedule] = await db.select().from(schedules).where(eq(schedules.id, id));
+    return schedule;
+  }
+  
+  async getScheduleByDateRange(startDate: Date, endDate: Date): Promise<Schedule | undefined> {
+    const formattedStartDate = startDate.toISOString().split('T')[0];
+    const formattedEndDate = endDate.toISOString().split('T')[0];
+    
+    const [schedule] = await db
+      .select()
+      .from(schedules)
+      .where(
+        and(
+          lte(schedules.startDate, formattedEndDate),
+          gte(schedules.endDate, formattedStartDate)
+        )
+      );
+    
+    return schedule;
+  }
+  
+  async publishSchedule(id: number): Promise<Schedule | undefined> {
+    const now = new Date();
+    
+    const [schedule] = await db
+      .update(schedules)
+      .set({ isPublished: true, publishedAt: now })
+      .where(eq(schedules.id, id))
+      .returning();
+    
+    return schedule;
+  }
+  
+  async createShift(shiftData: InsertShift): Promise<Shift> {
+    const [shift] = await db.insert(shifts).values(shiftData).returning();
+    return shift;
+  }
+  
+  async getShifts(scheduleId: number): Promise<Shift[]> {
+    return await db
+      .select()
+      .from(shifts)
+      .where(eq(shifts.scheduleId, scheduleId));
+  }
+  
+  async getUserShifts(userId: number, scheduleId: number): Promise<Shift[]> {
+    return await db
+      .select()
+      .from(shifts)
+      .where(
+        and(
+          eq(shifts.userId, userId),
+          eq(shifts.scheduleId, scheduleId)
+        )
+      );
+  }
+  
+  async updateShift(id: number, shiftData: Partial<InsertShift>): Promise<Shift | undefined> {
+    const [shift] = await db
+      .update(shifts)
+      .set(shiftData)
+      .where(eq(shifts.id, id))
+      .returning();
+    
+    return shift;
+  }
+  
+  async deleteShift(id: number): Promise<boolean> {
+    const result = await db
+      .delete(shifts)
+      .where(eq(shifts.id, id));
+    
+    return !!result;
+  }
+  
+  async createTimeOffRequest(requestData: InsertTimeOffRequest): Promise<TimeOffRequest> {
+    const now = new Date();
+    const newRequest = {
+      ...requestData,
+      createdAt: now,
+      updatedAt: now,
+      approvedBy: null
+    };
+    
+    const [request] = await db.insert(timeOffRequests).values(newRequest).returning();
+    return request;
+  }
+  
+  async getTimeOffRequest(id: number): Promise<TimeOffRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(timeOffRequests)
+      .where(eq(timeOffRequests.id, id));
+    
+    return request;
+  }
+  
+  async getUserTimeOffRequests(userId: number): Promise<TimeOffRequest[]> {
+    return await db
+      .select()
+      .from(timeOffRequests)
+      .where(eq(timeOffRequests.userId, userId));
+  }
+  
+  async getPendingTimeOffRequests(): Promise<TimeOffRequest[]> {
+    return await db
+      .select()
+      .from(timeOffRequests)
+      .where(eq(timeOffRequests.status, "pending"));
+  }
+  
+  async getAllTimeOffRequests(): Promise<TimeOffRequest[]> {
+    return await db.select().from(timeOffRequests);
+  }
+  
+  async approveTimeOffRequest(id: number, approverId: number): Promise<TimeOffRequest | undefined> {
+    const now = new Date();
+    
+    const [request] = await db
+      .update(timeOffRequests)
+      .set({
+        status: "approved",
+        updatedAt: now,
+        approvedBy: approverId
+      })
+      .where(eq(timeOffRequests.id, id))
+      .returning();
+    
+    return request;
+  }
+  
+  async rejectTimeOffRequest(id: number, approverId: number): Promise<TimeOffRequest | undefined> {
+    const now = new Date();
+    
+    const [request] = await db
+      .update(timeOffRequests)
+      .set({
+        status: "rejected",
+        updatedAt: now,
+        approvedBy: approverId
+      })
+      .where(eq(timeOffRequests.id, id))
+      .returning();
+    
+    return request;
+  }
+  
+  async createDocument(documentData: InsertDocument): Promise<Document> {
+    const now = new Date();
+    const newDocument = {
+      ...documentData,
+      uploadedAt: now
+    };
+    
+    const [document] = await db
+      .insert(documents)
+      .values(newDocument)
+      .returning();
+    
+    return document;
+  }
+  
+  async getDocument(id: number): Promise<Document | undefined> {
+    const [document] = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.id, id));
+    
+    return document;
+  }
+  
+  async getUserDocuments(userId: number, type?: string): Promise<Document[]> {
+    let query = db
+      .select()
+      .from(documents)
+      .where(eq(documents.userId, userId));
+    
+    if (type) {
+      query = query.where(eq(documents.type, type));
+    }
+    
+    return await query;
+  }
+  
+  async getAllDocuments(type?: string): Promise<Document[]> {
+    let query = db.select().from(documents);
+    
+    if (type) {
+      query = query.where(eq(documents.type, type));
+    }
+    
+    return await query;
+  }
+  
+  async deleteDocument(id: number): Promise<boolean> {
+    const result = await db
+      .delete(documents)
+      .where(eq(documents.id, id));
+    
+    return !!result;
+  }
+  
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    const now = new Date();
+    const newNotification = {
+      ...notificationData,
+      createdAt: now,
+      isRead: false
+    };
+    
+    const [notification] = await db
+      .insert(notifications)
+      .values(newNotification)
+      .returning();
+    
+    return notification;
+  }
+  
+  async getUserNotifications(userId: number): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId));
+  }
+  
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, id))
+      .returning();
+    
+    return notification;
+  }
+  
+  async markAllUserNotificationsAsRead(userId: number): Promise<boolean> {
+    const result = await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
+    
+    return !!result;
+  }
+  
+  async createMessage(messageData: InsertMessage): Promise<Message> {
+    const now = new Date();
+    const newMessage = {
+      ...messageData,
+      createdAt: now,
+      isRead: false
+    };
+    
+    const [message] = await db
+      .insert(messages)
+      .values(newMessage)
+      .returning();
+    
+    return message;
+  }
+  
+  async getMessage(id: number): Promise<Message | undefined> {
+    const [message] = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.id, id));
+    
+    return message;
+  }
+  
+  async getUserReceivedMessages(userId: number): Promise<Message[]> {
+    return await db
+      .select()
+      .from(messages)
+      .where(eq(messages.receiverId, userId));
+  }
+  
+  async getUserSentMessages(userId: number): Promise<Message[]> {
+    return await db
+      .select()
+      .from(messages)
+      .where(eq(messages.senderId, userId));
+  }
+  
+  async markMessageAsRead(id: number): Promise<Message | undefined> {
+    const [message] = await db
+      .update(messages)
+      .set({ isRead: true })
+      .where(eq(messages.id, id))
+      .returning();
+    
+    return message;
+  }
+  
+  async deleteMessage(id: number): Promise<boolean> {
+    const result = await db
+      .delete(messages)
+      .where(eq(messages.id, id));
+    
+    return !!result;
+  }
+}
+
+export const storage = new DatabaseStorage();
