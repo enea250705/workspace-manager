@@ -315,7 +315,7 @@ export function ScheduleBuilder({
         userId,
         day,
         startTime: timeSlots[timeIndex],
-        endTime: timeSlots[timeIndex + 1],  // Questo aggiunge mezz'ora
+        endTime: timeSlots[timeIndex],  // Ora usa lo stesso indice per evitare di aggiungere mezz'ora
         type: newType,
         notes: userDayData.notes,
         area: ""
