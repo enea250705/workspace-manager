@@ -176,6 +176,13 @@ export class MemStorage implements IStorage {
     );
   }
   
+  async getAllSchedules(): Promise<Schedule[]> {
+    // Return all schedules ordered by start date (most recent first)
+    return Array.from(this.schedules.values()).sort((a, b) => 
+      new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+    );
+  }
+  
   async publishSchedule(id: number): Promise<Schedule | undefined> {
     const schedule = await this.getSchedule(id);
     if (!schedule) return undefined;
