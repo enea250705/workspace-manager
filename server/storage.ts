@@ -234,6 +234,10 @@ export class MemStorage implements IStorage {
     );
   }
   
+  async getAllTimeOffRequests(): Promise<TimeOffRequest[]> {
+    return Array.from(this.timeOffRequests.values());
+  }
+  
   async approveTimeOffRequest(id: number, approverId: number): Promise<TimeOffRequest | undefined> {
     const request = await this.getTimeOffRequest(id);
     if (!request) return undefined;
