@@ -70,6 +70,7 @@ export class MemStorage implements IStorage {
   private documents: Map<number, Document>;
   private notifications: Map<number, Notification>;
   private messages: Map<number, Message>;
+  sessionStore: any;
   
   private userCurrentId: number;
   private scheduleCurrentId: number;
@@ -174,6 +175,11 @@ export class MemStorage implements IStorage {
         new Date(schedule.startDate) <= endDate && 
         new Date(schedule.endDate) >= startDate
     );
+  }
+  
+  async getAllSchedules(): Promise<Schedule[]> {
+    return Array.from(this.schedules.values())
+      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   }
   
   async publishSchedule(id: number): Promise<Schedule | undefined> {
