@@ -362,6 +362,62 @@ export class MemStorage implements IStorage {
     
     return true;
   }
+  
+  // Message management
+  async createMessage(messageData: InsertMessage): Promise<Message> {
+    const id = this.messageCurrentId++;
+    const now = new Date();
+    
+    const message: Message = {
+      id,
+      fromUserId: messageData.fromUserId,
+      toUserId: messageData.toUserId,
+      subject: messageData.subject,
+      content: messageData.content,
+      relatedToShiftId: messageData.relatedToShiftId || null,
+      isRead: false,
+      createdAt: now
+    };
+    
+    this.messages.set(id, message);
+    return message;
+  }
+  
+  async getMessage(id: number): Promise<Message | undefined> {
+    return this.messages.get(id);
+  }
+  
+  async getUserReceivedMessages(userId: number): Promise<Message[]> {
+    return Array.from(this.messages.values())
+      .filter(message => message.toUserId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async getUserSentMessages(userId: number): Promise<Message[]> {
+    return Array.from(this.messages.values())
+      .filter(message => message.fromUserId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async markMessageAsRead(id: number): Promise<Message | undefined> {
+    const message = this.messages.get(id);
+    
+    if (!message) {
+      return undefined;
+    }
+    
+    const updatedMessage: Message = {
+      ...message,
+      isRead: true
+    };
+    
+    this.messages.set(id, updatedMessage);
+    return updatedMessage;
+  }
+  
+  async deleteMessage(id: number): Promise<boolean> {
+    return this.messages.delete(id);
+  }
 }
 
 export const storage = new MemStorage();
