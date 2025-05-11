@@ -305,18 +305,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Authentication routes
   app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {
-    // Aggiorniamo il lastLogin
-    if (req.user) {
-      const userId = (req.user as any).id;
-      try {
-        storage.updateUser(userId, { 
-          // L'aggiornamento dell'ultimo accesso avviene direttamente nel metodo
-          // ma manteniamo questa chiamata per sicurezza
-        });
-      } catch (error) {
-        console.error("Errore nell'aggiornamento del lastLogin:", error);
-      }
-    }
+    // Restituisci immediatamente l'utente senza aggiornare lastLogin
+    // (questo verrà gestito in modo diverso per evitare errori)
     res.json({ user: req.user });
   });
   
