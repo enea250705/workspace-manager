@@ -290,8 +290,17 @@ export default function Schedule() {
     return hours + (minutes / 60);
   };
 
+  // State to show schedule builder without creating a schedule yet
+  const [showScheduleBuilder, setShowScheduleBuilder] = useState(false);
+  
   // Create new schedule if none exists for the selected week
   const handleCreateSchedule = () => {
+    if (createScheduleMutation.isPending) return;
+    
+    // Show the schedule builder immediately
+    setShowScheduleBuilder(true);
+    
+    // Create the schedule in the background
     createScheduleMutation.mutate({
       startDate: format(selectedWeek, "yyyy-MM-dd"),
       endDate: format(endOfWeek, "yyyy-MM-dd"),
@@ -321,7 +330,41 @@ export default function Schedule() {
               <p className="mt-4 text-gray-600">Caricamento pianificazione...</p>
             </div>
           </div>
-        ) : !existingSchedule ? (
+        ) : showScheduleBuilder && !existingSchedule ? (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">
+                Pianificazione Turni: {dateRangeText}
+              </h3>
+              <div className="text-sm text-gray-500">
+                In attesa di salvataggio...
+              </div>
+            </div>
+            <ScheduleBuilder
+              scheduleId={null}
+              users={users || []}
+              startDate={selectedWeek}
+              endDate={endOfWeek}
+              shifts={[]}
+              isPublished={false}
+              onPublish={() => {}}
+              onAutoGenerate={() => {}}
+              onExportPdf={handleExportPdf}
+            />
+          </div>
+        ) : existingSchedule ? (
+          <ScheduleBuilder
+            scheduleId={existingSchedule?.id || null}
+            users={users || []}
+            startDate={existingSchedule?.startDate ? new Date(existingSchedule.startDate) : selectedWeek}
+            endDate={existingSchedule?.endDate ? new Date(existingSchedule.endDate) : endOfWeek}
+            shifts={shifts || []}
+            isPublished={existingSchedule?.isPublished || false}
+            onPublish={handlePublish}
+            onAutoGenerate={handleAutoGenerate}
+            onExportPdf={handleExportPdf}
+          />
+        ) : (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             <div className="text-center">
               <span className="material-icons text-gray-400 text-5xl mb-4">event_busy</span>
@@ -346,18 +389,6 @@ export default function Schedule() {
               </Button>
             </div>
           </div>
-        ) : (
-          <ScheduleBuilder
-            scheduleId={existingSchedule.id}
-            users={users}
-            startDate={new Date(existingSchedule.startDate)}
-            endDate={new Date(existingSchedule.endDate)}
-            shifts={shifts}
-            isPublished={existingSchedule.isPublished}
-            onPublish={handlePublish}
-            onAutoGenerate={handleAutoGenerate}
-            onExportPdf={handleExportPdf}
-          />
         )}
       </div>
     </Layout>
