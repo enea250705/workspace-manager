@@ -114,10 +114,180 @@ export default function Schedule() {
 
   // Handle export PDF
   const handleExportPdf = () => {
-    toast({
-      title: "Esportazione PDF",
-      description: "Funzionalità in sviluppo. Sarà disponibile presto.",
-    });
+    if (!existingSchedule) {
+      toast({
+        title: "Nessuna pianificazione",
+        description: "Crea prima una pianificazione per poterla esportare in PDF.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Create content for PDF
+      let pdfContent = `
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; font-size: 12px; }
+            h1 { font-size: 18px; margin-bottom: 10px; }
+            h2 { font-size: 14px; margin-bottom: 5px; color: #666; }
+            table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+            th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+            .name-cell { text-align: left; font-weight: bold; width: 150px; }
+            .notes-cell { width: 120px; }
+            .total-cell { width: 60px; }
+            .working { background-color: #e6f0ff; }
+            .vacation { background-color: #ffe6e6; }
+            .leave { background-color: #fff9e6; }
+            .page-break { page-break-after: always; }
+            .legend { margin: 10px 0; display: flex; }
+            .legend-item { margin-right: 15px; display: flex; align-items: center; }
+            .legend-color { width: 15px; height: 15px; display: inline-block; margin-right: 5px; border: 1px solid #ccc; }
+            .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1>Pianificazione Turni</h1>
+              <h2>Settimana: ${format(new Date(existingSchedule.startDate), "d MMMM", { locale: it })} - 
+              ${format(new Date(existingSchedule.endDate), "d MMMM yyyy", { locale: it })}</h2>
+            </div>
+            <div>
+              <p>Data: ${format(new Date(), "dd/MM/yyyy")}</p>
+              <p>Stato: ${existingSchedule.isPublished ? 'Pubblicato' : 'Bozza'}</p>
+            </div>
+          </div>
+          
+          <div class="legend">
+            <div class="legend-item"><span class="legend-color working"></span> In servizio (X)</div>
+            <div class="legend-item"><span class="legend-color vacation"></span> Ferie (F)</div>
+            <div class="legend-item"><span class="legend-color leave"></span> Permesso (P)</div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th class="name-cell">Dipendente</th>
+                <th>Lunedì</th>
+                <th>Martedì</th>
+                <th>Mercoledì</th>
+                <th>Giovedì</th>
+                <th>Venerdì</th>
+                <th>Sabato</th>
+                <th>Domenica</th>
+                <th class="total-cell">Totale Ore</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      // Add employee rows with shift summary
+      users
+        .filter((user: any) => user.role === "employee" && user.isActive)
+        .forEach((user: any) => {
+          let userTotalHours = 0;
+          
+          pdfContent += `
+            <tr>
+              <td class="name-cell">${user.name}</td>
+          `;
+          
+          // Add days of week
+          ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'].forEach(day => {
+            const userShifts = shifts.filter((s: any) => s.userId === user.id && s.day === day);
+            let daySummary = '-';
+            let cellClass = '';
+            
+            if (userShifts.length > 0) {
+              // Sort shifts by start time
+              userShifts.sort((a: any, b: any) => {
+                return a.startTime.localeCompare(b.startTime);
+              });
+              
+              // Create summary of shifts
+              daySummary = userShifts.map((shift: any) => {
+                const hours = calculateHoursFromShift(shift);
+                userTotalHours += hours;
+                
+                if (shift.type === 'work') {
+                  cellClass = 'working';
+                  return `${shift.startTime}-${shift.endTime}`;
+                } else if (shift.type === 'vacation') {
+                  cellClass = 'vacation';
+                  return 'Ferie';
+                } else if (shift.type === 'leave') {
+                  cellClass = 'leave';
+                  return 'Permesso';
+                }
+                return '-';
+              }).join('<br>');
+            }
+            
+            pdfContent += `<td class="${cellClass}">${daySummary}</td>`;
+          });
+          
+          // Add total hours
+          pdfContent += `
+            <td class="total-cell">${userTotalHours.toFixed(1)}</td>
+          </tr>`;
+        });
+      
+      pdfContent += `
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+      
+      // Open in a new window for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast({
+          title: "Errore",
+          description: "Impossibile aprire la finestra di stampa. Controlla che i popup siano abilitati.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      printWindow.document.write(pdfContent);
+      printWindow.document.close();
+      
+      // Give time for the page to load then print
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+      
+      toast({
+        title: "Esportazione PDF",
+        description: "Il documento è stato generato per la stampa.",
+      });
+      
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'esportazione del PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Calculate hours from a shift
+  const calculateHoursFromShift = (shift: any) => {
+    const startTimeParts = shift.startTime.split(':').map(Number);
+    const endTimeParts = shift.endTime.split(':').map(Number);
+    
+    let hours = endTimeParts[0] - startTimeParts[0];
+    let minutes = endTimeParts[1] - startTimeParts[1];
+    
+    if (minutes < 0) {
+      hours -= 1;
+      minutes += 60;
+    }
+    
+    return hours + (minutes / 60);
   };
 
   // Create new schedule if none exists for the selected week
