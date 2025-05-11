@@ -51,18 +51,7 @@ export default function Schedule() {
   const startDateToUse = customStartDate || selectedWeek;
   const endOfWeek = customEndDate || addDays(selectedWeek, 6);
   
-  // Format date range for display (based on current schedule if available)
-  const dateRangeText = existingSchedule?.startDate ? 
-    `${format(new Date(existingSchedule.startDate), "d MMMM", { locale: it })} - ${format(
-      new Date(existingSchedule.endDate),
-      "d MMMM yyyy",
-      { locale: it }
-    )}` :
-    `${format(startDateToUse, "d MMMM", { locale: it })} - ${format(
-      endOfWeek,
-      "d MMMM yyyy",
-      { locale: it }
-    )}`;
+
 
   // Fetch all schedule data
   const { data: allSchedules = [], isLoading: isAllSchedulesLoading } = useQuery<any[]>({
@@ -81,6 +70,19 @@ export default function Schedule() {
     queryKey: ["/api/schedules", currentScheduleId],
     enabled: !!currentScheduleId,
   });
+  
+  // Format date range for display (based on current schedule if available)
+  const dateRangeText = existingSchedule?.startDate ? 
+    `${format(new Date(existingSchedule.startDate), "d MMMM", { locale: it })} - ${format(
+      new Date(existingSchedule.endDate),
+      "d MMMM yyyy",
+      { locale: it }
+    )}` :
+    `${format(startDateToUse, "d MMMM", { locale: it })} - ${format(
+      endOfWeek,
+      "d MMMM yyyy",
+      { locale: it }
+    )}`;
 
   // Fetch users for populating the schedule
   const { data: users = [], isLoading: isUsersLoading } = useQuery<any[]>({
