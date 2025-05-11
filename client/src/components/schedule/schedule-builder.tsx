@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -123,62 +123,71 @@ export function ScheduleBuilder({
     select: (data: any) => data.filter((req: any) => req.status === "approved"),
   });
 
+  // Evitiamo re-render non necessari
+  const isFirstRender = React.useRef(true);
+  
   // Initialize grid data based on shifts and time-off requests
   useEffect(() => {
     if (!shifts || !users || !scheduleId) return;
     
-    const newGridData: any = {};
-    
-    // Initialize empty grid for all users and time slots
-    weekDays.forEach(day => {
-      newGridData[day.name] = {};
-      users.forEach(user => {
-        newGridData[day.name][user.id] = {
-          cells: timeSlots.map(() => ({ type: "", shiftId: null })),
-          notes: "",
-          total: 0
-        };
-      });
-    });
-    
-    // Fill grid with existing shifts
-    shifts.forEach(shift => {
-      const userId = shift.userId;
-      const day = shift.day;
+    // Evitiamo loop infiniti impostando un flag
+    if (isFirstRender.current || shifts.length > 0) {
+      console.log("Rendering grid data with shifts:", shifts.length);
+      isFirstRender.current = false;
       
-      if (newGridData[day] && newGridData[day][userId]) {
-        // Find the indices corresponding to the shift's time range
-        const startIndex = timeSlots.indexOf(shift.startTime);
-        const endIndex = timeSlots.indexOf(shift.endTime);
-        
-        if (startIndex >= 0 && endIndex >= 0) {
-          for (let i = startIndex; i < endIndex; i++) {
-            newGridData[day][userId].cells[i] = { 
-              type: shift.type, 
-              shiftId: shift.id 
-            };
-          }
-          
-          // Update notes and calculate total hours
-          newGridData[day][userId].notes = shift.notes || "";
-          
-          const startTime = shift.startTime.split(':').map(Number);
-          const endTime = shift.endTime.split(':').map(Number);
-          
-          let hours = endTime[0] - startTime[0];
-          let minutes = endTime[1] - startTime[1];
-          
-          if (minutes < 0) {
-            hours -= 1;
-            minutes += 60;
-          }
-          
-          newGridData[day][userId].total = hours + (minutes / 60);
-        }
-      }
-    });
+      const newGridData: any = {};
     
-    setGridData(newGridData);
+      // Initialize empty grid for all users and time slots
+      weekDays.forEach(day => {
+        newGridData[day.name] = {};
+        users.forEach(user => {
+          newGridData[day.name][user.id] = {
+            cells: timeSlots.map(() => ({ type: "", shiftId: null })),
+            notes: "",
+            total: 0
+          };
+        });
+      });
+      
+      // Fill grid with existing shifts
+      shifts.forEach(shift => {
+        const userId = shift.userId;
+        const day = shift.day;
+        
+        if (newGridData[day] && newGridData[day][userId]) {
+          // Find the indices corresponding to the shift's time range
+          const startIndex = timeSlots.indexOf(shift.startTime);
+          const endIndex = timeSlots.indexOf(shift.endTime);
+          
+          if (startIndex >= 0 && endIndex >= 0) {
+            for (let i = startIndex; i < endIndex; i++) {
+              newGridData[day][userId].cells[i] = { 
+                type: shift.type, 
+                shiftId: shift.id 
+              };
+            }
+            
+            // Update notes and calculate total hours
+            newGridData[day][userId].notes = shift.notes || "";
+            
+            const startTime = shift.startTime.split(':').map(Number);
+            const endTime = shift.endTime.split(':').map(Number);
+            
+            let hours = endTime[0] - startTime[0];
+            let minutes = endTime[1] - startTime[1];
+            
+            if (minutes < 0) {
+              hours -= 1;
+              minutes += 60;
+            }
+            
+            newGridData[day][userId].total = hours + (minutes / 60);
+          }
+        }
+      });
+      
+      setGridData(newGridData);
+    }
   }, [shifts, users, scheduleId, weekDays, timeSlots]);
     
   // Add approved time-off requests to the grid in a separate useEffect
