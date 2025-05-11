@@ -1,8 +1,11 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./auth";
+import session from "express-session";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
 import { z } from "zod";
+import MemoryStore from "memorystore";
 import { WebSocketServer, WebSocket } from "ws";
 import { addDays, parseISO, format } from "date-fns";
 import {
@@ -14,7 +17,8 @@ import {
   insertNotificationSchema
 } from "@shared/schema";
 
-// Initialize session store - Moved to auth.ts
+// Initialize session store
+const MemorySessionStore = MemoryStore(session);
 
 // Funzione per la generazione automatica dei turni
 async function generateAutomaticSchedule(
@@ -166,9 +170,6 @@ async function generateAutomaticSchedule(
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication
-  setupAuth(app);
-  
   const httpServer = createServer(app);
   
   // Setup WebSocket server for real-time notifications
@@ -228,7 +229,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
   
-  // AUTH SETUP IS NOW HANDLED BY setupAuth in auth.ts
+  // Setup session middleware
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "keyboard cat",
+      resave: false,
+      saveUninitialized: false,
+      store: storage.sessionStore,
+      cookie: {
+        maxAge: 86400000, // 24 ore
+        secure: false
+      }
+    })
+  );
+  
+  // Setup passport for authentication
+  app.use(passport.initialize());
+  app.use(passport.session());
+  
+  // Configure passport local strategy
+  passport.use(
+    new LocalStrategy(async (username, password, done) => {
+      try {
+        const user = await storage.getUserByUsername(username);
+        
+        if (!user) {
+          return done(null, false, { message: "Incorrect username" });
+        }
+        
+        if (user.password !== password) {
+          return done(null, false, { message: "Incorrect password" });
+        }
+        
+        if (!user.isActive) {
+          return done(null, false, { message: "User account is disabled" });
+        }
+        
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
+    })
+  );
+  
+  // Serialize user for session
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+  
+  // Deserialize user from session
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (err) {
+      done(err);
+    }
+  });
   
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: Function) => {
@@ -246,7 +303,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(403).json({ message: "Forbidden" });
   };
   
-  // Authentication routes are handled in auth.ts
+  // Authentication routes
+  app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {
+    // Restituisci immediatamente l'utente senza aggiornare lastLogin
+    // (questo verrà gestito in modo diverso per evitare errori)
+    res.json({ user: req.user });
+  });
+  
+  app.post("/api/auth/logout", (req, res, next) => {
+    req.logout((err) => {
+      if (err) return next(err);
+      res.json({ success: true });
+    });
+  });
+  
+  app.get("/api/auth/me", (req, res) => {
+    if (req.isAuthenticated()) {
+      res.json({ user: req.user });
+    } else {
+      res.json({ user: null });
+    }
+  });
   
   // User management routes
   app.get("/api/users", isAdmin, async (req, res) => {
