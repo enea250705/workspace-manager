@@ -127,11 +127,13 @@ export function ScheduleBuilder({
   const isFirstRender = React.useRef(true);
   
   // Initialize grid data based on shifts and time-off requests
+  // Effetto per inizializzare i dati della griglia
+  // Usiamo useEffect separati per evitare loop infiniti
   useEffect(() => {
     if (!shifts || !users || !scheduleId) return;
     
-    // Evitiamo loop infiniti impostando un flag
-    if (isFirstRender.current || shifts.length > 0) {
+    // Controlliamo se è la prima renderizzazione o se ci sono nuovi turni
+    if (isFirstRender.current || Object.keys(gridData).length === 0) {
       console.log("Rendering grid data with shifts:", shifts.length);
       isFirstRender.current = false;
       
@@ -188,7 +190,7 @@ export function ScheduleBuilder({
       
       setGridData(newGridData);
     }
-  }, [shifts, users, scheduleId, weekDays, timeSlots]);
+  }, [shifts, users, scheduleId, weekDays, timeSlots, gridData]);
     
   // Add approved time-off requests to the grid in a separate useEffect
   useEffect(() => {
