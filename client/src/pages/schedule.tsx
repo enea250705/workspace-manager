@@ -12,7 +12,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BulkEmailPreview } from "@/components/notifications/email-preview";
 import { ScheduleAutoGenerator } from "@/components/schedule/auto-generator/auto-generator";
 
 // Date utilities
@@ -110,38 +109,8 @@ export default function Schedule() {
   // State for showing auto-generate modal
   const [showAutoGenerator, setShowAutoGenerator] = useState(false);
   
-  // Handle auto-generate schedule
-  const handleAutoGenerate = () => {
-    // Se non ci sono date personalizzate, chiediamo di selezionarle
-    if (!customStartDate || !customEndDate) {
-      setShowDatePicker(true);
-      return;
-    }
-    
-    // Mostra il generatore automatico
-    setShowAutoGenerator(true);
-  };
-  
-  // Handle schedule data received from auto-generator
-  const handleScheduleGenerated = (scheduleData: any) => {
-    // Nascondi il generatore automatico
-    setShowAutoGenerator(false);
-    
-    // Invalida la cache per riflettere i cambiamenti
-    queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-    
-    // Mostra il builder con i dati generati
-    setShowScheduleBuilder(true);
-  };
-
-  // Stato per l'anteprima delle email
-  const [showEmailPreview, setShowEmailPreview] = useState(false);
-  const [bulkEmailsData, setBulkEmailsData] = useState<Array<{
-    to: string;
-    subject: string;
-    body: string;
-    mailtoUrl: string;
-  }>>([]);
+  // State for showing schedule builder
+  const [showScheduleBuilder, setShowScheduleBuilder] = useState(false);
   
   // Handle publish schedule
   const handlePublish = () => {
@@ -155,305 +124,45 @@ export default function Schedule() {
         description: "La pianificazione è stata registrata nel sistema.",
         variant: "default",
       });
-      
-      // Non invia notifiche ai dipendenti, commenta il codice esistente
-      if (users && users.length > 0) {
-        const employeeUsers = users.filter((user: any) => 
-          user.role === "employee" && user.isActive && user.email
-        );
-        
-        // Prepara i dati per l'anteprima delle email
-        const emailsData = employeeUsers.map((user: any) => {
-          // Filtra i turni per questo dipendente
-          const userShifts = shifts.filter((s: any) => s.userId === user.id);
-          
-          // Formatta le date
-          const startDateFormatted = format(new Date(existingSchedule.startDate), "d MMMM yyyy", { locale: it });
-          const endDateFormatted = format(new Date(existingSchedule.endDate), "d MMMM yyyy", { locale: it });
-          
-          // Crea la tabella HTML con i turni
-          let shiftsTable = '';
-          if (userShifts && userShifts.length > 0) {
-            shiftsTable = '<table border="1" cellpadding="5" style="border-collapse: collapse; width: 100%;">';
-            shiftsTable += '<tr><th>Giorno</th><th>Orario</th><th>Tipo</th><th>Note</th></tr>';
-            
-            userShifts.forEach((shift: any) => {
-              const shiftType = shift.type === 'work' ? 'Lavoro' : 
-                              shift.type === 'vacation' ? 'Ferie' : 'Permesso';
-              
-              shiftsTable += `<tr>
-                <td>${shift.day}</td>
-                <td>${shift.startTime} - ${shift.endTime}</td>
-                <td>${shiftType}</td>
-                <td>${shift.notes || ''}</td>
-              </tr>`;
-            });
-            
-            shiftsTable += '</table>';
-          } else {
-            shiftsTable = '<p>Nessun turno pianificato per questo periodo.</p>';
-          }
-          
-          // Crea il corpo dell'email
-          const emailBody = `
-            <p>Gentile ${user.name},</p>
-            <p>È stata pubblicata la pianificazione dei turni per il periodo ${startDateFormatted} - ${endDateFormatted}.</p>
-            
-            <h3>I tuoi turni:</h3>
-            ${shiftsTable}
-            
-            <p>Per visualizzare tutti i dettagli, accedi alla piattaforma dalla sezione "I miei turni".</p>
-            
-            <p>Cordiali saluti,<br/>
-            Gestione del Personale</p>
-          `;
-          
-          // Pulisce il body per il mailto URL
-          const cleanBody = emailBody.replace(/<[^>]*>?/gm, '').replace(/\n/g, '%0A');
-          
-          // Crea un mailto URL
-          const subject = `Pianificazione turni: ${startDateFormatted} - ${endDateFormatted}`;
-          const mailtoUrl = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(cleanBody)}`;
-          
-          return {
-            to: user.email,
-            subject,
-            body: emailBody,
-            mailtoUrl
-          };
-        });
-        
-        setBulkEmailsData(emailsData);
-        setShowEmailPreview(true);
-      } else {
-        // Se non ci sono dipendenti, pubblica direttamente
-        publishScheduleMutation.mutate(existingSchedule.id);
-      }
     }
   };
 
-  // Handle export PDF
-  const handleExportPdf = () => {
-    if (!existingSchedule) {
-      toast({
-        title: "Nessuna pianificazione",
-        description: "Crea prima una pianificazione per poterla esportare in PDF.",
-        variant: "destructive",
-      });
+  // Handle auto-generate schedule
+  const handleAutoGenerate = () => {
+    // Se non ci sono date personalizzate, chiediamo di selezionarle
+    if (!customStartDate || !customEndDate) {
+      setShowDatePicker(true);
       return;
     }
     
-    try {
-      // Create content for PDF
-      let pdfContent = `
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; font-size: 12px; }
-            h1 { font-size: 18px; margin-bottom: 10px; }
-            h2 { font-size: 14px; margin-bottom: 5px; color: #666; }
-            table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-            th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
-            .name-cell { text-align: left; font-weight: bold; width: 150px; }
-            .notes-cell { width: 120px; }
-            .total-cell { width: 60px; }
-            .working { background-color: #e6f0ff; }
-            .vacation { background-color: #ffe6e6; }
-            .leave { background-color: #fff9e6; }
-            .page-break { page-break-after: always; }
-            .legend { margin: 10px 0; display: flex; }
-            .legend-item { margin-right: 15px; display: flex; align-items: center; }
-            .legend-color { width: 15px; height: 15px; display: inline-block; margin-right: 5px; border: 1px solid #ccc; }
-            .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <h1>Pianificazione Turni</h1>
-              <h2>Settimana: ${format(new Date(existingSchedule.startDate), "d MMMM", { locale: it })} - 
-              ${format(new Date(existingSchedule.endDate), "d MMMM yyyy", { locale: it })}</h2>
-            </div>
-            <div>
-              <p>Data: ${format(new Date(), "dd/MM/yyyy")}</p>
-              <p>Stato: ${existingSchedule.isPublished ? 'Pubblicato' : 'Bozza'}</p>
-            </div>
-          </div>
-          
-          <div class="legend">
-            <div class="legend-item"><span class="legend-color working"></span> In servizio (X)</div>
-            <div class="legend-item"><span class="legend-color vacation"></span> Ferie (F)</div>
-            <div class="legend-item"><span class="legend-color leave"></span> Permesso (P)</div>
-          </div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th class="name-cell">Dipendente</th>
-                <th>Lunedì</th>
-                <th>Martedì</th>
-                <th>Mercoledì</th>
-                <th>Giovedì</th>
-                <th>Venerdì</th>
-                <th>Sabato</th>
-                <th>Domenica</th>
-                <th class="total-cell">Totale Ore</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-      
-      // Add employee rows with shift summary
-      users
-        .filter((user: any) => user.role === "employee" && user.isActive)
-        .forEach((user: any) => {
-          let userTotalHours = 0;
-          
-          pdfContent += `
-            <tr>
-              <td class="name-cell">${user.name}</td>
-          `;
-          
-          // Add days of week
-          ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'].forEach(day => {
-            const userShifts = shifts.filter((s: any) => s.userId === user.id && s.day === day);
-            let daySummary = '-';
-            let cellClass = '';
-            
-            if (userShifts.length > 0) {
-              // Sort shifts by start time
-              userShifts.sort((a: any, b: any) => {
-                return a.startTime.localeCompare(b.startTime);
-              });
-              
-              // Create summary of shifts
-              daySummary = userShifts.map((shift: any) => {
-                const hours = calculateHoursFromShift(shift);
-                userTotalHours += hours;
-                
-                if (shift.type === 'work') {
-                  cellClass = 'working';
-                  return `${shift.startTime}-${shift.endTime}`;
-                } else if (shift.type === 'vacation') {
-                  cellClass = 'vacation';
-                  return 'Ferie';
-                } else if (shift.type === 'leave') {
-                  cellClass = 'leave';
-                  return 'Permesso';
-                }
-                return '-';
-              }).join('<br>');
-            }
-            
-            pdfContent += `<td class="${cellClass}">${daySummary}</td>`;
-          });
-          
-          // Add total hours
-          pdfContent += `
-            <td class="total-cell">${userTotalHours.toFixed(1)}</td>
-          </tr>`;
-        });
-      
-      pdfContent += `
-            </tbody>
-          </table>
-        </body>
-        </html>
-      `;
-      
-      // Open in a new window for printing
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        toast({
-          title: "Errore",
-          description: "Impossibile aprire la finestra di stampa. Controlla che i popup siano abilitati.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      printWindow.document.write(pdfContent);
-      printWindow.document.close();
-      
-      // Give time for the page to load then print
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-      
-      toast({
-        title: "Esportazione PDF",
-        description: "Il documento è stato generato per la stampa.",
-      });
-      
-    } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'esportazione del PDF.",
-        variant: "destructive",
-      });
-    }
+    setShowAutoGenerator(true);
   };
   
-  // Calculate hours from a shift
-  const calculateHoursFromShift = (shift: any) => {
-    const startTimeParts = shift.startTime.split(':').map(Number);
-    const endTimeParts = shift.endTime.split(':').map(Number);
-    
-    let hours = endTimeParts[0] - startTimeParts[0];
-    let minutes = endTimeParts[1] - startTimeParts[1];
-    
-    if (minutes < 0) {
-      hours -= 1;
-      minutes += 60;
-    }
-    
-    return hours + (minutes / 60);
-  };
-
-  // State to show schedule builder without creating a schedule yet
-  const [showScheduleBuilder, setShowScheduleBuilder] = useState(false);
-  
-  // Handle date selection
-  const handleDateChange = (type: 'start' | 'end', date: Date | undefined) => {
-    if (!date) return;
+  // Handle date change
+  const handleDateChange = (type: 'start' | 'end', date: Date | null) => {
     if (type === 'start') {
       setCustomStartDate(date);
-      // If end date is before start date, update it
-      if (customEndDate && isBefore(customEndDate, date)) {
-        setCustomEndDate(addDays(date, 6));
-      } else if (!customEndDate) {
-        // Default to a week range
-        setCustomEndDate(addDays(date, 6));
+      // Se la data di fine non è impostata o è prima della nuova data di inizio,
+      // impostiamo la data di fine a 6 giorni dopo la data di inizio
+      if (!customEndDate || (date && isBefore(customEndDate, date))) {
+        setCustomEndDate(date ? addDays(date, 6) : null);
       }
     } else {
       setCustomEndDate(date);
     }
   };
   
-  // Create new schedule if none exists for the selected week
+  // Create a new schedule
   const handleCreateSchedule = () => {
-    if (createScheduleMutation.isPending) return;
-    
-    // If no custom dates selected, show date picker
     if (!customStartDate || !customEndDate) {
-      setShowDatePicker(true);
+      toast({
+        title: "Date mancanti",
+        description: "Seleziona una data di inizio e di fine per creare una pianificazione.",
+        variant: "destructive",
+      });
       return;
     }
     
-    // Show the schedule builder immediately
-    setShowScheduleBuilder(true);
-    
-    // Create the schedule in the background
-    createScheduleMutation.mutate({
-      startDate: format(startDateToUse, "yyyy-MM-dd"),
-      endDate: format(endOfWeek, "yyyy-MM-dd"),
-      isPublished: false,
-      createdBy: user?.id,
-    });
-  };
-  
-  // Confirm date selection and create schedule
-  const handleDateConfirm = () => {
     setShowDatePicker(false);
     
     // Show the schedule builder immediately
@@ -466,6 +175,149 @@ export default function Schedule() {
       isPublished: false,
       createdBy: user?.id,
     });
+  };
+
+  // Handle PDF export
+  const handleExportPdf = () => {
+    if (!existingSchedule || !users || !shifts) return;
+    
+    // Create PDF content
+    let pdfContent = `
+      <html>
+      <head>
+        <title>Pianificazione Turni</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          h1 { color: #333; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+          .header { display: flex; justify-content: space-between; }
+          .working { background-color: #e6f7ff; }
+          .vacation { background-color: #f6ffed; }
+          .leave { background-color: #fff2e8; }
+          .legend { margin: 10px 0; display: flex; gap: 15px; }
+          .legend-item { display: flex; align-items: center; font-size: 12px; }
+          .legend-color { display: inline-block; width: 16px; height: 16px; margin-right: 5px; border: 1px solid #ccc; }
+          .name-cell { width: 150px; }
+          .total-cell { width: 80px; }
+        </style>
+      </head>
+      <body>
+        <h1>Pianificazione Turni: ${format(new Date(existingSchedule.startDate), "d MMMM", { locale: it })} - ${format(new Date(existingSchedule.endDate), "d MMMM yyyy", { locale: it })}</h1>
+        
+        <div class="header">
+          <div>
+            <p>Data: ${format(new Date(), "dd/MM/yyyy")}</p>
+            <p>Stato: ${existingSchedule.isPublished ? 'Pubblicato' : 'Bozza'}</p>
+          </div>
+        </div>
+        
+        <div class="legend">
+          <div class="legend-item"><span class="legend-color working"></span> In servizio (X)</div>
+          <div class="legend-item"><span class="legend-color vacation"></span> Ferie (F)</div>
+          <div class="legend-item"><span class="legend-color leave"></span> Permesso (P)</div>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th class="name-cell">Dipendente</th>
+              <th>Lunedì</th>
+              <th>Martedì</th>
+              <th>Mercoledì</th>
+              <th>Giovedì</th>
+              <th>Venerdì</th>
+              <th>Sabato</th>
+              <th>Domenica</th>
+              <th class="total-cell">Totale Ore</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    // Add employee rows with shift summary
+    users
+      .filter((user: any) => user.role === "employee" && user.isActive)
+      .forEach((user: any) => {
+        let userTotalHours = 0;
+        
+        pdfContent += `
+          <tr>
+            <td class="name-cell">${user.name}</td>
+        `;
+        
+        // Add days of week
+        ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'].forEach(day => {
+          const userShifts = shifts.filter((s: any) => s.userId === user.id && s.day === day);
+          let daySummary = '-';
+          let cellClass = '';
+          
+          if (userShifts.length > 0) {
+            // Sort shifts by start time
+            userShifts.sort((a: any, b: any) => {
+              return a.startTime.localeCompare(b.startTime);
+            });
+            
+            // Get first and last shift
+            const firstShift = userShifts[0];
+            const lastShift = userShifts[userShifts.length - 1];
+            
+            // Determine shift type for cell color
+            if (firstShift.type === 'work') {
+              cellClass = 'working';
+              daySummary = `${firstShift.startTime} - ${lastShift.endTime}`;
+              
+              // Calculate hours for this day
+              let dayHours = 0;
+              userShifts.forEach(shift => {
+                const [startHour, startMin] = shift.startTime.split(":").map(Number);
+                const [endHour, endMin] = shift.endTime.split(":").map(Number);
+                
+                let hours = endHour - startHour;
+                let minutes = endMin - startMin;
+                
+                if (minutes < 0) {
+                  hours -= 1;
+                  minutes += 60;
+                }
+                
+                dayHours += hours + (minutes / 60);
+              });
+              
+              // Add to total
+              userTotalHours += dayHours;
+            } else if (firstShift.type === 'vacation') {
+              cellClass = 'vacation';
+              daySummary = 'Ferie';
+            } else if (firstShift.type === 'leave') {
+              cellClass = 'leave';
+              daySummary = 'Permesso';
+            }
+          }
+          
+          pdfContent += `<td class="${cellClass}">${daySummary}</td>`;
+        });
+        
+        // Add total hours
+        pdfContent += `<td class="total-cell">${userTotalHours.toFixed(1)}</td></tr>`;
+      });
+    
+    pdfContent += `
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+    
+    // Create a blob and download
+    const blob = new Blob([pdfContent], { type: 'text/html' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `pianificazione_${format(new Date(existingSchedule.startDate), "yyyy-MM-dd")}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (isLoading) {
@@ -554,7 +406,7 @@ export default function Schedule() {
                         selected={customEndDate || undefined}
                         onSelect={(date) => handleDateChange('end', date)}
                         disabled={(date) => 
-                          customStartDate ? date < customStartDate : false
+                          !customStartDate || date < customStartDate
                         }
                         className="border border-gray-200 rounded-md"
                       />
@@ -564,77 +416,73 @@ export default function Schedule() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-end gap-2 border-t p-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setShowDatePicker(false);
-                      setCustomStartDate(null);
-                      setCustomEndDate(null);
-                    }}
+                <CardFooter className="justify-between border-t px-6 py-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDatePicker(false)}
                   >
                     Annulla
                   </Button>
                   <Button 
-                    onClick={handleDateConfirm}
+                    onClick={handleCreateSchedule}
                     disabled={!customStartDate || !customEndDate}
                   >
-                    Conferma e Crea
+                    Crea Pianificazione
                   </Button>
                 </CardFooter>
               </Card>
             ) : (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                <div className="text-center">
-                  <span className="material-icons text-gray-400 text-5xl mb-4">event_busy</span>
-                  <h3 className="text-lg font-medium mb-2">
-                    Nessuna pianificazione per la settimana {dateRangeText}
-                  </h3>
-                  <p className="text-gray-500 mb-6">
-                    Crea una nuova pianificazione per iniziare a gestire i turni.
-                  </p>
-                  <Button onClick={handleCreateSchedule} disabled={createScheduleMutation.isPending}>
-                    {createScheduleMutation.isPending ? (
-                      <>
-                        <span className="material-icons animate-spin mr-2">sync</span>
-                        Creazione in corso...
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-icons mr-2">add</span>
-                        Crea Pianificazione
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
+              <Card className="bg-white border border-gray-200">
+                <CardHeader>
+                  <CardTitle>Pianificazione Turni</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center py-12">
+                  <div className="mb-6">
+                    <span className="material-icons text-primary text-6xl mb-4">calendar_month</span>
+                    <h3 className="text-lg font-medium mb-2">Nessuna pianificazione attiva</h3>
+                    <p className="text-gray-500 max-w-md mx-auto mb-8">
+                      Non esiste ancora una pianificazione per la settimana corrente. Crea una nuova pianificazione per gestire i turni del personale.
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button
+                      onClick={() => setShowDatePicker(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <span className="material-icons">add</span>
+                      Crea Nuova Pianificazione
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleAutoGenerate}
+                      className="flex items-center gap-2"
+                    >
+                      <span className="material-icons">auto_fix_high</span>
+                      Genera Automaticamente
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         )}
       </div>
-      {/* Visualizzazione email di notifica */}
-      {showEmailPreview && bulkEmailsData.length > 0 && (
-        <BulkEmailPreview
-          open={showEmailPreview}
-          onClose={() => {
-            setShowEmailPreview(false);
-            // Dopo la chiusura, pubblica il programma
-            if (existingSchedule?.id) {
-              publishScheduleMutation.mutate(existingSchedule.id);
-            }
-          }}
-          emailsData={bulkEmailsData}
-        />
-      )}
       
-      {/* Dialog per la generazione automatica */}
+      {/* Automatic Schedule Generator Dialog */}
       <Dialog open={showAutoGenerator} onOpenChange={setShowAutoGenerator}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Generazione automatica turni</DialogTitle>
+            <DialogTitle>Generazione Automatica Turni</DialogTitle>
           </DialogHeader>
-          <ScheduleAutoGenerator 
-            onScheduleGenerated={handleScheduleGenerated}
+          <ScheduleAutoGenerator
+            startDate={customStartDate!}
+            endDate={customEndDate!}
+            users={users}
+            onGenerateSuccess={() => {
+              setShowAutoGenerator(false);
+              queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+            }}
           />
         </DialogContent>
       </Dialog>
