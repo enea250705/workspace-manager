@@ -11,7 +11,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BulkEmailPreview } from "@/components/notifications/email-preview";
+import { ScheduleAutoGenerator } from "@/components/schedule/auto-generator/auto-generator";
 
 // Date utilities
 import { format, startOfWeek, addDays, isBefore } from "date-fns";
@@ -108,12 +110,31 @@ export default function Schedule() {
     },
   });
 
+  // State for showing auto-generate modal
+  const [showAutoGenerator, setShowAutoGenerator] = useState(false);
+  
   // Handle auto-generate schedule
   const handleAutoGenerate = () => {
-    toast({
-      title: "Auto-generazione",
-      description: "Funzionalità in sviluppo. Sarà disponibile presto.",
-    });
+    // Se non ci sono date personalizzate, chiediamo di selezionarle
+    if (!customStartDate || !customEndDate) {
+      setShowDatePicker(true);
+      return;
+    }
+    
+    // Mostra il generatore automatico
+    setShowAutoGenerator(true);
+  };
+  
+  // Handle schedule data received from auto-generator
+  const handleScheduleGenerated = (scheduleData: any) => {
+    // Nascondi il generatore automatico
+    setShowAutoGenerator(false);
+    
+    // Invalida la cache per riflettere i cambiamenti
+    queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+    
+    // Mostra il builder con i dati generati
+    setShowScheduleBuilder(true);
   };
 
   // Stato per l'anteprima delle email
