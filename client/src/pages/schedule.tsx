@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { BulkEmailPreview } from "@/components/notifications/email-preview";
 
 // Date utilities
 import { format, startOfWeek, addDays, isBefore } from "date-fns";
@@ -53,17 +54,17 @@ export default function Schedule() {
   )}`;
 
   // Fetch existing schedule data for the selected week
-  const { data: existingSchedule, isLoading: isScheduleLoading } = useQuery({
+  const { data: existingSchedule = {}, isLoading: isScheduleLoading } = useQuery<any>({
     queryKey: ["/api/schedules", { startDate: format(selectedWeek, "yyyy-MM-dd") }],
   });
 
   // Fetch users for populating the schedule
-  const { data: users = [], isLoading: isUsersLoading } = useQuery({
+  const { data: users = [], isLoading: isUsersLoading } = useQuery<any[]>({
     queryKey: ["/api/users"],
   });
 
   // Fetch shifts for the schedule if it exists
-  const { data: shifts = [], isLoading: isShiftsLoading } = useQuery({
+  const { data: shifts = [], isLoading: isShiftsLoading } = useQuery<any[]>({
     queryKey: [`/api/schedules/${existingSchedule?.id}/shifts`],
     enabled: !!existingSchedule?.id,
   });
@@ -115,10 +116,91 @@ export default function Schedule() {
     });
   };
 
+  // Stato per l'anteprima delle email
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [bulkEmailsData, setBulkEmailsData] = useState<Array<{
+    to: string;
+    subject: string;
+    body: string;
+    mailtoUrl: string;
+  }>>([]);
+  
   // Handle publish schedule
   const handlePublish = () => {
     if (existingSchedule?.id) {
-      publishScheduleMutation.mutate(existingSchedule.id);
+      // Prima di pubblicare, prepara le email di notifica per tutti i dipendenti
+      if (users && users.length > 0) {
+        const employeeUsers = users.filter((user: any) => 
+          user.role === "employee" && user.isActive && user.email
+        );
+        
+        // Prepara i dati per l'anteprima delle email
+        const emailsData = employeeUsers.map((user: any) => {
+          // Filtra i turni per questo dipendente
+          const userShifts = shifts.filter((s: any) => s.userId === user.id);
+          
+          // Formatta le date
+          const startDateFormatted = format(new Date(existingSchedule.startDate), "d MMMM yyyy", { locale: it });
+          const endDateFormatted = format(new Date(existingSchedule.endDate), "d MMMM yyyy", { locale: it });
+          
+          // Crea la tabella HTML con i turni
+          let shiftsTable = '';
+          if (userShifts && userShifts.length > 0) {
+            shiftsTable = '<table border="1" cellpadding="5" style="border-collapse: collapse; width: 100%;">';
+            shiftsTable += '<tr><th>Giorno</th><th>Orario</th><th>Tipo</th><th>Note</th></tr>';
+            
+            userShifts.forEach((shift: any) => {
+              const shiftType = shift.type === 'work' ? 'Lavoro' : 
+                              shift.type === 'vacation' ? 'Ferie' : 'Permesso';
+              
+              shiftsTable += `<tr>
+                <td>${shift.day}</td>
+                <td>${shift.startTime} - ${shift.endTime}</td>
+                <td>${shiftType}</td>
+                <td>${shift.notes || ''}</td>
+              </tr>`;
+            });
+            
+            shiftsTable += '</table>';
+          } else {
+            shiftsTable = '<p>Nessun turno pianificato per questo periodo.</p>';
+          }
+          
+          // Crea il corpo dell'email
+          const emailBody = `
+            <p>Gentile ${user.name},</p>
+            <p>È stata pubblicata la pianificazione dei turni per il periodo ${startDateFormatted} - ${endDateFormatted}.</p>
+            
+            <h3>I tuoi turni:</h3>
+            ${shiftsTable}
+            
+            <p>Per visualizzare tutti i dettagli, accedi alla piattaforma dalla sezione "I miei turni".</p>
+            
+            <p>Cordiali saluti,<br/>
+            Gestione del Personale</p>
+          `;
+          
+          // Pulisce il body per il mailto URL
+          const cleanBody = emailBody.replace(/<[^>]*>?/gm, '').replace(/\n/g, '%0A');
+          
+          // Crea un mailto URL
+          const subject = `Pianificazione turni: ${startDateFormatted} - ${endDateFormatted}`;
+          const mailtoUrl = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(cleanBody)}`;
+          
+          return {
+            to: user.email,
+            subject,
+            body: emailBody,
+            mailtoUrl
+          };
+        });
+        
+        setBulkEmailsData(emailsData);
+        setShowEmailPreview(true);
+      } else {
+        // Se non ci sono dipendenti, pubblica direttamente
+        publishScheduleMutation.mutate(existingSchedule.id);
+      }
     }
   };
 
@@ -502,6 +584,20 @@ export default function Schedule() {
           </div>
         )}
       </div>
+      {/* Visualizzazione email di notifica */}
+      {showEmailPreview && bulkEmailsData.length > 0 && (
+        <BulkEmailPreview
+          open={showEmailPreview}
+          onClose={() => {
+            setShowEmailPreview(false);
+            // Dopo la chiusura, pubblica il programma
+            if (existingSchedule?.id) {
+              publishScheduleMutation.mutate(existingSchedule.id);
+            }
+          }}
+          emailsData={bulkEmailsData}
+        />
+      )}
     </Layout>
   );
 }
