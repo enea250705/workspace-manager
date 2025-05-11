@@ -95,13 +95,23 @@ export class MemStorage implements IStorage {
     this.notificationCurrentId = 1;
     this.messageCurrentId = 1;
     
-    // Create default admin user
+    // Creazione utente amministratore predefinito
     this.createUser({
       username: "admin",
       password: "admin123",
       name: "Admin User",
       email: "admin@staffsync.com",
       role: "admin",
+      isActive: true,
+    });
+
+    // Creazione di un utente dipendente di esempio
+    this.createUser({
+      username: "employee",
+      password: "employee123",
+      name: "Dipendente Demo",
+      email: "dipendente@staffsync.com",
+      role: "employee",
       isActive: true,
     });
   }

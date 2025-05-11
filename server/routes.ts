@@ -306,7 +306,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Aggiorniamo il lastLogin
     if (req.user) {
       const userId = (req.user as any).id;
-      storage.updateUser(userId, { lastLogin: new Date() });
+      try {
+        storage.updateUser(userId, { 
+          // L'aggiornamento dell'ultimo accesso avviene direttamente nel metodo
+          // ma manteniamo questa chiamata per sicurezza
+        });
+      } catch (error) {
+        console.error("Errore nell'aggiornamento del lastLogin:", error);
+      }
     }
     res.json({ user: req.user });
   });
