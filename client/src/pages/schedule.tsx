@@ -40,8 +40,8 @@ export default function Schedule() {
   }, [isLoading, isAuthenticated, navigate, user]);
 
   // State for custom date selection
-  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
-  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+  const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
+  const [customEndDate, setCustomEndDate] = useState<Date>(addDays(new Date(), 6));
   const [showDatePicker, setShowDatePicker] = useState(false);
   
   // Calculate end of week (Sunday) - use custom dates if selected
@@ -197,14 +197,18 @@ export default function Schedule() {
   // Handle date change
   const handleDateChange = (type: 'start' | 'end', date: Date | null) => {
     if (type === 'start') {
-      setCustomStartDate(date);
-      // Se la data di fine non è impostata o è prima della nuova data di inizio,
-      // impostiamo la data di fine a 6 giorni dopo la data di inizio
-      if (!customEndDate || (date && isBefore(customEndDate, date))) {
-        setCustomEndDate(date ? addDays(date, 6) : null);
+      if (date) {
+        setCustomStartDate(date);
+        // Se la data di fine non è impostata o è prima della nuova data di inizio,
+        // impostiamo la data di fine a 6 giorni dopo la data di inizio
+        if (isBefore(customEndDate, date)) {
+          setCustomEndDate(addDays(date, 6));
+        }
       }
     } else {
-      setCustomEndDate(date);
+      if (date) {
+        setCustomEndDate(date);
+      }
     }
   };
   

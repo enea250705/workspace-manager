@@ -461,7 +461,7 @@ export function ExcelGrid({
         if (cell.type !== "") {
           if (!currentBlock || currentBlock.type !== cell.type) {
             // Se avevamo un blocco precedente, salvalo
-            if (currentBlock) {
+            if (currentBlock && typeof currentBlock.start === 'number' && typeof currentBlock.end === 'number') {
               createShiftMutation.mutate({
                 scheduleId,
                 userId: userIdNum,
@@ -485,7 +485,7 @@ export function ExcelGrid({
               currentBlock.end = index;
             }
           }
-        } else if (currentBlock) {
+        } else if (currentBlock && typeof currentBlock.start === 'number' && typeof currentBlock.end === 'number') {
           // Fine di un blocco
           createShiftMutation.mutate({
             scheduleId,
@@ -501,7 +501,7 @@ export function ExcelGrid({
       });
       
       // Non dimenticare l'ultimo blocco se arriva fino alla fine
-      if (currentBlock) {
+      if (currentBlock && typeof currentBlock.start === 'number' && typeof currentBlock.end === 'number') {
         createShiftMutation.mutate({
           scheduleId,
           userId: userIdNum,
