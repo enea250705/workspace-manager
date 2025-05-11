@@ -241,8 +241,8 @@ export function AdminDashboard() {
         </CardContent>
       </Card>
       
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Single column layout for Pending Approvals only */}
+      <div className="grid grid-cols-1 gap-4">
         {/* Pending Approvals */}
         <Card>
           <CardHeader className="border-b px-4 py-3 flex justify-between items-center">
@@ -308,116 +308,7 @@ export function AdminDashboard() {
             )}
           </CardContent>
         </Card>
-        
-        {/* Weekly Overview */}
-        <Card>
-          <CardHeader className="border-b px-4 py-3 flex justify-between items-center">
-            <CardTitle className="text-base font-medium">Panoramica Settimanale</CardTitle>
-            <Link href="/schedule">
-              <Button variant="link" size="sm" className="h-auto p-0">
-                Pianifica
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium">
-                  Settimana: {currentSchedule ? (
-                    <>
-                      {formatDate(currentSchedule.startDate)} - {formatDate(currentSchedule.endDate)}
-                    </>
-                  ) : (
-                    "Nessun turno pianificato"
-                  )}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Stato: {currentSchedule?.isPublished ? "Pubblicato" : "Bozza"}
-                </p>
-              </div>
-              <Button size="sm" className="h-8 flex items-center gap-1">
-                <span className="material-icons text-sm">download</span>
-                PDF
-              </Button>
-            </div>
-            
-            {/* Coverage Overview */}
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-2">Copertura Turni</p>
-              <div className="space-y-2">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Mattina (4:00-12:00)</span>
-                    <span>85%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-success rounded-full h-2" style={{ width: "85%" }}></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Pomeriggio (12:00-18:00)</span>
-                    <span>100%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-success rounded-full h-2" style={{ width: "100%" }}></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Sera (18:00-24:00)</span>
-                    <span>75%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-warning rounded-full h-2" style={{ width: "75%" }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="pt-2 flex justify-between border-t">
-              <Button variant="ghost" size="sm" className="h-auto p-1 text-primary flex items-center gap-1">
-                <span className="material-icons text-sm">edit</span>
-                <span className="text-sm">Modifica</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="h-auto p-1 text-primary flex items-center gap-1">
-                <span className="material-icons text-sm">send</span>
-                <span className="text-sm">Notifica</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
-      
-      {/* Shift Distribution Chart */}
-      <Card>
-        <CardHeader className="border-b px-4 py-3">
-          <CardTitle className="text-base font-medium">Distribuzione Ore per Turno</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4">
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={shiftDistributionData}
-                margin={{
-                  top: 20,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="hours" fill="#1976D2" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
