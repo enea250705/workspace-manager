@@ -315,7 +315,7 @@ export function ScheduleBuilder({
         userId,
         day,
         startTime: timeSlots[timeIndex],
-        endTime: timeSlots[timeIndex + 1],
+        endTime: timeSlots[timeIndex + 1],  // Questo aggiunge mezz'ora
         type: newType,
         notes: userDayData.notes,
         area: ""
@@ -378,7 +378,7 @@ export function ScheduleBuilder({
                 userId: userIdNum,
                 day: nextDay,
                 startTime: timeSlots[currentBlock.start],
-                endTime: timeSlots[currentBlock.end + 1],
+                endTime: timeSlots[currentBlock.end],  // Rimuovo il +1 per evitare di aggiungere 30 minuti in più
                 type: currentBlock.type,
                 notes: userData.notes,
                 area: ""
@@ -397,7 +397,7 @@ export function ScheduleBuilder({
             userId: userIdNum,
             day: nextDay,
             startTime: timeSlots[currentBlock.start],
-            endTime: timeSlots[currentBlock.end + 1],
+            endTime: timeSlots[currentBlock.end],  // Rimuovo il +1 per evitare di aggiungere 30 minuti in più
             type: currentBlock.type,
             notes: userData.notes,
             area: ""
@@ -413,7 +413,7 @@ export function ScheduleBuilder({
           userId: userIdNum,
           day: nextDay,
           startTime: timeSlots[currentBlock.start],
-          endTime: timeSlots[currentBlock.end + 1],
+          endTime: timeSlots[currentBlock.end],  // Rimuovo il +1 per evitare di aggiungere 30 minuti in più
           type: currentBlock.type,
           notes: userData.notes,
           area: ""
