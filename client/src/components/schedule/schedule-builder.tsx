@@ -588,9 +588,10 @@ export function ScheduleBuilder({
               size="sm"
               className="flex items-center gap-1"
               disabled={isPublished}
+              onClick={onPublish}
             >
-              <span className="material-icons text-sm">save</span>
-              Salva
+              <span className="material-icons text-sm">publish</span>
+              Pubblica
             </Button>
             <Button
               variant="outline"
