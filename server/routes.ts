@@ -458,18 +458,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get schedules" });
     }
   });
-  
-  // Ottieni tutte le programmazioni pubblicate
-  app.get("/api/schedules/published", isAuthenticated, async (req, res) => {
-    try {
-      const allSchedules = await storage.getAllSchedules();
-      const publishedSchedules = allSchedules.filter(schedule => schedule.isPublished);
-      res.json(publishedSchedules);
-    } catch (err) {
-      console.error("Error getting published schedules:", err);
-      res.status(500).json({ message: "Failed to get published schedules" });
-    }
-  });
 
   // Ottieni una programmazione specifica per data o l'attuale
   app.get("/api/schedules", isAuthenticated, async (req, res) => {
