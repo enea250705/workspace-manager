@@ -1,101 +1,129 @@
 import { createContext, useState, useEffect, ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface User {
   id: number;
   username: string;
-  name: string;
-  email: string;
+  name?: string;
+  email?: string;
   role: string;
   isActive: boolean;
 }
 
-interface AuthContextType {
+interface AuthContextProps {
   user: User | null;
-  isAuthenticated: boolean;
   isLoading: boolean;
+  error: Error | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
 }
 
-export const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  login: async () => {},
-  logout: async () => {},
-});
+export const AuthContext = createContext<AuthContextProps | null>(null);
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const queryClient = useQueryClient();
-
-  // Check if user is already logged in
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const response = await fetch("/api/auth/me", {
-          credentials: "include",
-        });
-        const data = await response.json();
-        
-        if (data.user) {
-          setUser(data.user);
-        }
-      } catch (error) {
-        console.error("Failed to check authentication:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  const { toast } = useToast();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  
+  // Fetch current user data
+  const { 
+    data: user, 
+    isLoading, 
+    error,
+    refetch: refetchUser
+  } = useQuery<User | null>({
+    queryKey: ["/api/auth/me"],
+    refetchOnWindowFocus: true,
+    onSuccess: (data) => {
+      setIsAuthenticated(!!data);
+    },
+    onError: () => {
+      setIsAuthenticated(false);
     }
+  });
+  
+  // Login mutation
+  const loginMutation = useMutation({
+    mutationFn: async (credentials: { username: string; password: string }) => {
+      const res = await apiRequest("POST", "/api/auth/login", credentials);
+      const data = await res.json();
+      return data;
+    },
+    onSuccess: () => {
+      refetchUser();
+      
+      toast({
+        title: "Login effettuato",
+        description: "Hai effettuato l'accesso con successo.",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore di accesso",
+        description: "Username o password non validi.",
+        variant: "destructive",
+      });
+    },
+  });
 
-    checkAuth();
-  }, []);
+  // Logout mutation
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout", {});
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(["/api/auth/me"], null);
+      setIsAuthenticated(false);
+      
+      toast({
+        title: "Logout effettuato",
+        description: "Hai effettuato il logout con successo.",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore durante il logout",
+        description: "Si è verificato un errore durante il logout.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Login function
   const login = async (username: string, password: string) => {
-    try {
-      const response = await apiRequest("POST", "/api/auth/login", { username, password });
-      const data = await response.json();
-      
-      if (data.user) {
-        setUser(data.user);
-        return;
-      }
-      
-      throw new Error("Login failed");
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
+    await loginMutation.mutateAsync({ username, password });
   };
 
   // Logout function
   const logout = async () => {
-    try {
-      await apiRequest("POST", "/api/auth/logout", {});
-      setUser(null);
-      
-      // Clear all queries from the cache on logout
-      queryClient.clear();
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    await logoutMutation.mutateAsync();
   };
 
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    logout,
-  };
+  // Check if user is admin
+  const isAdmin = user?.role === "admin";
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        error: error as Error,
+        login,
+        logout,
+        isAuthenticated,
+        isAdmin,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
