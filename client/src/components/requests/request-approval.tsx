@@ -95,8 +95,10 @@ export function RequestApproval() {
   // Process request
   const processRequest = (requestId: number, approve: boolean) => {
     if (approve) {
+      console.log(`Approvazione richiesta ID: ${requestId}`);
       approveMutation.mutate(requestId);
     } else {
+      console.log(`Rifiuto richiesta ID: ${requestId}`);
       rejectMutation.mutate(requestId);
     }
   };
