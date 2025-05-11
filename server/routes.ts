@@ -338,10 +338,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/users", isAdmin, async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
       const user = await storage.createUser(userData);
       res.status(201).json(user);
     } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user data", errors: err.errors });
+      }
       res.status(400).json({ message: "Invalid user data" });
+    }
+  });
+  
+  // Bulk user creation
+  app.post("/api/users/bulk", isAdmin, async (req, res) => {
+    try {
+      const { users } = req.body;
+      
+      if (!Array.isArray(users) || users.length === 0) {
+        return res.status(400).json({ message: "Invalid user data. Expected array of users." });
+      }
+      
+      const results = {
+        createdCount: 0,
+        failedCount: 0,
+        failed: [] as string[]
+      };
+      
+      // Process each user
+      for (const userData of users) {
+        try {
+          // Validate user data
+          const validUserData = insertUserSchema.parse(userData);
+          
+          // Check if username already exists
+          const existingUser = await storage.getUserByUsername(validUserData.username);
+          if (existingUser) {
+            results.failedCount++;
+            results.failed.push(`Username '${validUserData.username}' già esistente`);
+            continue;
+          }
+          
+          // Create user
+          await storage.createUser(validUserData);
+          results.createdCount++;
+        } catch (validationError) {
+          results.failedCount++;
+          if (validationError instanceof z.ZodError) {
+            results.failed.push(`Dati non validi per l'utente: ${userData.username || "unknown"}`);
+          } else {
+            results.failed.push(`Errore nella creazione dell'utente: ${userData.username || "unknown"}`);
+          }
+        }
+      }
+      
+      res.status(201).json(results);
+    } catch (error) {
+      console.error("Error creating bulk users:", error);
+      res.status(500).json({ message: "Error creating users" });
     }
   });
   
