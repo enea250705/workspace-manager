@@ -303,6 +303,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Authentication routes
   app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {
+    // Aggiorniamo il lastLogin
+    if (req.user) {
+      const userId = (req.user as any).id;
+      storage.updateUser(userId, { lastLogin: new Date() });
+    }
     res.json({ user: req.user });
   });
   
