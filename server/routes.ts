@@ -418,8 +418,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/time-off-requests", isAuthenticated, async (req, res) => {
     try {
       if ((req.user as any).role === "admin") {
-        // Admins can see all pending requests
-        const requests = await storage.getPendingTimeOffRequests();
+        // Admins can see all requests
+        const requests = await storage.getAllTimeOffRequests();
         res.json(requests);
       } else {
         // Employees can only see their own requests
@@ -428,6 +428,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (err) {
       res.status(500).json({ message: "Failed to get time-off requests" });
+    }
+  });
+  
+  // Get pending time off requests (admin only)
+  app.get("/api/time-off-requests/pending", isAdmin, async (req, res) => {
+    try {
+      const requests = await storage.getPendingTimeOffRequests();
+      res.json(requests);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get pending time-off requests" });
     }
   });
   

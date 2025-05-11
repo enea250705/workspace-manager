@@ -34,6 +34,7 @@ export interface IStorage {
   getTimeOffRequest(id: number): Promise<TimeOffRequest | undefined>;
   getUserTimeOffRequests(userId: number): Promise<TimeOffRequest[]>;
   getPendingTimeOffRequests(): Promise<TimeOffRequest[]>;
+  getAllTimeOffRequests(): Promise<TimeOffRequest[]>;
   approveTimeOffRequest(id: number, approverId: number): Promise<TimeOffRequest | undefined>;
   rejectTimeOffRequest(id: number, approverId: number): Promise<TimeOffRequest | undefined>;
   
