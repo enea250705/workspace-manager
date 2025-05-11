@@ -32,6 +32,7 @@ export function ScheduleBuilder({
   onPublish,
   onAutoGenerate,
   onExportPdf,
+  onChangeWeek,
 }: ScheduleBuilderProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();

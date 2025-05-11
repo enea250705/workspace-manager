@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { WeekSelectorDialog } from "@/components/schedule/week-selector-dialog";
 import { ScheduleAutoGenerator } from "@/components/schedule/auto-generator/auto-generator";
 
 // Date utilities
@@ -390,6 +391,13 @@ export default function Schedule() {
   return (
     <Layout>
       <div className="space-y-6">
+        <WeekSelectorDialog 
+          open={showWeekSelector}
+          onOpenChange={setShowWeekSelector}
+          schedules={allSchedules || []}
+          onSelectSchedule={handleSelectSchedule}
+        />
+        
         {isScheduleLoading || isUsersLoading || isShiftsLoading ? (
           <div className="flex items-center justify-center h-64 bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="text-center">
