@@ -27,9 +27,6 @@ export default function Schedule() {
     const now = new Date();
     return startOfWeek(now, { weekStartsOn: 1 }); // Start week on Monday
   });
-  // State for week selection modal
-  const [showWeekPicker, setShowWeekPicker] = useState(false);
-  const [weekPickerType, setWeekPickerType] = useState<'new' | 'change'>('new');
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -372,34 +369,23 @@ export default function Schedule() {
               <h3 className="text-lg font-medium">
                 Pianificazione Turni: {dateRangeText}
               </h3>
-              <div className="flex space-x-2">
+              <div>
                 <Button
                   variant="outline"
                   size="sm"
+                  className="mr-2"
                   onClick={() => {
                     // Reset date selections
                     setCustomStartDate(null);
                     setCustomEndDate(null);
-                    // Show week picker for new schedule
-                    setWeekPickerType('new');
-                    setShowWeekPicker(true);
+                    // Show date picker for new schedule
+                    setShowDatePicker(true);
+                    // Hide the current schedule builder
+                    queryClient.setQueryData(["/api/schedules", { startDate: format(selectedWeek, "yyyy-MM-dd") }], null);
                   }}
                 >
                   <span className="material-icons text-sm mr-1">add</span>
                   Nuovo turno settimanale
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Show week picker to change view
-                    setWeekPickerType('change');
-                    setShowWeekPicker(true);
-                  }}
-                >
-                  <span className="material-icons text-sm mr-1">date_range</span>
-                  Cambia Settimana
                 </Button>
               </div>
             </div>
@@ -510,49 +496,6 @@ export default function Schedule() {
       </div>
       
       {/* Automatic Schedule Generator Dialog */}
-      {/* Week Picker Dialog */}
-      <Dialog open={showWeekPicker} onOpenChange={setShowWeekPicker}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {weekPickerType === 'new' ? 'Scegli la settimana per il nuovo turno' : 'Cambia settimana visualizzata'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="p-4">
-            <Calendar
-              mode="single"
-              selected={selectedWeek}
-              onSelect={(date) => {
-                if (date) {
-                  const newWeekStart = startOfWeek(date, { weekStartsOn: 1 });
-                  setSelectedWeek(newWeekStart);
-                  
-                  if (weekPickerType === 'new') {
-                    // Set for new schedule creation
-                    setCustomStartDate(newWeekStart);
-                    setCustomEndDate(addDays(newWeekStart, 6));
-                    setShowDatePicker(true);
-                  } else {
-                    // Change view to existing schedule for this week
-                    queryClient.invalidateQueries({ 
-                      queryKey: ["/api/schedules", { startDate: format(newWeekStart, "yyyy-MM-dd") }] 
-                    });
-                  }
-                  
-                  setShowWeekPicker(false);
-                }
-              }}
-              footer={
-                <div className="text-sm text-gray-500 text-center mt-4">
-                  Seleziona qualsiasi giorno della settimana desiderata
-                </div>
-              }
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Auto Generator Dialog */}
       <Dialog open={showAutoGenerator} onOpenChange={setShowAutoGenerator}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
