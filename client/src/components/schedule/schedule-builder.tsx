@@ -321,6 +321,12 @@ export function ScheduleBuilder({
         area: ""
       };
       
+      // Mostra toast di conferma quando si crea un nuovo turno
+      toast({
+        title: "Turno aggiunto",
+        description: `Nuovo turno ${newType === "work" ? "di lavoro" : newType === "vacation" ? "di ferie" : "di permesso"} aggiunto per ${day}`,
+      });
+      
       createShiftMutation.mutate(newShiftData);
     }
     
