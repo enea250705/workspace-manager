@@ -8,15 +8,13 @@ import { it } from "date-fns/locale";
 import { generateTimeSlots, formatHours } from "@/lib/utils";
 
 /**
- * La griglia Excel-like per la gestione dei turni
- * Implementa esattamente la funzionalità richiesta con:
- * - Celle con cadenza di 30 minuti dalle 4:00 alle 24:00
- * - Visualizzazione per singolo giorno con tab per ogni giorno della settimana
- * - X per indicare presenza lavorativa
- * - F per indicare ferie
- * - P per indicare permessi
- * - Colonna NOTE per annotazioni
- * - Colonna TOTALE per calcolo automatico delle ore
+ * Griglia Excel per la gestione dei turni con:
+ * - Celle da 30 minuti (4:00-24:00)
+ * - Visualizzazione giornaliera tramite tab
+ * - Indicatori: X (lavoro), F (ferie), P (permessi)
+ * - Colonne per note e totale ore
+ * - Supporto per richieste approvate
+ * - Pubblicazione e modifica dopo pubblicazione
  */
 
 type ScheduleGridProps = {
@@ -44,10 +42,10 @@ export function ExcelGrid({
   const queryClient = useQueryClient();
   const [selectedDay, setSelectedDay] = useState(0);
   
-  // Generazione degli slot di tempo (30 minuti) dalle 4:00 alle 24:00
+  // Orari dalle 4:00 alle 24:00 con intervalli di 30 minuti
   const timeSlots = generateTimeSlots(4, 24);
   
-  // Inizializza giorni della settimana
+  // Giorni della settimana basati sul range di date
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(startDate, i);
     return {
@@ -58,14 +56,14 @@ export function ExcelGrid({
     };
   });
   
-  // Stato della griglia
+  // Struttura dati della griglia: {giorno: {userId: {cells, notes, total}}}
   const [gridData, setGridData] = useState<Record<string, Record<number, {
     cells: Array<{ type: string; shiftId: number | null; isTimeOff?: boolean }>;
     notes: string;
     total: number;
   }>>>({});
   
-  // Creazione di un nuovo turno
+  // API mutation per creare un nuovo turno
   const createShiftMutation = useMutation({
     mutationFn: (shiftData: any) => apiRequest("POST", "/api/shifts", shiftData),
     onSuccess: () => {
@@ -84,7 +82,7 @@ export function ExcelGrid({
     }
   });
   
-  // Aggiornamento di un turno esistente
+  // API mutation per modificare un turno
   const updateShiftMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => 
       apiRequest("PATCH", `/api/shifts/${id}`, data),
@@ -104,7 +102,7 @@ export function ExcelGrid({
     }
   });
   
-  // Eliminazione di un turno
+  // API mutation per eliminare un turno
   const deleteShiftMutation = useMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/shifts/${id}`, {}),
     onSuccess: () => {
@@ -127,24 +125,21 @@ export function ExcelGrid({
   useEffect(() => {
     if (!scheduleId || !users.length) return;
     
-    // Se la griglia è già inizializzata, non fare nulla
     if (Object.keys(gridData).length > 0) return;
     
-    // Crea una nuova griglia
     const newGridData: Record<string, Record<number, {
       cells: Array<{ type: string; shiftId: number | null; isTimeOff?: boolean }>;
       notes: string;
       total: number;
     }>> = {};
     
-    // Inizializza la griglia vuota per tutti i giorni e utenti
+    // Crea griglia vuota per tutti i giorni e dipendenti
     weekDays.forEach(day => {
       newGridData[day.name] = {};
       
-      // Filtra solo i dipendenti attivi
-      const activeUsers = users.filter(u => u.role === "employee" && u.isActive);
+      const activeEmployees = users.filter(u => u.role === "employee" && u.isActive);
       
-      activeUsers.forEach(user => {
+      activeEmployees.forEach(user => {
         newGridData[day.name][user.id] = {
           cells: timeSlots.map(() => ({ type: "", shiftId: null })),
           notes: "",
@@ -153,19 +148,18 @@ export function ExcelGrid({
       });
     });
     
-    // Popola la griglia con i turni esistenti
+    // Popola con i turni esistenti
     if (shifts && shifts.length > 0) {
       shifts.forEach(shift => {
         const userId = shift.userId;
         const day = shift.day;
         
         if (newGridData[day] && newGridData[day][userId]) {
-          // Trova gli indici corrispondenti all'intervallo di tempo del turno
           const startIndex = timeSlots.indexOf(shift.startTime);
           const endIndex = timeSlots.indexOf(shift.endTime);
           
           if (startIndex >= 0 && endIndex >= 0) {
-            // Imposta tutte le celle nell'intervallo
+            // Imposta le celle del turno
             for (let i = startIndex; i < endIndex; i++) {
               newGridData[day][userId].cells[i] = { 
                 type: shift.type, 
@@ -173,26 +167,13 @@ export function ExcelGrid({
               };
             }
             
-            // Aggiorna le note
+            // Imposta note
             newGridData[day][userId].notes = shift.notes || "";
             
-            // Calcola le ore totali
+            // Calcola ore lavorate
             if (shift.type === 'work') {
-              const startHour = parseInt(shift.startTime.split(':')[0]);
-              const startMin = parseInt(shift.startTime.split(':')[1]);
-              const endHour = parseInt(shift.endTime.split(':')[0]);
-              const endMin = parseInt(shift.endTime.split(':')[1]);
-              
-              let hours = endHour - startHour;
-              let minutes = endMin - startMin;
-              
-              if (minutes < 0) {
-                hours -= 1;
-                minutes += 60;
-              }
-              
-              // Aggiungi al totale
-              newGridData[day][userId].total += hours + (minutes / 60);
+              const duration = getHourDifference(shift.startTime, shift.endTime);
+              newGridData[day][userId].total += duration;
             }
           }
         }
@@ -208,16 +189,15 @@ export function ExcelGrid({
         const startDate = new Date(request.startDate);
         const endDate = new Date(request.endDate);
         
-        // Verifica ogni giorno della settimana
+        // Per ogni giorno coperto dalla richiesta
         weekDays.forEach(day => {
           const dayDate = new Date(day.formattedDate);
           
-          // Se il giorno è nell'intervallo della richiesta
           if (dayDate >= startDate && dayDate <= endDate) {
             if (newGridData[day.name] && newGridData[day.name][userId]) {
-              // Marca tutte le celle per questo giorno
               const type = request.type === "vacation" ? "vacation" : "leave";
               
+              // In base al tipo di richiesta (giorno intero, mattina, pomeriggio)
               if (request.duration === "full_day") {
                 // Giorno intero
                 newGridData[day.name][userId].cells = newGridData[day.name][userId].cells.map(() => ({
@@ -227,7 +207,7 @@ export function ExcelGrid({
                 }));
                 newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} approvato`;
               } else if (request.duration === "morning") {
-                // Solo mattina (prima metà)
+                // Solo mattina
                 const halfDay = Math.floor(timeSlots.length / 2);
                 for (let i = 0; i < halfDay; i++) {
                   newGridData[day.name][userId].cells[i] = {
@@ -238,7 +218,7 @@ export function ExcelGrid({
                 }
                 newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} mattina`;
               } else if (request.duration === "afternoon") {
-                // Solo pomeriggio (seconda metà)
+                // Solo pomeriggio
                 const halfDay = Math.floor(timeSlots.length / 2);
                 for (let i = halfDay; i < timeSlots.length; i++) {
                   newGridData[day.name][userId].cells[i] = {
@@ -258,25 +238,50 @@ export function ExcelGrid({
     setGridData(newGridData);
   }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots]);
   
+  // Calcola differenza in ore tra due orari
+  const getHourDifference = (startTime: string, endTime: string) => {
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    
+    let hours = endHour - startHour;
+    let minutes = endMin - startMin;
+    
+    if (minutes < 0) {
+      hours -= 1;
+      minutes += 60;
+    }
+    
+    return hours + (minutes / 60);
+  };
+  
   // Gestione del click su una cella
   const handleCellClick = (userId: number, timeIndex: number, day: string) => {
-    if (!scheduleId || isPublished) return;
+    if (!scheduleId) return;
+    
+    // Non permettere modifiche se pubblicato (solo admin può farlo)
+    if (isPublished) {
+      toast({
+        title: "Pianificazione pubblicata",
+        description: "Questa pianificazione è stata pubblicata. Ripubblica dopo le modifiche.",
+      });
+      return;
+    }
     
     const newGridData = { ...gridData };
     const userDayData = newGridData[day][userId];
     const currentCell = userDayData.cells[timeIndex];
     
-    // Non modificare se è una cella di ferie/permessi approvati
+    // Non permettere modifiche a celle con richieste approvate
     if (currentCell.isTimeOff) {
       toast({
         title: "Cella bloccata",
-        description: "Non puoi modificare questa cella perché è una richiesta di ferie/permessi approvata.",
+        description: "Non puoi modificare questa cella perché contiene una richiesta di ferie/permessi approvata.",
         variant: "destructive",
       });
       return;
     }
     
-    // Ciclo: vuoto -> lavoro -> ferie -> permesso -> vuoto
+    // Ciclo di stati: vuoto -> lavoro -> ferie -> permesso -> vuoto
     let newType = "";
     
     if (currentCell.type === "") {
@@ -287,15 +292,15 @@ export function ExcelGrid({
       newType = "leave";
     }
     
-    // Trova le celle consecutive dello stesso tipo
+    // Trova tutte le celle dello stesso turno (consecutive con stesso shiftId)
     let startIndex = timeIndex;
     let endIndex = timeIndex;
     
     if (currentCell.shiftId) {
-      // Se è un turno esistente, trova i suoi confini
+      // Elimina un turno esistente
       const shiftId = currentCell.shiftId;
       
-      // Trova l'indice iniziale
+      // Trova i limiti del turno
       for (let i = timeIndex; i >= 0; i--) {
         if (userDayData.cells[i].shiftId === shiftId) {
           startIndex = i;
@@ -304,7 +309,6 @@ export function ExcelGrid({
         }
       }
       
-      // Trova l'indice finale
       for (let i = timeIndex; i < userDayData.cells.length; i++) {
         if (userDayData.cells[i].shiftId === shiftId) {
           endIndex = i;
@@ -313,16 +317,16 @@ export function ExcelGrid({
         }
       }
       
-      // Cancella tutte le celle nel range
+      // Cancella le celle
       for (let i = startIndex; i <= endIndex; i++) {
         userDayData.cells[i] = { type: "", shiftId: null };
       }
       
-      // Elimina il turno dal server
+      // Elimina dal server
       deleteShiftMutation.mutate(shiftId);
       
-      // Ricalcola il totale delle ore
-      calculateTotal(userId, day, newGridData);
+      // Ricalcola ore totali
+      recalculateTotal(userId, day, newGridData);
     } else if (newType !== "") {
       // Crea un nuovo turno
       const newShiftData = {
@@ -337,13 +341,13 @@ export function ExcelGrid({
       
       createShiftMutation.mutate(newShiftData);
       
-      // Aggiorna la cella nella UI
+      // Aggiorna UI
       userDayData.cells[timeIndex] = { 
         type: newType, 
-        shiftId: null // sarà aggiornato nel prossimo caricamento
+        shiftId: null // sarà aggiornato al prossimo caricamento
       };
       
-      // Ricalcola il totale delle ore
+      // Aggiorna totale ore
       if (newType === 'work') {
         userDayData.total += 0.5; // 30 minuti = 0.5 ore
       }
@@ -352,13 +356,13 @@ export function ExcelGrid({
     setGridData(newGridData);
   };
   
-  // Calcola il totale delle ore per un dipendente in un giorno
-  const calculateTotal = (userId: number, day: string, data: any) => {
+  // Ricalcola ore totali per un dipendente in un giorno
+  const recalculateTotal = (userId: number, day: string, data: any) => {
     let total = 0;
     let continuousWork = false;
     let startTime = "";
     
-    // Cerca blocchi continui di celle "work"
+    // Cerca blocchi continui di celle di tipo "work"
     data[day][userId].cells.forEach((cell: any, index: number) => {
       if (cell.type === "work") {
         if (!continuousWork) {
@@ -370,43 +374,15 @@ export function ExcelGrid({
         continuousWork = false;
         const endTime = timeSlots[index];
         
-        // Calcola le ore
-        const startHour = parseInt(startTime.split(':')[0]);
-        const startMin = parseInt(startTime.split(':')[1]);
-        const endHour = parseInt(endTime.split(':')[0]);
-        const endMin = parseInt(endTime.split(':')[1]);
-        
-        let hours = endHour - startHour;
-        let minutes = endMin - startMin;
-        
-        if (minutes < 0) {
-          hours -= 1;
-          minutes += 60;
-        }
-        
-        total += hours + (minutes / 60);
+        // Aggiungi ore al totale
+        total += getHourDifference(startTime, endTime);
       }
     });
     
     // Controlla se l'ultimo blocco arriva fino alla fine
     if (continuousWork) {
       const endTime = timeSlots[timeSlots.length - 1];
-      
-      // Calcola le ore
-      const startHour = parseInt(startTime.split(':')[0]);
-      const startMin = parseInt(startTime.split(':')[1]);
-      const endHour = parseInt(endTime.split(':')[0]);
-      const endMin = parseInt(endTime.split(':')[1]);
-      
-      let hours = endHour - startHour;
-      let minutes = endMin - startMin;
-      
-      if (minutes < 0) {
-        hours -= 1;
-        minutes += 60;
-      }
-      
-      total += hours + (minutes / 60);
+      total += getHourDifference(startTime, endTime);
     }
     
     data[day][userId].total = total;
@@ -433,7 +409,7 @@ export function ExcelGrid({
     setGridData(newGridData);
   };
   
-  // Funzione per copiare un giorno al successivo
+  // Copia turni dal giorno selezionato al successivo
   const handleCopyDay = () => {
     if (!scheduleId || isPublished) return;
     
@@ -445,7 +421,7 @@ export function ExcelGrid({
       description: `Copiando gli orari da ${currentDay} a ${nextDay}...`,
     });
     
-    // Copia tutti i turni dal giorno corrente al successivo
+    // Per ogni dipendente, copia i suoi turni
     Object.entries(gridData[currentDay]).forEach(([userId, userData]: [string, any]) => {
       const userIdNum = parseInt(userId);
       
@@ -460,7 +436,7 @@ export function ExcelGrid({
       userData.cells.forEach((cell: any, index: number) => {
         if (cell.type !== "") {
           if (!currentBlock || currentBlock.type !== cell.type) {
-            // Se avevamo un blocco precedente, salvalo
+            // Salva il blocco precedente
             if (currentBlock && typeof currentBlock.start === 'number' && typeof currentBlock.end === 'number') {
               createShiftMutation.mutate({
                 scheduleId,
@@ -486,7 +462,7 @@ export function ExcelGrid({
             }
           }
         } else if (currentBlock && typeof currentBlock.start === 'number' && typeof currentBlock.end === 'number') {
-          // Fine di un blocco
+          // Fine di un blocco, salvalo
           createShiftMutation.mutate({
             scheduleId,
             userId: userIdNum,
@@ -500,7 +476,7 @@ export function ExcelGrid({
         }
       });
       
-      // Non dimenticare l'ultimo blocco se arriva fino alla fine
+      // Gestisci l'ultimo blocco se arriva fino alla fine
       if (currentBlock && typeof currentBlock.start === 'number' && typeof currentBlock.end === 'number') {
         createShiftMutation.mutate({
           scheduleId,
@@ -520,12 +496,12 @@ export function ExcelGrid({
     });
   };
   
-  // Filtro per mostrare solo gli impiegati attivi
+  // Filtra solo i dipendenti attivi
   const activeEmployees = users.filter(user => user.role === "employee" && user.isActive);
   
   return (
-    <div className="bg-white border rounded-lg p-4 pt-0">
-      {/* Pannello di controllo */}
+    <div className="bg-white border rounded-lg shadow-sm p-4 pt-0">
+      {/* Header e controlli */}
       <div className="flex justify-between items-center py-4 border-b">
         <div className="flex space-x-4">
           <div className="text-xl font-semibold">
@@ -546,14 +522,13 @@ export function ExcelGrid({
             Copia Giorno
           </Button>
           <Button
-            variant="default"
+            variant={isPublished ? "outline" : "default"}
             size="sm"
-            className="bg-success hover:bg-success/90"
+            className={isPublished ? "" : "bg-green-600 hover:bg-green-700"}
             onClick={onPublish}
-            disabled={isPublished}
           >
             <span className="material-icons text-sm mr-1">publish</span>
-            Pubblica
+            {isPublished ? "Ripubblica" : "Pubblica"}
           </Button>
         </div>
       </div>
@@ -579,11 +554,11 @@ export function ExcelGrid({
       </div>
       
       {/* Tabs giorni settimana */}
-      <div className="flex border-b">
+      <div className="flex border-b overflow-x-auto">
         {weekDays.map((day, index) => (
           <button
             key={day.name}
-            className={`py-2 px-4 text-sm font-medium ${
+            className={`py-2 px-4 text-sm font-medium whitespace-nowrap ${
               index === selectedDay
                 ? "border-b-2 border-primary text-primary"
                 : "text-gray-500 hover:text-gray-700"
@@ -595,19 +570,21 @@ export function ExcelGrid({
         ))}
       </div>
       
-      {/* Tabella in stile Excel */}
+      {/* Tabella turni in stile Excel */}
       <div className="overflow-x-auto mt-2">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-gray-50">
-              <th className="border py-2 px-3 text-left w-[180px]">Dipendente</th>
+              <th className="border py-2 px-3 text-left font-medium sticky left-0 bg-gray-50 z-10 w-[180px]">
+                Dipendente
+              </th>
               {timeSlots.map((slot, index) => (
-                <th key={index} className="border py-1 px-1 text-center text-xs" style={{ minWidth: '40px' }}>
+                <th key={index} className="border py-1 px-1 text-center text-xs font-medium" style={{ minWidth: '40px' }}>
                   {slot}
                 </th>
               ))}
-              <th className="border py-2 px-3 text-left w-[150px]">Note</th>
-              <th className="border py-2 px-3 text-center w-[80px]">Totale</th>
+              <th className="border py-2 px-3 text-left font-medium w-[150px]">Note</th>
+              <th className="border py-2 px-3 text-center font-medium w-[80px]">Totale</th>
             </tr>
           </thead>
           <tbody>
@@ -616,13 +593,15 @@ export function ExcelGrid({
               const userDayData = gridData[currentDay]?.[employee.id];
               
               return (
-                <tr key={employee.id}>
-                  <td className="border py-2 px-3">{employee.name}</td>
+                <tr key={employee.id} className="hover:bg-gray-50">
+                  <td className="border py-2 px-3 font-medium sticky left-0 bg-white z-10">
+                    {employee.name}
+                  </td>
                   
                   {userDayData?.cells.map((cell, index) => (
                     <td
                       key={index}
-                      className={`border text-center cursor-pointer ${
+                      className={`border text-center ${
                         cell.type === "work"
                           ? "bg-blue-100 hover:bg-blue-200"
                           : cell.type === "vacation"
@@ -630,14 +609,13 @@ export function ExcelGrid({
                             : cell.type === "leave"
                               ? "bg-yellow-100 hover:bg-yellow-200"
                               : "hover:bg-gray-100"
-                      }`}
+                      } ${isPublished ? "" : "cursor-pointer"}`}
                       onClick={() => handleCellClick(employee.id, index, currentDay)}
-                      style={{ cursor: isPublished ? "default" : "pointer" }}
                       title={
                         cell.isTimeOff
                           ? "Richiesta approvata (non modificabile)"
                           : isPublished 
-                            ? "Pianificazione pubblicata (non modificabile)"
+                            ? "Pianificazione pubblicata (modifica e ripubblica)"
                             : "Clicca per cambiare stato"
                       }
                     >
@@ -668,12 +646,17 @@ export function ExcelGrid({
         </table>
       </div>
       
-      {/* Messaggio se pubblicato */}
-      {isPublished && (
+      {/* Messaggio stato pubblicazione */}
+      {isPublished ? (
         <div className="mt-4 bg-blue-50 p-3 rounded border border-blue-200 text-blue-700 text-sm">
           <span className="material-icons text-sm align-middle mr-1">info</span>
-          Questa pianificazione è stata pubblicata. I dipendenti possono visualizzarla nel loro account.
-          Puoi ancora apportare modifiche e ripubblicare per aggiornare i turni.
+          Questa pianificazione è stata pubblicata e i dipendenti possono visualizzarla. 
+          Puoi apportare modifiche e fare clic su "Ripubblica" per aggiornare i turni.
+        </div>
+      ) : (
+        <div className="mt-4 bg-yellow-50 p-3 rounded border border-yellow-200 text-yellow-700 text-sm">
+          <span className="material-icons text-sm align-middle mr-1">warning</span>
+          Questa pianificazione è attualmente in bozza. I dipendenti non possono visualizzarla finché non fai clic su "Pubblica".
         </div>
       )}
     </div>

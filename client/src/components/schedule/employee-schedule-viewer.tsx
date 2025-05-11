@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { format, parseISO, addDays } from "date-fns";
+import { format, addDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { formatHours } from "@/lib/utils";
 
@@ -13,11 +13,13 @@ type EmployeeScheduleViewerProps = {
 
 /**
  * Visualizzatore dei turni per i dipendenti
- * Mostra i propri turni pubblicati in formato tabella
+ * Mostra i propri turni pubblicati in formato tabella o lista
+ * Con supporto per ferie e permessi
  */
 export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: EmployeeScheduleViewerProps) {
   const [view, setView] = useState<"week" | "list">("week");
   
+  // Messaggio quando non ci sono turni
   if (!schedule) {
     return (
       <Card className="bg-white shadow-sm">
@@ -52,7 +54,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
     currentDate = addDays(currentDate, 1);
   }
   
-  // Organizza gli orari per giorno
+  // Organizza i turni per giorno
   const shiftsByDay: Record<string, any[]> = {};
   
   userShifts.forEach(shift => {
@@ -61,6 +63,28 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
     }
     shiftsByDay[shift.day].push(shift);
   });
+  
+  // Calcola ore totali per la settimana
+  const calculateTotalHours = () => {
+    return userShifts
+      .filter(shift => shift.type === "work")
+      .reduce((total, shift) => {
+        const startHour = parseInt(shift.startTime.split(':')[0]);
+        const startMin = parseInt(shift.startTime.split(':')[1]);
+        const endHour = parseInt(shift.endTime.split(':')[0]);
+        const endMin = parseInt(shift.endTime.split(':')[1]);
+        
+        let hours = endHour - startHour;
+        let minutes = endMin - startMin;
+        
+        if (minutes < 0) {
+          hours -= 1;
+          minutes += 60;
+        }
+        
+        return total + hours + (minutes / 60);
+      }, 0);
+  };
   
   return (
     <Card className="bg-white shadow-sm">
@@ -71,7 +95,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
             variant={view === "week" ? "default" : "ghost"}
             size="sm"
             onClick={() => setView("week")}
-            className="text-xs"
+            className="text-xs px-3"
           >
             <span className="material-icons text-sm mr-1">view_week</span>
             Settimana
@@ -80,7 +104,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
             variant={view === "list" ? "default" : "ghost"}
             size="sm"
             onClick={() => setView("list")}
-            className="text-xs"
+            className="text-xs px-3"
           >
             <span className="material-icons text-sm mr-1">list</span>
             Lista
@@ -90,10 +114,15 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
       
       {/* Dettagli pianificazione */}
       <div className="px-6 pb-2 pt-0">
-        <p className="text-sm text-gray-500 mb-4">
-          <span className="material-icons text-xs align-middle mr-1">calendar_today</span>
-          {format(startDate, "d MMMM", { locale: it })} - {format(endDate, "d MMMM yyyy", { locale: it })}
-        </p>
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm text-gray-500">
+            <span className="material-icons text-xs align-middle mr-1">calendar_today</span>
+            {format(startDate, "d MMMM", { locale: it })} - {format(endDate, "d MMMM yyyy", { locale: it })}
+          </p>
+          <p className="text-sm text-primary font-medium">
+            Totale ore: {formatHours(calculateTotalHours())}
+          </p>
+        </div>
       </div>
       
       <CardContent className="pb-6 pt-0">
@@ -108,7 +137,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                       key={day.formattedDate}
                       className="border px-3 py-2 text-center font-medium"
                     >
-                      <div className="whitespace-nowrap">{day.shortName}</div>
+                      <div className="whitespace-nowrap capitalize">{day.name}</div>
                       <div className="text-xs font-normal text-gray-500">{day.formattedDate}</div>
                     </th>
                   ))}
@@ -123,25 +152,29 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                     dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
                     
                     return (
-                      <td key={day.formattedDate} className="border p-3 align-top h-28">
+                      <td key={day.formattedDate} className="border p-3 align-top h-32">
                         {dayShifts.length === 0 ? (
-                          <div className="text-center py-2 text-gray-400 text-sm">
+                          <div className="text-center py-4 text-gray-400 text-sm flex flex-col items-center justify-center h-full">
+                            <span className="material-icons mb-1">event_busy</span>
                             Non in servizio
                           </div>
                         ) : (
                           <div className="space-y-2">
                             {dayShifts.map((shift, idx) => {
                               // Determina il tipo di turno
-                              let bgColor = "bg-blue-100";
+                              let bgColor = "bg-blue-100 border-blue-200";
+                              let textColor = "text-blue-800";
                               let icon = "schedule";
                               let label = "In servizio";
                               
                               if (shift.type === "vacation") {
-                                bgColor = "bg-red-100";
+                                bgColor = "bg-red-100 border-red-200";
+                                textColor = "text-red-800";
                                 icon = "beach_access";
                                 label = "Ferie";
                               } else if (shift.type === "leave") {
-                                bgColor = "bg-yellow-100";
+                                bgColor = "bg-yellow-100 border-yellow-200";
+                                textColor = "text-yellow-800";
                                 icon = "event_busy";
                                 label = "Permesso";
                               }
@@ -149,7 +182,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                               return (
                                 <div 
                                   key={idx} 
-                                  className={`${bgColor} rounded-md p-2 text-sm`}
+                                  className={`${bgColor} rounded-md p-2 text-sm border ${textColor}`}
                                 >
                                   <div className="font-medium flex items-center">
                                     <span className="material-icons text-sm mr-1">{icon}</span>
@@ -157,9 +190,11 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                   </div>
                                   
                                   {shift.type === "work" && (
-                                    <div className="mt-1 text-gray-700">
-                                      <div>{shift.startTime} - {shift.endTime}</div>
-                                      <div className="text-xs mt-1 text-gray-600">{shift.notes}</div>
+                                    <div className="mt-1">
+                                      <div className="font-medium">{shift.startTime} - {shift.endTime}</div>
+                                      {shift.notes && (
+                                        <div className="text-xs mt-1 text-gray-600">{shift.notes}</div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -185,15 +220,41 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
               // Ordina i turni per orario di inizio
               dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
               
+              // Calcola ore totali per il giorno
+              const dayTotalHours = dayShifts
+                .filter(shift => shift.type === "work")
+                .reduce((total, shift) => {
+                  const startHour = parseInt(shift.startTime.split(':')[0]);
+                  const startMin = parseInt(shift.startTime.split(':')[1]);
+                  const endHour = parseInt(shift.endTime.split(':')[0]);
+                  const endMin = parseInt(shift.endTime.split(':')[1]);
+                  
+                  let hours = endHour - startHour;
+                  let minutes = endMin - startMin;
+                  
+                  if (minutes < 0) {
+                    hours -= 1;
+                    minutes += 60;
+                  }
+                  
+                  return total + hours + (minutes / 60);
+                }, 0);
+              
               return (
-                <div key={day.formattedDate} className="border rounded-md overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-2 font-medium">
-                    {day.name} {day.formattedDate}
+                <div key={day.formattedDate} className="border rounded-md overflow-hidden shadow-sm">
+                  <div className="bg-gray-50 px-4 py-2 flex justify-between items-center">
+                    <div className="font-medium capitalize">{day.name} {day.formattedDate}</div>
+                    {dayTotalHours > 0 && (
+                      <div className="text-sm text-primary font-medium">
+                        {formatHours(dayTotalHours)}
+                      </div>
+                    )}
                   </div>
                   
                   {dayShifts.length === 0 ? (
-                    <div className="p-4 text-gray-500 text-sm">
-                      Non in servizio oggi
+                    <div className="p-4 text-gray-500 text-sm flex items-center">
+                      <span className="material-icons text-sm mr-2">event_busy</span>
+                      Non in servizio
                     </div>
                   ) : (
                     <div className="divide-y">
@@ -213,6 +274,25 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                           label = "Permesso";
                         }
                         
+                        // Calcola durata in ore per questo turno
+                        let duration = "";
+                        if (shift.type === "work") {
+                          const startHour = parseInt(shift.startTime.split(':')[0]);
+                          const startMin = parseInt(shift.startTime.split(':')[1]);
+                          const endHour = parseInt(shift.endTime.split(':')[0]);
+                          const endMin = parseInt(shift.endTime.split(':')[1]);
+                          
+                          let hours = endHour - startHour;
+                          let minutes = endMin - startMin;
+                          
+                          if (minutes < 0) {
+                            hours -= 1;
+                            minutes += 60;
+                          }
+                          
+                          duration = formatHours(hours + (minutes / 60));
+                        }
+                        
                         return (
                           <div 
                             key={idx} 
@@ -227,7 +307,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                 
                                 {shift.type === "work" && (
                                   <>
-                                    <div className="text-sm">{shift.startTime} - {shift.endTime}</div>
+                                    <div className="text-sm font-medium">{shift.startTime} - {shift.endTime}</div>
                                     {shift.notes && (
                                       <div className="text-xs mt-1 text-gray-600">{shift.notes}</div>
                                     )}
@@ -237,7 +317,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                               
                               {shift.type === "work" && (
                                 <div className="text-sm font-medium">
-                                  {formatHours(Number(shift.hours))}
+                                  {duration}
                                 </div>
                               )}
                             </div>
