@@ -21,6 +21,7 @@ export interface IStorage {
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
   getSchedule(id: number): Promise<Schedule | undefined>;
   getScheduleByDateRange(startDate: Date, endDate: Date): Promise<Schedule | undefined>;
+  getAllSchedules(): Promise<Schedule[]>;
   publishSchedule(id: number): Promise<Schedule | undefined>;
   
   // Shift management
