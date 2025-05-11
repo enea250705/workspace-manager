@@ -7,6 +7,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { z } from "zod";
 import MemoryStore from "memorystore";
 import { WebSocketServer, WebSocket } from "ws";
+import { addDays, parseISO, format } from "date-fns";
 import {
   insertUserSchema,
   insertScheduleSchema,
@@ -18,6 +19,155 @@ import {
 
 // Initialize session store
 const MemorySessionStore = MemoryStore(session);
+
+// Funzione per la generazione automatica dei turni
+async function generateAutomaticSchedule(
+  startDate: string,
+  endDate: string,
+  users: any[],
+  settings: {
+    minHoursPerEmployee: number,
+    maxHoursPerEmployee: number,
+    startHour: string,
+    endHour: string,
+    distributeEvenly: boolean,
+    respectTimeOffRequests: boolean
+  },
+  approvedTimeOffs: any[] = []
+): Promise<any[]> {
+  // Risultato: array di turni da generare
+  const shifts: any[] = [];
+  
+  // Calcola il numero di giorni nel periodo
+  const start = parseISO(startDate);
+  const end = parseISO(endDate);
+  const days = [];
+  
+  // Crea un array di tutte le date nel periodo
+  let currentDate = start;
+  while (currentDate <= end) {
+    days.push(format(currentDate, 'yyyy-MM-dd'));
+    currentDate = addDays(currentDate, 1);
+  }
+  
+  // Calcola per ogni dipendente i giorni in cui hanno ferie approvate
+  const userTimeOffs: Record<number, string[]> = {};
+  
+  if (settings.respectTimeOffRequests) {
+    // Inizializza l'oggetto per ogni utente
+    users.forEach(user => {
+      userTimeOffs[user.id] = [];
+    });
+    
+    // Popola l'oggetto con i giorni di ferie
+    approvedTimeOffs.forEach(timeOff => {
+      const timeOffStart = parseISO(timeOff.startDate);
+      const timeOffEnd = parseISO(timeOff.endDate);
+      
+      let current = timeOffStart;
+      while (current <= timeOffEnd) {
+        const dateStr = format(current, 'yyyy-MM-dd');
+        
+        // Se è mezza giornata, potremmo decidere diversamente in base alla logica aziendale
+        // Qui per semplicità, anche una mezza giornata di ferie blocca l'intera giornata
+        if (!userTimeOffs[timeOff.userId].includes(dateStr)) {
+          userTimeOffs[timeOff.userId].push(dateStr);
+        }
+        
+        current = addDays(current, 1);
+      }
+    });
+  }
+  
+  // Calcola le ore totali per dipendente in base alla configurazione
+  // Se distributeEvenly è true, tutti avranno ore simili
+  let hoursPerEmployee: Record<number, number> = {};
+  
+  if (settings.distributeEvenly) {
+    const totalEmployees = users.length;
+    users.forEach(user => {
+      // Calcola i giorni disponibili (totali - giorni di ferie)
+      const availableDays = days.filter(day => !userTimeOffs[user.id]?.includes(day)).length;
+      
+      // Calcola le ore totali considerando i giorni disponibili
+      const totalPossibleHours = availableDays * 8; // Assumiamo max 8 ore al giorno
+      const targetHours = Math.min(settings.maxHoursPerEmployee, totalPossibleHours);
+      
+      hoursPerEmployee[user.id] = Math.max(settings.minHoursPerEmployee, targetHours);
+    });
+  } else {
+    // Se non distribuiamo equamente, proviamo a dare il massimo delle ore a tutti
+    users.forEach(user => {
+      hoursPerEmployee[user.id] = settings.maxHoursPerEmployee;
+    });
+  }
+  
+  // Converti le ore di inizio e fine in numeri per facilitare i calcoli
+  const startHourNum = parseInt(settings.startHour.split(':')[0]);
+  const endHourNum = parseInt(settings.endHour.split(':')[0]);
+  
+  // Ore di lavoro disponibili in un giorno
+  const hoursPerDay = endHourNum - startHourNum;
+  
+  // Per ogni giorno nel periodo
+  days.forEach(day => {
+    // Determina quanti dipendenti lavorano in questo giorno
+    // Filtriamo i dipendenti che non hanno ferie in questo giorno
+    const availableUsers = users.filter(user => !userTimeOffs[user.id]?.includes(day));
+    
+    // Se non ci sono dipendenti disponibili, salta questo giorno
+    if (availableUsers.length === 0) return;
+    
+    // Distribuzione turni: per semplicità, facciamo turni di 8 ore o il massimo configurato
+    // In un sistema reale, si potrebbe usare un algoritmo più sofisticato
+    
+    // Creiamo un array di ore per slot, ad esempio [8, 9, 10, ..., 17] per 8:00-18:00
+    const timeSlots = [];
+    for (let hour = startHourNum; hour < endHourNum; hour++) {
+      timeSlots.push(hour);
+    }
+    
+    // Distribuiamo i turni per questo giorno
+    availableUsers.forEach(user => {
+      // Verifica se questo utente ha ancora ore da assegnare
+      if (hoursPerEmployee[user.id] <= 0) return;
+      
+      // Determiniamo la lunghezza del turno (4 o 8 ore in base alle ore rimaste)
+      // Per semplicità, facciamo turni di 4 o 8 ore
+      let shiftLength = 8;
+      if (hoursPerEmployee[user.id] < 8) {
+        shiftLength = 4;
+      }
+      
+      // Se non ci sono abbastanza ore rimaste nella giornata, salta
+      if (shiftLength > timeSlots.length) return;
+      
+      // Determina l'ora di inizio del turno
+      // Per semplicità, partiamo dall'inizio della giornata
+      const shiftStartHour = timeSlots[0];
+      const shiftEndHour = shiftStartHour + shiftLength;
+      
+      // Aggiungi il turno
+      shifts.push({
+        userId: user.id,
+        day,
+        startTime: `${String(shiftStartHour).padStart(2, '0')}:00`,
+        endTime: `${String(shiftEndHour).padStart(2, '0')}:00`,
+        type: 'regular',
+        notes: null,
+        area: null
+      });
+      
+      // Aggiorna le ore rimaste per questo dipendente
+      hoursPerEmployee[user.id] -= shiftLength;
+      
+      // Rimuovi gli slot utilizzati
+      timeSlots.splice(0, shiftLength);
+    });
+  });
+  
+  return shifts;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -411,6 +561,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Failed to delete shift" });
+    }
+  });
+  
+  // Auto-generation preview endpoint
+  app.post("/api/schedules/preview", isAdmin, async (req, res) => {
+    try {
+      const { startDate, endDate, userIds, settings } = req.body;
+      
+      // Ottieni richieste di ferie approvate per il periodo specificato
+      let approvedTimeOffs: any[] = [];
+      if (settings.respectTimeOffRequests) {
+        approvedTimeOffs = (await storage.getAllTimeOffRequests()).filter(
+          request => 
+            request.status === "approved" &&
+            userIds.includes(request.userId) &&
+            // Controllo sovrapposizione date
+            (
+              (new Date(request.startDate) >= new Date(startDate) && new Date(request.startDate) <= new Date(endDate)) ||
+              (new Date(request.endDate) >= new Date(startDate) && new Date(request.endDate) <= new Date(endDate)) ||
+              (new Date(request.startDate) <= new Date(startDate) && new Date(request.endDate) >= new Date(endDate))
+            )
+        );
+      }
+      
+      // Dati utenti
+      const users = await Promise.all(
+        userIds.map(async (userId: number) => {
+          const user = await storage.getUser(userId);
+          return user;
+        })
+      );
+
+      // Algoritmo di generazione automatica dei turni
+      const shifts = await generateAutomaticSchedule(
+        startDate,
+        endDate,
+        users.filter(Boolean) as any[],
+        settings,
+        approvedTimeOffs
+      );
+      
+      // Restituisci anteprima
+      res.json({
+        startDate,
+        endDate,
+        isPublished: false,
+        shifts
+      });
+    } catch (err) {
+      console.error("Preview generation error:", err);
+      res.status(500).json({ message: "Failed to generate schedule preview" });
+    }
+  });
+  
+  // Auto-generation and save endpoint
+  app.post("/api/schedules/auto-generate", isAdmin, async (req, res) => {
+    try {
+      const { startDate, endDate, userIds, settings } = req.body;
+      
+      // Ottieni richieste di ferie approvate per il periodo specificato
+      let approvedTimeOffs: any[] = [];
+      if (settings.respectTimeOffRequests) {
+        approvedTimeOffs = (await storage.getAllTimeOffRequests()).filter(
+          request => 
+            request.status === "approved" &&
+            userIds.includes(request.userId) &&
+            // Controllo sovrapposizione date
+            (
+              (new Date(request.startDate) >= new Date(startDate) && new Date(request.startDate) <= new Date(endDate)) ||
+              (new Date(request.endDate) >= new Date(startDate) && new Date(request.endDate) <= new Date(endDate)) ||
+              (new Date(request.startDate) <= new Date(startDate) && new Date(request.endDate) >= new Date(endDate))
+            )
+        );
+      }
+      
+      // Dati utenti
+      const users = await Promise.all(
+        userIds.map(async (userId: number) => {
+          const user = await storage.getUser(userId);
+          return user;
+        })
+      );
+      
+      // Crea la pianificazione
+      const schedule = await storage.createSchedule({
+        startDate,
+        endDate,
+        isPublished: false,
+        createdBy: (req.user as any).id
+      });
+      
+      // Genera i turni automaticamente
+      const shifts = await generateAutomaticSchedule(
+        startDate,
+        endDate,
+        users.filter(Boolean) as any[],
+        settings,
+        approvedTimeOffs
+      );
+      
+      // Salva i turni generati
+      for (const shift of shifts) {
+        await storage.createShift({
+          ...shift,
+          scheduleId: schedule.id
+        });
+      }
+      
+      res.status(201).json({
+        ...schedule,
+        shifts
+      });
+    } catch (err) {
+      console.error("Auto-generation error:", err);
+      res.status(500).json({ message: "Failed to auto-generate schedule" });
     }
   });
   

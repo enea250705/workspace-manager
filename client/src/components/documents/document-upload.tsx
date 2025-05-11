@@ -52,7 +52,8 @@ export function DocumentUpload() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    form.setValue("file", null);
+    // Rimuovi il file dal form senza passare null che causa un errore di tipo
+    form.setValue("file", undefined as any);
   };
   
   // Funzione per convertire un file in base64
