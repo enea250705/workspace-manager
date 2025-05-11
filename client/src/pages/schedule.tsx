@@ -13,9 +13,10 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScheduleAutoGenerator } from "@/components/schedule/auto-generator/auto-generator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Date utilities
-import { format, startOfWeek, addDays, isBefore } from "date-fns";
+import { format, startOfWeek, addDays, isBefore, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 
 export default function Schedule() {
@@ -27,6 +28,9 @@ export default function Schedule() {
     const now = new Date();
     return startOfWeek(now, { weekStartsOn: 1 }); // Start week on Monday
   });
+  
+  // State for tracking the currently selected schedule ID
+  const [currentScheduleId, setCurrentScheduleId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -47,16 +51,22 @@ export default function Schedule() {
   const startDateToUse = customStartDate || selectedWeek;
   const endOfWeek = customEndDate || addDays(selectedWeek, 6);
 
-  // Format date range for display
-  const dateRangeText = `${format(startDateToUse, "d MMMM", { locale: it })} - ${format(
-    endOfWeek,
-    "d MMMM yyyy",
-    { locale: it }
-  )}`;
+  // Fetch all schedule data
+  const { data: allSchedules = [], isLoading: isAllSchedulesLoading } = useQuery<any[]>({
+    queryKey: ["/api/schedules/all"],
+  });
 
-  // Fetch existing schedule data for the selected week
+  // Set current schedule ID when schedules are loaded (if not already set)
+  useEffect(() => {
+    if (allSchedules.length > 0 && !currentScheduleId) {
+      setCurrentScheduleId(allSchedules[0].id);
+    }
+  }, [allSchedules, currentScheduleId]);
+
+  // Fetch the current selected schedule data
   const { data: existingSchedule = {}, isLoading: isScheduleLoading } = useQuery<any>({
-    queryKey: ["/api/schedules", { startDate: format(selectedWeek, "yyyy-MM-dd") }],
+    queryKey: ["/api/schedules", currentScheduleId],
+    enabled: !!currentScheduleId,
   });
 
   // Fetch users for populating the schedule
@@ -73,8 +83,17 @@ export default function Schedule() {
   // Create schedule mutation
   const createScheduleMutation = useMutation({
     mutationFn: (scheduleData: any) => apiRequest("POST", "/api/schedules", scheduleData),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+    onSuccess: async (response) => {
+      // Extract the new schedule data from the response
+      const newSchedule = await response.json();
+      // Invalidate the queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
+      
+      // Set the current schedule ID to the newly created schedule
+      if (newSchedule && newSchedule.id) {
+        setCurrentScheduleId(newSchedule.id);
+      }
+      
       toast({
         title: "Turni creati",
         description: "La pianificazione è stata creata con successo.",
@@ -94,8 +113,11 @@ export default function Schedule() {
     mutationFn: (scheduleId: number) =>
       apiRequest("POST", `/api/schedules/${scheduleId}/publish`, {}),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules/1/shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
+      if (currentScheduleId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/schedules", currentScheduleId] });
+        queryClient.invalidateQueries({ queryKey: [`/api/schedules/${currentScheduleId}/shifts`] });
+      }
     },
     onError: () => {
       toast({
@@ -369,7 +391,24 @@ export default function Schedule() {
               <h3 className="text-lg font-medium">
                 Pianificazione Turni: {dateRangeText}
               </h3>
-              <div>
+              <div className="flex items-center">
+                {allSchedules.length > 0 && (
+                  <Select
+                    value={currentScheduleId?.toString()}
+                    onValueChange={(value) => setCurrentScheduleId(parseInt(value, 10))}
+                  >
+                    <SelectTrigger className="w-[240px] mr-2">
+                      <SelectValue placeholder="Seleziona pianificazione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allSchedules.map((schedule) => (
+                        <SelectItem key={schedule.id} value={schedule.id.toString()}>
+                          {format(new Date(schedule.startDate), "d MMMM", { locale: it })} - {format(new Date(schedule.endDate), "d MMMM", { locale: it })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -380,8 +419,6 @@ export default function Schedule() {
                     setCustomEndDate(null);
                     // Show date picker for new schedule
                     setShowDatePicker(true);
-                    // Hide the current schedule builder
-                    queryClient.setQueryData(["/api/schedules", { startDate: format(selectedWeek, "yyyy-MM-dd") }], null);
                   }}
                 >
                   <span className="material-icons text-sm mr-1">add</span>
