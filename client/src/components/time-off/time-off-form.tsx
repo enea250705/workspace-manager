@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -46,6 +46,29 @@ export function TimeOffRequestForm() {
       reason: "",
     },
   });
+  
+  // Aggiorna la durata quando cambia il tipo di richiesta o le date
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "type" || name === "startDate" || name === "endDate") {
+        const requestType = form.getValues("type");
+        const startDate = form.getValues("startDate");
+        const endDate = form.getValues("endDate");
+        
+        if (!startDate || !endDate) return;
+        
+        const isSameDay = startDate.toDateString() === endDate.toDateString();
+        const isPersonalLeave = requestType === "personal";
+        
+        // Se non è permesso personale o è su più giorni, forza a "full_day"
+        if (!isPersonalLeave || (isPersonalLeave && !isSameDay)) {
+          form.setValue("duration", "full_day");
+        }
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
   
   const createTimeOffRequest = useMutation({
     mutationFn: (data: z.infer<typeof formSchema>) => {
@@ -164,44 +187,68 @@ export function TimeOffRequestForm() {
             <FormField
               control={form.control}
               name="duration"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Durata giornaliera</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex flex-col space-y-1"
-                    >
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="full_day" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Giornata intera
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="morning" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Solo mattina
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="afternoon" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Solo pomeriggio
-                        </FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const requestType = form.watch("type");
+                const startDate = form.watch("startDate");
+                const endDate = form.watch("endDate");
+                const isSameDay = startDate && endDate && startDate.toDateString() === endDate.toDateString();
+                const isPersonalLeave = requestType === "personal";
+                
+                // Se non è permesso personale (ferie o malattia) oppure se è permesso personale
+                // ma ci sono più giorni selezionati, imposta automaticamente "full_day"
+                if (!isPersonalLeave || (isPersonalLeave && !isSameDay)) {
+                  // Forza il valore a "full_day" se la condizione è vera
+                  if (field.value !== "full_day") {
+                    setTimeout(() => form.setValue("duration", "full_day"), 0);
+                  }
+                }
+                
+                return (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Durata giornaliera</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-col space-y-1"
+                        disabled={!isPersonalLeave || (isPersonalLeave && !isSameDay)}
+                      >
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="full_day" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Giornata intera
+                          </FormLabel>
+                        </FormItem>
+                        
+                        {/* Mostra queste opzioni solo per permesso personale di un giorno */}
+                        {isPersonalLeave && isSameDay && (
+                          <>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="morning" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Solo mattina
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="afternoon" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Solo pomeriggio
+                              </FormLabel>
+                            </FormItem>
+                          </>
+                        )}
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
             
             <FormField
