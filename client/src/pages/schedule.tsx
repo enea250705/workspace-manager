@@ -367,7 +367,7 @@ export default function Schedule() {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">
-                Pianificazione Turni: {dateRangeText}
+                Pianificazione Turni: {`${format(startDateToUse, "d MMMM", { locale: it })} - ${format(endOfWeek, "d MMMM yyyy", { locale: it })}`}
               </h3>
               <div className="text-sm text-gray-500">
                 In attesa di salvataggio...
@@ -389,7 +389,9 @@ export default function Schedule() {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">
-                Pianificazione Turni: {dateRangeText}
+                Pianificazione Turni: {existingSchedule?.startDate ? 
+                  `${format(new Date(existingSchedule.startDate), "d MMMM", { locale: it })} - ${format(new Date(existingSchedule.endDate), "d MMMM yyyy", { locale: it })}` :
+                  `${format(startDateToUse, "d MMMM", { locale: it })} - ${format(endOfWeek, "d MMMM yyyy", { locale: it })}`}
               </h3>
               <div className="flex items-center">
                 {allSchedules.length > 0 && (
