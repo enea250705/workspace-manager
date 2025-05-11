@@ -15,6 +15,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { apiRequest } from "@/lib/queryClient";
+import { RecentActivities } from "./recent-activities";
 
 export function AdminDashboard() {
   const { user } = useAuth();
@@ -67,64 +68,7 @@ export function AdminDashboard() {
     { name: "Sera", hours: 36 },
   ];
 
-  // Example activities (would come from a real endpoint in production)
-  const recentActivities = [
-    {
-      id: 1,
-      type: "schedule_update",
-      message: "Turno settimanale pubblicato",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    },
-    {
-      id: 2,
-      type: "request_approved",
-      message: "Approvata richiesta ferie",
-      user: "Laura Bianchi",
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-    },
-    {
-      id: 3,
-      type: "user_added",
-      message: "Nuovo dipendente registrato",
-      user: "Stefano Verdi",
-      timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000), // 1.08 days ago
-    },
-    {
-      id: 4,
-      type: "document_upload",
-      message: "Buste paga caricate nel sistema",
-      timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000), // 2 days ago
-    },
-  ];
-
-  const formatActivityTime = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diff / (1000 * 60 * 60));
-    
-    if (diffHours < 24) {
-      return `${diffHours} ore fa`;
-    } else {
-      const diffDays = Math.floor(diffHours / 24);
-      if (diffDays === 1) return "Ieri";
-      return `${diffDays} giorni fa`;
-    }
-  };
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "schedule_update":
-        return { icon: "event_available", bgColor: "bg-blue-100", textColor: "text-primary" };
-      case "request_approved":
-        return { icon: "check_circle", bgColor: "bg-green-100", textColor: "text-success" };
-      case "user_added":
-        return { icon: "person_add", bgColor: "bg-amber-100", textColor: "text-warning" };
-      case "document_upload":
-        return { icon: "upload_file", bgColor: "bg-purple-100", textColor: "text-purple-600" };
-      default:
-        return { icon: "info", bgColor: "bg-gray-100", textColor: "text-gray-600" };
-    }
-  };
+  // Funzioni di utilità rimosse perché ora gestite dal componente RecentActivities
 
   return (
     <div className="space-y-6">
@@ -207,39 +151,7 @@ export function AdminDashboard() {
       </div>
       
       {/* Recent Activity */}
-      <Card>
-        <CardHeader className="border-b px-4 py-3 flex justify-between items-center">
-          <CardTitle className="text-base font-medium">Attività Recenti</CardTitle>
-          <Button variant="link" size="sm" className="h-auto p-0">
-            Vedi tutte
-          </Button>
-        </CardHeader>
-        <CardContent className="p-4">
-          <div className="divide-y">
-            {recentActivities.map((activity) => {
-              const { icon, bgColor, textColor } = getActivityIcon(activity.type);
-              return (
-                <div key={activity.id} className="py-3 flex items-start">
-                  <div className={`${bgColor} p-1 rounded mr-3`}>
-                    <span className={`material-icons text-sm ${textColor}`}>{icon}</span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm">
-                      {activity.message}
-                      {activity.user && (
-                        <span className="font-medium"> {activity.user}</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatActivityTime(activity.timestamp)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      <RecentActivities />
       
       {/* Single column layout for Pending Approvals only */}
       <div className="grid grid-cols-1 gap-4">
