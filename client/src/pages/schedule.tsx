@@ -374,7 +374,15 @@ export default function Schedule() {
                   variant="outline"
                   size="sm"
                   className="mr-2"
-                  onClick={() => setShowDatePicker(true)}
+                  onClick={() => {
+                    // Reset date selections
+                    setCustomStartDate(null);
+                    setCustomEndDate(null);
+                    // Show date picker for new schedule
+                    setShowDatePicker(true);
+                    // Hide the current schedule builder
+                    queryClient.setQueryData(["/api/schedules", { startDate: format(selectedWeek, "yyyy-MM-dd") }], null);
+                  }}
                 >
                   <span className="material-icons text-sm mr-1">add</span>
                   Nuovo turno settimanale
