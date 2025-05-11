@@ -3,7 +3,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/layout";
-import { ScheduleBuilder } from "@/components/schedule/schedule-builder";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { WeekSelectorDialog } from "@/components/schedule/week-selector-dialog";
 import { ScheduleAutoGenerator } from "@/components/schedule/auto-generator/auto-generator";
+import { ExcelGrid } from "@/components/schedule/excel-grid";
 
 // Date utilities
 import { format, startOfWeek, addDays, isBefore } from "date-fns";
@@ -69,6 +69,11 @@ export default function Schedule() {
   const { data: shifts = [], isLoading: isShiftsLoading } = useQuery<any[]>({
     queryKey: [`/api/schedules/${existingSchedule?.id}/shifts`],
     enabled: !!existingSchedule?.id,
+  });
+  
+  // Fetch time-off requests for displaying on the schedule
+  const { data: timeOffRequests = [], isLoading: isTimeOffLoading } = useQuery<any[]>({
+    queryKey: ["/api/time-off-requests"],
   });
 
   // Create schedule mutation
@@ -449,17 +454,15 @@ export default function Schedule() {
                 In attesa di salvataggio...
               </div>
             </div>
-            <ScheduleBuilder
+            <ExcelGrid
               scheduleId={null}
               users={users || []}
               startDate={selectedWeek}
               endDate={endOfWeek}
               shifts={[]}
+              timeOffRequests={timeOffRequests || []}
               isPublished={false}
               onPublish={() => {}}
-              onAutoGenerate={() => {}}
-              onExportPdf={handleExportPdf}
-              onChangeWeek={handleChangeWeek}
             />
           </div>
         ) : existingSchedule ? (
@@ -480,17 +483,15 @@ export default function Schedule() {
                 </Button>
               </div>
             </div>
-            <ScheduleBuilder
+            <ExcelGrid
               scheduleId={existingSchedule?.id || null}
               users={users || []}
               startDate={existingSchedule?.startDate ? new Date(existingSchedule.startDate) : selectedWeek}
               endDate={existingSchedule?.endDate ? new Date(existingSchedule.endDate) : endOfWeek}
               shifts={shifts || []}
+              timeOffRequests={timeOffRequests || []}
               isPublished={existingSchedule?.isPublished || false}
               onPublish={handlePublish}
-              onAutoGenerate={handleAutoGenerate}
-              onExportPdf={handleExportPdf}
-              onChangeWeek={handleChangeWeek}
             />
           </div>
         ) : (
