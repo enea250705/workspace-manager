@@ -21,7 +21,6 @@ export interface IStorage {
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
   getSchedule(id: number): Promise<Schedule | undefined>;
   getScheduleByDateRange(startDate: Date, endDate: Date): Promise<Schedule | undefined>;
-  getAllSchedules(): Promise<Schedule[]>;
   publishSchedule(id: number): Promise<Schedule | undefined>;
   
   // Shift management
@@ -173,13 +172,6 @@ export class MemStorage implements IStorage {
       (schedule) => 
         new Date(schedule.startDate) <= endDate && 
         new Date(schedule.endDate) >= startDate
-    );
-  }
-  
-  async getAllSchedules(): Promise<Schedule[]> {
-    // Return all schedules ordered by start date (most recent first)
-    return Array.from(this.schedules.values()).sort((a, b) => 
-      new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
     );
   }
   
@@ -447,7 +439,7 @@ import { pool } from "./db";
 const PostgresSessionStore = connectPg(session);
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.Store;
+  sessionStore: session.SessionStore;
   
   constructor() {
     // Create PostgreSQL session store

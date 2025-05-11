@@ -50,17 +50,6 @@ export default function Schedule() {
   // Calculate end of week (Sunday) - use custom dates if selected
   const startDateToUse = customStartDate || selectedWeek;
   const endOfWeek = customEndDate || addDays(selectedWeek, 6);
-  
-
-
-  // Format date range for display
-  const getDateRangeText = (startDate: Date, endDate: Date) => {
-    return `${format(startDate, "d MMMM", { locale: it })} - ${format(
-      endDate,
-      "d MMMM yyyy",
-      { locale: it }
-    )}`;
-  };
 
   // Fetch all schedule data
   const { data: allSchedules = [], isLoading: isAllSchedulesLoading } = useQuery<any[]>({
@@ -79,8 +68,6 @@ export default function Schedule() {
     queryKey: ["/api/schedules", currentScheduleId],
     enabled: !!currentScheduleId,
   });
-  
-
 
   // Fetch users for populating the schedule
   const { data: users = [], isLoading: isUsersLoading } = useQuery<any[]>({

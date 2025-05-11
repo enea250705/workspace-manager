@@ -388,15 +388,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Schedule management routes
-  app.get("/api/schedules/all", isAuthenticated, async (req, res) => {
-    try {
-      const schedules = await storage.getAllSchedules();
-      res.json(schedules);
-    } catch (err) {
-      res.status(500).json({ message: "Failed to get all schedules" });
-    }
-  });
-  
   app.get("/api/schedules", isAuthenticated, async (req, res) => {
     try {
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date();
@@ -425,22 +416,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get a specific schedule by ID
-  app.get("/api/schedules/:id", isAuthenticated, async (req, res) => {
-    try {
-      const scheduleId = parseInt(req.params.id);
-      const schedule = await storage.getSchedule(scheduleId);
-      
-      if (!schedule) {
-        return res.status(404).json({ message: "Schedule not found" });
-      }
-      
-      res.json(schedule);
-    } catch (err) {
-      res.status(500).json({ message: "Failed to get schedule" });
-    }
-  });
-
   app.post("/api/schedules/:id/publish", isAdmin, async (req, res) => {
     try {
       const scheduleId = parseInt(req.params.id);
