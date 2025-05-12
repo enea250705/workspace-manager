@@ -59,7 +59,7 @@ export function ExcelGrid({
     return {
       date,
       name: format(date, "EEEE", { locale: it }),
-      shortName: format(date, "EEE", { locale: it }),
+      shortName: ["lun", "mar", "mer", "gio", "ven", "sab", "dom"][date.getDay() === 0 ? 6 : date.getDay() - 1],
       formattedDate: format(date, "yyyy-MM-dd")
     };
   });
@@ -687,9 +687,9 @@ export function ExcelGrid({
           <TabsList className="mb-4 w-full">
             {weekDays.map((day, idx) => (
               <TabsTrigger key={day.name} value={day.name} className="flex-1">
-                <span className="hidden sm:inline">{day.name}</span>
-                <span className="sm:hidden">{day.shortName}</span>
-                <span className="ml-1 text-xs text-muted-foreground hidden sm:inline">
+                <span className="hidden md:inline">{day.name}</span>
+                <span className="md:hidden text-xs sm:text-sm">{day.shortName}</span>
+                <span className="ml-1 text-xs text-muted-foreground hidden md:inline">
                   {format(day.date, "d/M")}
                 </span>
               </TabsTrigger>
