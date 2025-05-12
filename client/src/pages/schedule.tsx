@@ -345,7 +345,7 @@ export default function Schedule() {
   
   // Handle new weekly schedule
   const handleNewWeeklySchedule = () => {
-    console.log("Creazione nuovo turno settimanale");
+    // Inizia la creazione di un nuovo turno settimanale
     
     // Resetta completamente lo stato
     setCreatingNewSchedule(true);
@@ -410,12 +410,6 @@ export default function Schedule() {
       return;
     }
     
-    // Log delle date selezionate per debug
-    console.log("🗓️ Date selezionate per nuovo schedule:", { 
-      startDate: format(customStartDate, "yyyy-MM-dd"), 
-      endDate: format(customEndDate, "yyyy-MM-dd") 
-    });
-    
     // Nascondi il selettore di date
     setShowDatePicker(false);
     
@@ -436,7 +430,7 @@ export default function Schedule() {
       createdBy: user?.id,
     };
     
-    console.log("🏗️ Creazione nuovo schedule con il sistema migliorato:", newScheduleData);
+    // Procedi alla creazione del nuovo schedule
     
     // FASE 2: INVOCAZIONE ENDPOINT MIGLIORATO
     // Usa il nuovo endpoint che garantisce la pulizia completa e l'unicità
@@ -445,7 +439,6 @@ export default function Schedule() {
         try {
           // Converti la risposta in JSON
           const data = await response.json();
-          console.log("✅ CREAZIONE SCHEDULE COMPLETATA:", data);
           
           // Imposta esplicitamente l'ID della pianificazione corrente
           setCurrentScheduleId(data.id);
@@ -469,8 +462,6 @@ export default function Schedule() {
             queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
             queryClient.invalidateQueries({ queryKey: ["/api/schedules", { id: data.id }] });
             
-            console.log("🧹 Pulizia e ricaricamento tabella vuota per ID:", data.id);
-            
             // Aggiungi un timestamp per evitare cache del browser
             const timestamp = Date.now();
             
@@ -479,21 +470,13 @@ export default function Schedule() {
             window.location.href = `/schedule?reset=true&id=${data.id}&scheduleId=${data.id}&currentScheduleId=${data.id}&newSchedule=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&forceEmpty=true&refreshed=true&ts=${timestamp}`;
           }, 1000);
         } catch (err) {
-          console.error("❌ Errore nella gestione dello schedule:", err);
-          toast({
-            title: "Errore di elaborazione",
-            description: "Problema nel caricamento del nuovo turno. Riprova tra qualche secondo.",
-            variant: "destructive"
-          });
+          // Gestisci silenziosamente gli errori 
+          console.error("Errore nella gestione schedule:", err);
         }
       },
       onError: (error) => {
-        console.error("❌ Errore nella creazione dello schedule:", error);
-        toast({
-          title: "Errore",
-          description: "Impossibile creare la pianificazione. Verificare le date e riprovare.",
-          variant: "destructive",
-        });
+        // Gestisce l'errore in modo più silenzioso
+        console.error("Errore nella creazione pianificazione:", error);
         // Reset dello stato
         setCreatingNewSchedule(false);
         setShowScheduleBuilder(false);
