@@ -208,12 +208,39 @@ export function EmployeeDashboard() {
                       return convertToHours(a.startTime) - convertToHours(b.startTime);
                     });
                     
+                    // Consolida gli slot consecutivi in un unico turno
+                    const consolidatedWorkShifts = [];
+                    let currentShift = null;
+                    
+                    for (const shift of sortedWorkShifts) {
+                      if (!currentShift) {
+                        currentShift = {...shift};
+                        continue;
+                      }
+                      
+                      // Se questo slot inizia esattamente quando finisce quello precedente, sono consecutivi
+                      // Considerando che ogni slot è di 30 minuti
+                      if (shift.startTime === currentShift.endTime) {
+                        // Estendi l'orario di fine del turno corrente
+                        currentShift.endTime = shift.endTime;
+                      } else {
+                        // Se non è consecutivo, aggiungi il turno corrente e inizia uno nuovo
+                        consolidatedWorkShifts.push(currentShift);
+                        currentShift = {...shift};
+                      }
+                    }
+                    
+                    // Aggiungi l'ultimo turno se esiste
+                    if (currentShift) {
+                      consolidatedWorkShifts.push(currentShift);
+                    }
+                    
                     return (
                       <>
                         {/* Turni di lavoro */}
-                        {sortedWorkShifts.length > 0 && (
+                        {consolidatedWorkShifts.length > 0 && (
                           <div className="mb-3">
-                            {sortedWorkShifts.map((shift: any) => (
+                            {consolidatedWorkShifts.map((shift: any) => (
                               <div 
                                 key={shift.id}
                                 className="p-2 mb-2 rounded-md bg-blue-50 border border-blue-100"
