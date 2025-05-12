@@ -557,6 +557,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint specifico per ottenere i turni di un utente specifico
+  app.get("/api/schedules/:scheduleId/shifts/user/:userId", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.scheduleId);
+      const userId = parseInt(req.params.userId);
+      
+      // Verifica che l'utente stia accedendo solo ai propri turni o sia un amministratore
+      if ((req.user as any).role !== "admin" && (req.user as any).id !== userId) {
+        return res.status(403).json({ message: "Not authorized to view these shifts" });
+      }
+      
+      const shifts = await storage.getUserShifts(userId, scheduleId);
+      res.json(shifts);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Error fetching user shifts" });
+    }
+  });
+  
   app.post("/api/shifts", isAdmin, async (req, res) => {
     try {
       const shiftData = insertShiftSchema.parse(req.body);
