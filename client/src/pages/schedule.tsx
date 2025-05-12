@@ -175,6 +175,8 @@ export default function Schedule() {
   
   // Handle new weekly schedule
   const handleNewWeeklySchedule = () => {
+    console.log("Creazione nuovo turno settimanale");
+    
     // Resetta lo stato attuale
     setCreatingNewSchedule(true);
     
@@ -183,14 +185,16 @@ export default function Schedule() {
     setCustomStartDate(nextWeekStart);
     setCustomEndDate(addDays(nextWeekStart, 6));
     
-    // Forza il reset dello schedule esistente
-    queryClient.removeQueries({ queryKey: ["/api/schedules"] });
-    
     // Mostra il selettore di date per consentire all'utente di modificarle
     setShowDatePicker(true);
     
-    // Passa alla visualizzazione del selettore di date
-    console.log("Aprendo selettore date per nuovo turno");
+    // Forza il reset dell'esistente schedule (evita conflitti)
+    queryClient.removeQueries({ queryKey: ["/api/schedules"] });
+    
+    toast({
+      title: "Seleziona settimana",
+      description: "Seleziona le date di inizio e fine per il nuovo turno settimanale",
+    });
   };
 
   // Handle auto-generate schedule
@@ -484,7 +488,7 @@ export default function Schedule() {
               onPublish={() => {}}
             />
           </div>
-        ) : existingSchedule && !showDatePicker ? (
+        ) : existingSchedule && !showDatePicker && !creatingNewSchedule ? (
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">
