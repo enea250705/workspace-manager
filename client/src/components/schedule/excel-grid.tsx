@@ -642,12 +642,12 @@ export function ExcelGrid({
   
   return (
     <div className="schedule-grid bg-white rounded-md shadow-sm">
-      <div className="p-4 border-b">
-        <div className="flex flex-wrap justify-between items-center gap-4">
+      <div className="p-3 sm:p-4 border-b">
+        <div className="flex flex-wrap justify-between items-center gap-3 sm:gap-4">
           <div>
-            <h2 className="text-xl font-bold mb-1">Pianificazione Turni</h2>
-            <p className="text-sm text-muted-foreground">
-              {format(startDate, "dd MMMM", { locale: it })} - {format(endDate, "dd MMMM yyyy", { locale: it })}
+            <h2 className="text-lg sm:text-xl font-bold mb-1">Pianificazione Turni</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              {format(startDate, "dd MMM", { locale: it })} - {format(endDate, "dd MMM yyyy", { locale: it })}
             </p>
           </div>
           
@@ -677,18 +677,22 @@ export function ExcelGrid({
         </div>
       </div>
       
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         <Tabs defaultValue={weekDays[selectedDay].name} onValueChange={(value) => {
           const dayIndex = weekDays.findIndex(d => d.name === value);
           if (dayIndex !== -1) {
             setSelectedDay(dayIndex);
           }
         }}>
-          <TabsList className="mb-4 w-full">
+          <TabsList className="mb-4 w-full overflow-x-auto flex-wrap md:flex-nowrap">
             {weekDays.map((day, idx) => (
-              <TabsTrigger key={day.name} value={day.name} className="flex-1">
+              <TabsTrigger 
+                key={day.name} 
+                value={day.name} 
+                className="flex-1 min-w-[40px] px-1 sm:px-2 md:px-4"
+              >
                 <span className="hidden md:inline">{day.name}</span>
-                <span className="md:hidden text-xs sm:text-sm">{day.shortName}</span>
+                <span className="md:hidden text-xs sm:text-sm font-medium">{day.shortName}</span>
                 <span className="ml-1 text-xs text-muted-foreground hidden md:inline">
                   {format(day.date, "d/M")}
                 </span>
@@ -702,16 +706,17 @@ export function ExcelGrid({
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="p-1 sm:p-2 text-left font-medium">Dipendente</th>
+                      <th className="p-1 sm:p-2 text-left text-xs sm:text-sm font-medium">Dipendente</th>
                       {timeSlots.map((slot, idx) => (
                         idx < timeSlots.length - 1 && (
-                          <th key={idx} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-medium">
-                            {slot}
+                          <th key={idx} className="p-0 sm:p-1 md:p-2 text-center text-[10px] sm:text-xs md:text-sm font-medium">
+                            <span className="hidden sm:inline">{slot}</span>
+                            <span className="sm:hidden">{slot.split(":")[0]}</span>
                           </th>
                         )
                       ))}
-                      <th className="p-2 text-left font-medium">Note</th>
-                      <th className="p-2 text-center font-medium">Totale</th>
+                      <th className="p-1 sm:p-2 text-left text-xs sm:text-sm font-medium">Note</th>
+                      <th className="p-1 sm:p-2 text-center text-xs sm:text-sm font-medium">Totale</th>
                     </tr>
                   </thead>
                   <tbody>
