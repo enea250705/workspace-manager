@@ -62,9 +62,14 @@ export function EmployeeDashboard() {
     return acc;
   }, {});
   
+  // Mostra tutti i giorni della settimana, non solo i primi due
   const upcomingShifts = Object.entries(shiftsByDay)
-    .slice(0, 2)
-    .map(([day, shifts]) => ({ day, shifts: shifts as any[] }));
+    .map(([day, shifts]) => ({ day, shifts: shifts as any[] }))
+    // Ordina i giorni secondo l'ordine corretto della settimana (da Lunedì a Domenica)
+    .sort((a, b) => {
+      const dayOrder = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
+      return dayOrder.indexOf(a.day.toLowerCase()) - dayOrder.indexOf(b.day.toLowerCase());
+    });
   
   // Get the number of working days (solo giorni con turni di lavoro)
   const workingDays = Object.entries(shiftsByDay)
