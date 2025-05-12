@@ -4,6 +4,7 @@ import { it } from "date-fns/locale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { generateTimeSlots, calculateWorkHours, formatHours } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -354,19 +355,24 @@ export function ExcelGrid({
     }
   }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid, gridData]);
   
+  // Ottieni il context di autenticazione per verificare se l'utente è un amministratore
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  
   // GESTIONE CLIC MIGLIORATA
   // Gestisce in modo più robusto il clic su una cella della griglia
   const handleCellClick = (userId: number, timeIndex: number, day: string) => {
     // VALIDAZIONE PRELIMINARE
-    // Non procedere se non c'è uno schedule valido o se è già pubblicato
-    if (!scheduleId || isPublished) {
-      if (isPublished) {
-        toast({
-          title: "Turno pubblicato",
-          description: "Non puoi modificare un turno già pubblicato.",
-          variant: "destructive"
-        });
-      }
+    // Non procedere se non c'è uno schedule valido
+    if (!scheduleId) return;
+    
+    // Se il turno è pubblicato, solo gli admin possono modificarlo
+    if (isPublished && !isAdmin) {
+      toast({
+        title: "Turno pubblicato",
+        description: "Solo gli amministratori possono modificare un turno già pubblicato.",
+        variant: "destructive"
+      });
       return;
     }
     
