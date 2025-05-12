@@ -13,6 +13,12 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  LineChart,
+  Line
 } from "recharts";
 import { apiRequest } from "@/lib/queryClient";
 import { RecentActivities } from "./recent-activities";
