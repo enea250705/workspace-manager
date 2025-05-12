@@ -130,6 +130,14 @@ export default function Schedule() {
   // State for creating a new schedule
   const [creatingNewSchedule, setCreatingNewSchedule] = useState(false);
   
+  // State for managing existing schedule data
+  const [existingSchedule, setExistingSchedule] = useState<{
+    id: number;
+    startDate: Date | string;
+    endDate: Date | string;
+    isPublished: boolean;
+  } | null>(null);
+  
   // State for week selector dialog
   const [showWeekSelector, setShowWeekSelector] = useState(false);
   
@@ -269,31 +277,38 @@ export default function Schedule() {
     
     // Create the schedule in the background
     createScheduleMutation.mutate(newScheduleData, {
-      onSuccess: (response) => {
-        console.log("Schedule creato con successo:", response);
+      onSuccess: async (response) => {
+        // Converti la risposta in JSON per ottenere i dati
+        const data = await response.json();
+        console.log("Schedule creato con successo:", data);
         
-        // NON resettare ancora il flag di creazione nuovo turno
-        // permettiamo all'utente di inserire gli orari
+        // Forza un completo reset dello stato
+        setForceResetGrid(true);
         
-        // Refresh data
+        // Aggiorna l'interfaccia con le nuove date
         if (customStartDate) {
           setSelectedWeek(customStartDate);
         }
         
-        // Forza il refresh dei dati e seleziona il nuovo schedule
-        queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
+        // Cancella completamente i dati vecchi prima di richiedere i nuovi
+        queryClient.removeQueries({ queryKey: ["/api/schedules"] });
         
-        console.log("Schedule creato con successo con date:", { 
-          startDate: customStartDate, 
-          endDate: customEndDate 
-        });
-        
-        // Mostra messaggio di successo
-        toast({
-          title: "Pianificazione creata",
-          description: "La nuova pianificazione è stata creata con successo",
-        });
+        // Pausa breve per assicurarsi che il reset sia completato
+        setTimeout(() => {
+          // Ora richiedi i dati freschi dal server
+          queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
+          
+          toast({
+            title: "Nuova pianificazione creata",
+            description: `Pianificazione dal ${format(customStartDate!, "d MMMM", { locale: it })} al ${format(customEndDate!, "d MMMM", { locale: it })} creata con successo`,
+          });
+          
+          // Resetta il flag di creazione dopo che tutto è stato impostato
+          setTimeout(() => {
+            setCreatingNewSchedule(false);
+          }, 500);
+        }, 500);
       },
       onError: (error) => {
         console.error("Errore nella creazione dello schedule:", error);
@@ -302,6 +317,7 @@ export default function Schedule() {
           description: "Si è verificato un errore durante la creazione della pianificazione",
           variant: "destructive",
         });
+        setCreatingNewSchedule(false);
       }
     });
   };
