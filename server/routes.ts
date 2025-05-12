@@ -16,6 +16,10 @@ import {
   insertDocumentSchema,
   insertNotificationSchema
 } from "@shared/schema";
+// Commentiamo temporaneamente l'integrazione delle email
+// Per attivare le notifiche email, decommenta e configura le variabili d'ambiente
+// SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_SENDER, EMAIL_ENABLED
+// import { sendEmail } from './email_service';
 
 // Initialize session store
 const MemorySessionStore = MemoryStore(session);
@@ -718,9 +722,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all users
       const users = await storage.getAllUsers();
       
-      // Create notifications for all users
+      // Ottieni tutti i turni per questo schedule
+      const allShifts = await storage.getShifts(scheduleId);
+      
+      // Elabora notifiche per tutti gli utenti attivi
       for (const user of users) {
         if (user.isActive) {
+          // Crea notifica in-app
           const notification = await storage.createNotification({
             userId: user.id,
             type: "schedule_update",
@@ -733,12 +741,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
           
-          // Send real-time notification
+          // Invia notifica real-time
           sendNotification(user.id, {
             type: "schedule_update",
             message: "Nuova pianificazione turni pubblicata",
             data: notification
           });
+          
+          // Per i dipendenti, invia anche email con i loro turni specifici
+          if (user.role === "employee") {
+            // Filtra i turni solo per questo utente
+            const userShifts = allShifts.filter(shift => shift.userId === user.id);
+            
+            // Formatta i turni per l'email
+            const formattedShifts = userShifts.map(shift => {
+              // Determina il giorno della settimana
+              const shiftDate = new Date(shift.date);
+              const dayNames = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
+              const dayName = dayNames[shiftDate.getDay()];
+              const formattedDate = `${dayName} ${shiftDate.getDate()}/${shiftDate.getMonth() + 1}`;
+              
+              return {
+                day: formattedDate,
+                startTime: shift.startTime,
+                endTime: shift.endTime,
+                type: shift.type || "work",
+                notes: shift.notes || ""
+              };
+            });
+            
+            // NOTIFICA EMAIL: Qui verrà implementata la notifica via email ai dipendenti
+            // La funzionalità è predisposta ma disabilitata in attesa di configurazione server SMTP
+            console.log(`[INFO] Simulazione invio email turni a ${user.email || user.username}`);
+            // Quando pronti per attivare:
+            // 1. Configura variabili SMTP in un file .env
+            // 2. Imposta EMAIL_ENABLED=true
+            // 3. Rimuovi la direttiva di commento dall'import del servizio email
+          }
         }
       }
       
