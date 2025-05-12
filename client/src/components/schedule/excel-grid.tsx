@@ -291,8 +291,6 @@ export function ExcelGrid({
             if (isSameOrAfterStart && isSameOrBeforeEnd && newGridData[day.name] && newGridData[day.name][userId]) {
               // Determina se è mezza giornata (mattina/pomeriggio) o giornata intera
               if (request.halfDay) {
-                // Determina il testo per mezza giornata
-                const halfDayText = request.type === "vacation" ? "Ferie" : "Permesso";
                 // Gestione dei permessi a mezza giornata
                 // Mattina (fino alle 13:00)
                 if (request.halfDayPeriod === "morning") {
@@ -671,101 +669,41 @@ export function ExcelGrid({
         </div>
       </div>
       
-      <div className="p-2 sm:p-4">
+      <div className="p-4">
         <Tabs defaultValue={weekDays[selectedDay].name} onValueChange={(value) => {
           const dayIndex = weekDays.findIndex(d => d.name === value);
           if (dayIndex !== -1) {
             setSelectedDay(dayIndex);
           }
         }}>
-          {/* Tabs per dispositivi desktop (mostra nomi completi e date) */}
-          <TabsList className="mb-4 w-full hidden sm:flex">
+          <TabsList className="mb-4 w-full">
             {weekDays.map((day, idx) => (
-              <TabsTrigger key={`desktop-${day.name}`} value={day.name} className="flex-1">
-                <span>{day.name}</span>
-                <span className="ml-1 text-xs text-muted-foreground">
+              <TabsTrigger key={day.name} value={day.name} className="flex-1">
+                <span className="hidden sm:inline">{day.name}</span>
+                <span className="sm:hidden">{day.shortName}</span>
+                <span className="ml-1 text-xs text-muted-foreground hidden sm:inline">
                   {format(day.date, "d/M")}
                 </span>
               </TabsTrigger>
             ))}
           </TabsList>
           
-          {/* Tabs più compatte per dispositivi mobili (solo abbreviazioni e giorno) */}
-          <TabsList className="mb-2 w-full flex flex-wrap sm:hidden">
-            {weekDays.map((day, idx) => (
-              <TabsTrigger 
-                key={`mobile-${day.name}`} 
-                value={day.name} 
-                className="flex-1 min-w-[3rem] p-1 text-xs"
-              >
-                <div className="flex flex-col items-center">
-                  <span className="font-medium">{day.shortName}</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {format(day.date, "d/M")}
-                  </span>
-                </div>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          
           {weekDays.map((day) => (
             <TabsContent key={day.name} value={day.name} className="relative">
-              {/* Pulsante per mostrare una legenda per dispositivi mobili */}
-              <div className="flex flex-wrap gap-2 mb-2 sm:hidden bg-muted/10 rounded-md p-2 text-xs">
-                <div className="flex items-center">
-                  <span className="inline-block w-3 h-3 rounded-full bg-blue-100 border border-blue-300 mr-1"></span>
-                  <span>X = In servizio</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="inline-block w-3 h-3 rounded-full bg-red-100 border border-red-300 mr-1"></span>
-                  <span>F = Ferie</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="inline-block w-3 h-3 rounded-full bg-yellow-100 border border-yellow-300 mr-1"></span>
-                  <span>P = Permesso</span>
-                </div>
-              </div>
-              
               <div className="overflow-auto border rounded-md">
-                {/* Indicatore di scroll orizzontale su mobile */}
-                <div className="text-center text-xs text-muted-foreground py-1 border-b bg-muted/10 sm:hidden">
-                  ← Scorri orizzontalmente per vedere tutte le ore →
-                </div>
-                
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      {/* Intestazione Dipendente - fissa a sinistra */}
-                      <th className="p-1 sm:p-2 text-left font-medium sticky left-0 bg-muted/50 z-10 min-w-[100px]">
-                        Dipendente
-                      </th>
-                      
-                      {/* Intestazioni degli slot orari - selettive per mobile */}
-                      {timeSlots.map((slot, idx) => {
-                        if (idx >= timeSlots.length - 1) return null;
-                        
-                        // Su mobile, mostra solo alcune ore (ogni 2 ore)
-                        const showOnMobile = idx % 4 === 0; // Mostra solo ogni 4 slot (ogni 2 ore)
-                        
-                        return (
-                          <th 
-                            key={idx} 
-                            className={`
-                              p-1 sm:p-2 text-center font-medium
-                              ${showOnMobile ? 'text-xs' : 'text-[0] sm:text-xs'} 
-                              sm:text-sm
-                              ${idx % 2 === 0 ? 'bg-muted/20' : ''}
-                            `}
-                          >
-                            {showOnMobile ? slot : <span className="sm:hidden">·</span>}
-                            <span className="hidden sm:inline">{slot}</span>
+                      <th className="p-1 sm:p-2 text-left font-medium">Dipendente</th>
+                      {timeSlots.map((slot, idx) => (
+                        idx < timeSlots.length - 1 && (
+                          <th key={idx} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-medium">
+                            {slot}
                           </th>
-                        );
-                      })}
-                      
-                      {/* Intestazioni Note e Totale */}
-                      <th className="p-1 sm:p-2 text-left font-medium">Note</th>
-                      <th className="p-1 sm:p-2 text-center font-medium">Totale</th>
+                        )
+                      ))}
+                      <th className="p-2 text-left font-medium">Note</th>
+                      <th className="p-2 text-center font-medium">Totale</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -773,19 +711,16 @@ export function ExcelGrid({
                       .filter(user => user.role === "employee" && user.isActive)
                       .map((user) => (
                         <tr key={user.id} className="border-b hover:bg-muted/20">
-                          {/* Cella dipendente - fissa a sinistra */}
-                          <td className="p-1 sm:p-2 text-left font-medium text-xs sm:text-sm sticky left-0 bg-white z-10 min-w-[100px]">
+                          <td className="p-2 text-left font-medium text-xs sm:text-sm">
                             {user.fullName || user.username}
                           </td>
                           
-                          {/* Celle orarie */}
                           {timeSlots.map((slot, idx) => {
                             if (idx >= timeSlots.length - 1) return null;
                             
                             // Get cell data
                             const cellData = gridData[day.name]?.[user.id]?.cells[idx] || { type: "", shiftId: null };
                             const cellType = cellData.type;
-                            const isTimeOff = cellData.isTimeOff;
                             
                             // Style based on cell type
                             let cellStyle = "cursor-pointer hover:bg-gray-50 transition-colors";
@@ -802,16 +737,6 @@ export function ExcelGrid({
                               cellContent = "P";
                             }
                             
-                            // Se è una richiesta di ferie/permessi approvata, aggiungi stile speciale
-                            if (isTimeOff) {
-                              cellStyle += " ring-1 ring-inset ring-gray-400";
-                            }
-                            
-                            // Sfondo alternato per le colonne per migliorare la leggibilità
-                            if (idx % 2 === 0) {
-                              cellStyle += " bg-opacity-80";
-                            }
-                            
                             return (
                               <td 
                                 key={idx}
@@ -825,7 +750,6 @@ export function ExcelGrid({
                             );
                           })}
                           
-                          {/* Cella Note */}
                           <td className="p-1">
                             <Input
                               size={20}
@@ -837,7 +761,6 @@ export function ExcelGrid({
                             />
                           </td>
                           
-                          {/* Cella Totale */}
                           <td className="p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm">
                             {formatHours(gridData[day.name]?.[user.id]?.total || 0)}
                           </td>
