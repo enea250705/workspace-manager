@@ -62,7 +62,7 @@ export function Layout({ children }: PropsWithChildren) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
             transition={{ duration: 0.3 }}
-            className="p-4 md:p-6 pb-20"
+            className="p-3 md:p-6 pb-16 md:pb-20 overflow-x-auto"
           >
             {children}
           </motion.div>
