@@ -146,24 +146,7 @@ export default function MySchedule() {
                     <div className="text-sm">
                       <div className="font-medium">Totale ore settimanali:</div>
                       <div>
-                        {userShifts
-                          .filter(shift => shift.type === "work")
-                          .reduce((total, shift) => {
-                            const startHour = parseInt(shift.startTime.split(':')[0]);
-                            const startMin = parseInt(shift.startTime.split(':')[1]);
-                            const endHour = parseInt(shift.endTime.split(':')[0]);
-                            const endMin = parseInt(shift.endTime.split(':')[1]);
-                            
-                            let hours = endHour - startHour;
-                            let minutes = endMin - startMin;
-                            
-                            if (minutes < 0) {
-                              hours -= 1;
-                              minutes += 60;
-                            }
-                            
-                            return total + hours + (minutes / 60);
-                          }, 0).toFixed(1)} ore
+                        {formatHours(calculateTotalWorkHours(userShifts.filter(shift => shift.type === "work")))}
                       </div>
                     </div>
                   </div>

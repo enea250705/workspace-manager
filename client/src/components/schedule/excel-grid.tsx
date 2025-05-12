@@ -4,7 +4,7 @@ import { it } from "date-fns/locale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { generateTimeSlots } from "@/lib/utils";
+import { generateTimeSlots, calculateWorkHours, formatHours } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -250,23 +250,10 @@ export function ExcelGrid({
               // Aggiorna le note
               newGridData[day][userId].notes = shift.notes || "";
               
-              // Calcola le ore totali
+              // Calcola le ore totali utilizzando la funzione centralizzata
               if (shift.type === 'work') {
-                const startHour = parseInt(shift.startTime.split(':')[0]);
-                const startMin = parseInt(shift.startTime.split(':')[1]);
-                const endHour = parseInt(shift.endTime.split(':')[0]);
-                const endMin = parseInt(shift.endTime.split(':')[1]);
-                
-                let hours = endHour - startHour;
-                let minutes = endMin - startMin;
-                
-                if (minutes < 0) {
-                  hours -= 1;
-                  minutes += 60;
-                }
-                
-                // Aggiungi al totale
-                newGridData[day][userId].total += hours + (minutes / 60);
+                // Aggiungi al totale usando la funzione di calcolo standardizzata
+                newGridData[day][userId].total += calculateWorkHours(shift.startTime, shift.endTime);
               }
             }
           }
