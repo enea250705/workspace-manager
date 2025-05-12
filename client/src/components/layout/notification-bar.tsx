@@ -17,6 +17,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { CardHoverEffect } from "@/components/ui/card-hover-effect";
 
+interface NotificationBarProps {
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
+}
+
 type Notification = {
   id: number;
   userId: number;
@@ -27,7 +32,7 @@ type Notification = {
   createdAt: string;
 };
 
-export function NotificationBar() {
+export function NotificationBar({ mobileMenuOpen, setMobileMenuOpen }: NotificationBarProps) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
@@ -162,18 +167,32 @@ export function NotificationBar() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <AnimatePresence mode="wait">
-        <motion.h2 
-          key={location} 
-          className="font-condensed text-xl bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent"
-          variants={titleVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
+      <div className="flex items-center space-x-3">
+        <motion.button
+          className="p-1.5 rounded-full hover:bg-gray-100 md:hidden flex items-center justify-center"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          aria-label={mobileMenuOpen ? "Chiudi menu" : "Apri menu"}
         >
-          {getPageTitle()}
-        </motion.h2>
-      </AnimatePresence>
+          <span className="material-icons text-gray-600">
+            {mobileMenuOpen ? "close" : "menu"}
+          </span>
+        </motion.button>
+        
+        <AnimatePresence mode="wait">
+          <motion.h2 
+            key={location} 
+            className="font-condensed text-xl bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent"
+            variants={titleVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
+            {getPageTitle()}
+          </motion.h2>
+        </AnimatePresence>
+      </div>
 
       <div className="flex items-center space-x-4">
         <motion.div 

@@ -196,7 +196,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
         className={cn(
           "bg-white shadow-md w-full md:w-72 md:min-h-screen transition-all duration-300 flex flex-col",
           mobileMenuOpen 
-            ? "fixed h-screen z-50 inset-0" 
+            ? "fixed h-screen z-50 inset-0 flex" 
             : "h-auto hidden md:flex",
         )}
         variants={sidebarVariants}
