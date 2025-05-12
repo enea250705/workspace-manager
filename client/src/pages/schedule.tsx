@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { WeekSelectorDialog } from "@/components/schedule/week-selector-dialog";
 import { ScheduleAutoGenerator } from "@/components/schedule/auto-generator/auto-generator";
 import { ExcelGrid } from "@/components/schedule/excel-grid";
+import { RepublishButton } from "@/components/schedule/republish-button";
 
 // Date utilities
 import { format, startOfWeek, addDays, isBefore, parseISO } from "date-fns";
@@ -698,6 +699,13 @@ export default function Schedule() {
             
             {/* Pulsanti di azione posizionati sotto la tabella */}
             <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mt-6 pt-4 border-t border-gray-200">
+              {/* Mostra il pulsante di ripubblicazione solo per gli amministratori */}
+              {user?.role === "admin" && existingSchedule?.isPublished && (
+                <RepublishButton 
+                  scheduleId={existingSchedule.id} 
+                  isPublished={existingSchedule.isPublished}
+                />
+              )}
               <Button
                 variant="outline"
                 size="sm"
