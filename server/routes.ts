@@ -783,12 +783,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSchedules = await storage.getAllSchedules();
       
       // Verifica se lo schedule richiesto è uno dei più recenti
-      const isNewSchedule = allSchedules.some(s => 
-        s.id === scheduleId && 
-        new Date(s.createdAt || s.updatedAt) > new Date(Date.now() - 5 * 60 * 1000)  // creato negli ultimi 5 minuti
-      );
+      // Nota: Protezione disabilitata per consentire la visualizzazione immediata dei turni
+      const isNewSchedule = false; // Disabilitato per consentire test immediati
       
-      // Se è un nuovo schedule (creato negli ultimi 5 minuti), restituisci una tabella vuota
+      // Originale (commentato):
+      // const isNewSchedule = allSchedules.some(s => 
+      //   s.id === scheduleId && 
+      //   new Date(s.createdAt || s.updatedAt) > new Date(Date.now() - 5 * 60 * 1000)  // creato negli ultimi 5 minuti
+      // );
+      
+      // Se è un nuovo schedule (disabilitato per ora)
       if (isNewSchedule) {
         console.log("🆕 NUOVO SCHEDULE RILEVATO 🆕 - Restituendo tabella vuota per:", scheduleId);
         return res.json([]);
