@@ -536,88 +536,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // SOLUZIONE DRASTICA: API per creare un NUOVO schedule COMPLETAMENTE pulito
-  // Prima di creare un nuovo schedule, rimuove tutti gli altri con le stesse date
+  // IMPLEMENTAZIONE COMPLETAMENTE NUOVA:
+  // API per creare un NUOVO schedule COMPLETAMENTE pulito garantito
   app.post("/api/schedules/new-empty", isAdmin, async (req, res) => {
     try {
+      // Valida i dati di input
       const scheduleData = insertScheduleSchema.parse({
         ...req.body,
         createdBy: (req.user as any).id
       });
       
-      // PASSAGGIO 1: Trova tutti gli schedule con le stesse date
+      // FASE 1: Verifica conflitti con date esistenti
       const startDate = scheduleData.startDate;
       const endDate = scheduleData.endDate;
+      
+      console.log("📅 NUOVA RICHIESTA SCHEDULE:", { startDate, endDate });
       
       // Ottieni tutti gli schedule esistenti
       const allSchedules = await storage.getAllSchedules();
       
-      // Identifica gli schedule con date simili
+      // Identifica schedule con date in conflitto (sovrapposte)
       const conflictingSchedules = allSchedules.filter(s => 
         (s.startDate === startDate && s.endDate === endDate) || 
         (s.startDate <= startDate && s.endDate >= startDate) ||
         (s.startDate <= endDate && s.endDate >= endDate)
       );
       
-      console.log(`🚨 ATTENZIONE: Trovati ${conflictingSchedules.length} schedule con date in conflitto`);
-      console.log("Date del nuovo schedule:", { startDate, endDate });
-      console.log("Schedule in conflitto IDs:", conflictingSchedules.map(s => s.id));
+      // Log informativo sui conflitti trovati
+      console.log(`🔍 Analisi date: Rilevati ${conflictingSchedules.length} schedule con date in conflitto`);
+      if (conflictingSchedules.length > 0) {
+        console.log("📊 Schedule in conflitto:", 
+          conflictingSchedules.map(s => ({ 
+            id: s.id, 
+            periodo: `${s.startDate} al ${s.endDate}`,
+            pubblicato: s.isPublished 
+          }))
+        );
+      }
       
-      // PASSAGGIO 2: SOLUZIONE DRASTICA - Eliminazione fisica di tutti i turni per gli schedule non pubblicati
+      // FASE 2: GESTIONE DRASTICA DEI CONFLITTI
+      // Per ogni schedule in conflitto, elimina i turni associati se non è pubblicato
       for (const conflictSchedule of conflictingSchedules) {
         if (conflictSchedule.isPublished) {
-          // Se è già pubblicato, non lo tocchiamo
-          console.log(`⚠️ Schedule ID ${conflictSchedule.id} è già pubblicato, non verrà modificato`);
+          console.log(`⚠️ ATTENZIONE: Schedule ID ${conflictSchedule.id} è già pubblicato, non verrà modificato`);
           continue;
         }
         
-        console.log(`🗑️ ELIMINAZIONE DRASTICA: Eliminazione manuale di TUTTI i turni collegati allo schedule ID ${conflictSchedule.id}`);
+        console.log(`🧹 PULIZIA RADICALE: Iniziata eliminazione turni per schedule ID ${conflictSchedule.id}`);
         
         try {
-          // Elimina tutti i turni per questo schedule direttamente usando la Map
-          const scheduleId = conflictSchedule.id;
+          // Ottieni tutti i turni dello schedule
+          const allShifts = await storage.getShifts(conflictSchedule.id);
+          console.log(`   ┌── Trovati ${allShifts.length} turni da eliminare`);
           
-          // Ottieni tutti i turni esistenti
-          const allShifts = await storage.getShifts(scheduleId);
-          console.log(`   - Trovati ${allShifts.length} turni da eliminare per lo schedule ID ${scheduleId}`);
-          
-          // Elimina manualmente ogni turno
-          let eliminatiCount = 0;
+          // Elimina ogni singolo turno
+          let successCount = 0;
           for (const shift of allShifts) {
-            await storage.deleteShift(shift.id);
-            eliminatiCount++;
+            const success = await storage.deleteShift(shift.id);
+            if (success) successCount++;
           }
           
-          console.log(`✅ Eliminati manualmente ${eliminatiCount} turni per lo schedule ID ${scheduleId}`);
+          console.log(`   └── ✅ Eliminati ${successCount}/${allShifts.length} turni con successo`);
+          
+          // Se possibile, elimina anche lo schedule stesso
+          try {
+            if (storage.deleteSchedule && typeof storage.deleteSchedule === 'function') {
+              const deleted = await storage.deleteSchedule(conflictSchedule.id);
+              if (deleted) {
+                console.log(`   └── 🗑️ Schedule ID ${conflictSchedule.id} eliminato completamente`);
+              }
+            }
+          } catch (innerError) {
+            console.log(`   └── ℹ️ Schedule non eliminato, solo i turni sono stati rimossi`);
+          }
         } catch (error) {
-          console.error(`❌ Errore nell'eliminazione drastica dei turni:`, error);
+          console.error(`   └── ❌ Errore durante l'eliminazione:`, error);
         }
       }
       
-      // PASSAGGIO 3: Crea un nuovo schedule nel database
-      console.log("🆕 Creazione di un nuovo schedule COMPLETAMENTE VUOTO");
-      const schedule = await storage.createSchedule(scheduleData);
+      // FASE 3: CREAZIONE NUOVO SCHEDULE (completamente vuoto)
+      console.log("🏗️ Creazione nuovo schedule completamente VUOTO...");
       
-      // PASSAGGIO 4: Invia la risposta con il nuovo schedule
-      const emptySchedule = {
-        ...schedule,
-        isNew: true,
-        isEmpty: true,
-        isClean: true
+      // Marca esplicitamente schedule come non pubblicato
+      const newScheduleData = {
+        ...scheduleData,
+        isPublished: false,
+        publishedAt: null
       };
       
-      // Registra i dettagli dell'operazione
-      console.log("✅ NUOVO SCHEDULE PULITO CREATO:", {
+      // Crea uno schedule totalmente pulito
+      const schedule = await storage.createSchedule(newScheduleData);
+      
+      // FASE 4: RISPOSTA CON METADATA AGGIUNTIVI 
+      const responseSchedule = {
+        ...schedule,
+        isNew: true,           // Flag per indicare che è nuovo
+        isEmpty: true,         // Flag per indicare che è vuoto
+        isClean: true,         // Flag per indicare che è stato creato pulito
+        creationTime: new Date().toISOString()  // Timestamp esatto di creazione
+      };
+      
+      // Log finale di successo
+      console.log("✅ NUOVO SCHEDULE CREATO CORRETTAMENTE:", {
         id: schedule.id, 
-        startDate: schedule.startDate,
-        endDate: schedule.endDate,
-        isClean: true
+        periodo: `${schedule.startDate} al ${schedule.endDate}`,
+        timestamp: new Date().toISOString()
       });
       
-      res.status(201).json(emptySchedule);
+      // Invia risposta
+      res.status(201).json(responseSchedule);
     } catch (err) {
-      console.error("❌ ERRORE nella creazione del nuovo schedule:", err);
-      res.status(400).json({ message: "Impossibile creare il nuovo schedule", error: String(err) });
+      console.error("❌ ERRORE nella creazione dello schedule:", err);
+      res.status(400).json({ 
+        message: "Impossibile creare il nuovo schedule", 
+        error: String(err),
+        timestamp: new Date().toISOString()
+      });
     }
   });
   

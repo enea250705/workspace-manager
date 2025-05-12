@@ -23,6 +23,7 @@ export interface IStorage {
   getScheduleByDateRange(startDate: Date, endDate: Date): Promise<Schedule | undefined>;
   getAllSchedules(): Promise<Schedule[]>;
   publishSchedule(id: number): Promise<Schedule | undefined>;
+  deleteSchedule?(id: number): Promise<boolean>; // Nuova funzione opzionale per eliminare uno schedule
   
   // Shift management
   createShift(shift: InsertShift): Promise<Shift>;
@@ -30,7 +31,7 @@ export interface IStorage {
   getUserShifts(userId: number, scheduleId: number): Promise<Shift[]>;
   updateShift(id: number, shiftData: Partial<InsertShift>): Promise<Shift | undefined>;
   deleteShift(id: number): Promise<boolean>;
-  deleteAllShiftsForSchedule?(scheduleId: number): Promise<boolean>; // ora opzionale
+  deleteAllShiftsForSchedule?(scheduleId: number): Promise<boolean>; // Funzione per eliminare tutti i turni di uno schedule
   
   // TimeOff requests
   createTimeOffRequest(request: InsertTimeOffRequest): Promise<TimeOffRequest>;
@@ -233,13 +234,23 @@ export class MemStorage implements IStorage {
     return this.shifts.delete(id);
   }
   
-  // NUOVA FUNZIONE: Elimina tutti i turni di uno schedule specifico
+  /**
+   * Elimina tutti i turni di uno schedule specifico
+   * @param scheduleId - ID dello schedule da cui eliminare i turni
+   * @returns true se l'operazione è riuscita, false altrimenti
+   */
   async deleteAllShiftsForSchedule(scheduleId: number): Promise<boolean> {
     try {
-      // Trova tutti i turni per questo schedule
+      // Conta quanti turni esistevano prima
       const scheduleShifts = Array.from(this.shifts.values()).filter(
         shift => shift.scheduleId === scheduleId
       );
+      const initialCount = scheduleShifts.length;
+      
+      if (initialCount === 0) {
+        console.log(`Nessun turno da eliminare per lo schedule ID ${scheduleId}`);
+        return true;
+      }
       
       // Elimina tutti i turni
       let deletedCount = 0;
@@ -249,10 +260,33 @@ export class MemStorage implements IStorage {
         }
       }
       
-      console.log(`Eliminati ${deletedCount} turni per lo schedule ID ${scheduleId}`);
-      return true;
+      // Verifica il risultato
+      const success = deletedCount === initialCount;
+      console.log(`✅ Pulizia schedule ID ${scheduleId}: eliminati ${deletedCount}/${initialCount} turni`);
+      return success;
     } catch (error) {
-      console.error(`Errore nell'eliminazione dei turni per lo schedule ID ${scheduleId}:`, error);
+      console.error(`❌ Errore nell'eliminazione dei turni per lo schedule ID ${scheduleId}:`, error);
+      return false;
+    }
+  }
+  
+  /**
+   * Elimina completamente uno schedule e tutti i suoi turni
+   * @param id - ID dello schedule da eliminare
+   * @returns true se l'operazione è riuscita, false altrimenti
+   */
+  async deleteSchedule(id: number): Promise<boolean> {
+    try {
+      // Prima elimina tutti i turni associati
+      await this.deleteAllShiftsForSchedule(id);
+      
+      // Poi elimina lo schedule stesso
+      const result = this.schedules.delete(id);
+      
+      console.log(`${result ? '✅' : '❌'} Schedule ID ${id} ${result ? 'eliminato' : 'non trovato o non eliminato'}`);
+      return result;
+    } catch (error) {
+      console.error(`❌ Errore durante l'eliminazione dello schedule ID ${id}:`, error);
       return false;
     }
   }
@@ -472,6 +506,8 @@ const PostgresSessionStore = connectPg(session);
 
 export class DatabaseStorage implements IStorage {
   sessionStore: any; // Usiamo any per evitare errori di tipo
+
+  // Implementiamo deleteSchedule e deleteAllShiftsForSchedule per aderire all'interfaccia
   
   constructor() {
     // Create PostgreSQL session store
@@ -649,11 +685,68 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteShift(id: number): Promise<boolean> {
-    const result = await db
-      .delete(shifts)
-      .where(eq(shifts.id, id));
-    
-    return !!result;
+    try {
+      const result = await db
+        .delete(shifts)
+        .where(eq(shifts.id, id));
+      
+      return !!result;
+    } catch (error) {
+      console.error(`Errore durante l'eliminazione del turno ID ${id}:`, error);
+      return false;
+    }
+  }
+  
+  /**
+   * Elimina tutti i turni collegati a uno schedule specifico
+   * @param scheduleId - L'ID dello schedule di cui eliminare i turni
+   * @returns true se l'operazione è riuscita, false altrimenti
+   */
+  async deleteAllShiftsForSchedule(scheduleId: number): Promise<boolean> {
+    try {
+      // Prima conta quanti turni ci sono per lo schedule
+      const allShifts = await this.getShifts(scheduleId);
+      const initialCount = allShifts.length;
+      
+      if (initialCount === 0) {
+        console.log(`✅ Nessun turno da eliminare per lo schedule ID ${scheduleId}`);
+        return true;
+      }
+      
+      // Elimina tutti i turni per lo schedule specificato
+      const result = await db
+        .delete(shifts)
+        .where(eq(shifts.scheduleId, scheduleId));
+      
+      console.log(`✅ Pulizia DB: eliminati tutti i turni per schedule ID ${scheduleId}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Errore nell'eliminazione dei turni per lo schedule ID ${scheduleId}:`, error);
+      return false;
+    }
+  }
+  
+  /**
+   * Elimina completamente uno schedule e tutti i suoi turni
+   * @param id - ID dello schedule da eliminare
+   * @returns true se l'operazione è riuscita, false altrimenti
+   */
+  async deleteSchedule(id: number): Promise<boolean> {
+    try {
+      // Prima elimina tutti i turni associati
+      await this.deleteAllShiftsForSchedule(id);
+      
+      // Poi elimina lo schedule stesso
+      const result = await db
+        .delete(schedules)
+        .where(eq(schedules.id, id));
+      
+      console.log(`✅ Schedule ID ${id} eliminato completamente dal database`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Errore durante l'eliminazione dello schedule ID ${id}:`, error);
+      return false;
+    }
   }
   
   async createTimeOffRequest(requestData: InsertTimeOffRequest): Promise<TimeOffRequest> {
