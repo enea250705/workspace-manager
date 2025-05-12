@@ -77,7 +77,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
     };
   }, [mobileMenuOpen]);
   
-  if (!user) {
+  if (!isAuthenticated) {
     return null; // Don't show sidebar if not logged in
   }
   
