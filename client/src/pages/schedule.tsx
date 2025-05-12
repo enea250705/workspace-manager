@@ -154,18 +154,12 @@ export default function Schedule() {
   const startDateToUse = customStartDate || selectedWeek;
   const endOfWeek = customEndDate || addDays(selectedWeek, 6);
 
-  // Format date range for display basato sull'esistingSchedule se disponibile
-  const dateRangeText = existingSchedule && existingSchedule.startDate && existingSchedule.endDate
-    ? `${format(new Date(existingSchedule.startDate), "d MMMM", { locale: it })} - ${format(
-        new Date(existingSchedule.endDate),
-        "d MMMM yyyy",
-        { locale: it }
-      )}`
-    : `${format(startDateToUse, "d MMMM", { locale: it })} - ${format(
-        endOfWeek,
-        "d MMMM yyyy",
-        { locale: it }
-      )}`;
+  // Format date range for display
+  const dateRangeText = `${format(startDateToUse, "d MMMM", { locale: it })} - ${format(
+    endOfWeek,
+    "d MMMM yyyy",
+    { locale: it }
+  )}`;
 
   // QUERY MIGLIORATA: Fetch existing schedule data for the selected week
   // Manteniamo una scheduleId corrente per garantire il caricamento corretto
