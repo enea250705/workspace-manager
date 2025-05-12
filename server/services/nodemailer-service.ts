@@ -163,9 +163,6 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
   if (shifts && shifts.length > 0) {
     // Ordina i turni per giorno della settimana
     const weekdayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-    const orderedShifts = [...shifts].sort((a, b) => {
-      return weekdayOrder.indexOf(a.day) - weekdayOrder.indexOf(b.day);
-    });
     
     // Traduci i giorni della settimana in italiano
     const weekdayTranslation: Record<string, string> = {
@@ -186,7 +183,17 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
       "sick": "Malattia"
     };
     
-    // Crea la tabella dei turni
+    // Raggruppa i turni per giorno
+    const shiftsByDay: Record<string, any[]> = {};
+    
+    shifts.forEach(shift => {
+      if (!shiftsByDay[shift.day]) {
+        shiftsByDay[shift.day] = [];
+      }
+      shiftsByDay[shift.day].push(shift);
+    });
+    
+    // Crea la tabella dei turni con formato semplificato (giorno: da ora a ora)
     shiftsTable = `
       <div style="margin-top: 25px; margin-bottom: 25px;">
         <h3 style="color: #4a6cf7; margin-bottom: 15px;">I tuoi turni:</h3>
@@ -196,31 +203,43 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
               <th style="padding: 10px; border: 1px solid #e0e0e0; text-align: left;">Giorno</th>
               <th style="padding: 10px; border: 1px solid #e0e0e0; text-align: left;">Orario</th>
               <th style="padding: 10px; border: 1px solid #e0e0e0; text-align: left;">Tipo</th>
-              <th style="padding: 10px; border: 1px solid #e0e0e0; text-align: left;">Area</th>
             </tr>
           </thead>
           <tbody>
     `;
     
-    for (const shift of orderedShifts) {
-      // Converti il tipo di turno
-      const shiftType = typeTranslation[shift.type] || shift.type;
+    // Itera sui giorni nell'ordine corretto
+    for (const day of weekdayOrder) {
+      const dayShifts = shiftsByDay[day] || [];
       
-      // Assegna colore in base al tipo
-      const typeColor = shift.type === 'work' ? '#4a6cf7' : 
-                         shift.type === 'vacation' ? '#e8aa33' : 
-                         shift.type === 'leave' ? '#10b981' : 
-                         shift.type === 'sick' ? '#ef4444' : '#6b7280';
+      if (dayShifts.length === 0) continue; // Salta i giorni senza turni
       
-      // Aggiungi riga alla tabella
-      shiftsTable += `
-        <tr>
-          <td style="padding: 10px; border: 1px solid #e0e0e0;">${weekdayTranslation[shift.day] || shift.day}</td>
-          <td style="padding: 10px; border: 1px solid #e0e0e0;">${shift.startTime.substring(0, 5)} - ${shift.endTime.substring(0, 5)}</td>
-          <td style="padding: 10px; border: 1px solid #e0e0e0; color: ${typeColor}; font-weight: bold;">${shiftType}</td>
-          <td style="padding: 10px; border: 1px solid #e0e0e0;">${shift.area || '-'}</td>
-        </tr>
-      `;
+      // Ordina i turni per orario di inizio
+      dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      
+      // Per ogni giorno, mostra un singolo orario di inizio e fine (primo e ultimo turno)
+      if (dayShifts.length > 0) {
+        const firstShift = dayShifts[0];
+        const lastShift = dayShifts[dayShifts.length - 1];
+        
+        // Converti il tipo di turno
+        const shiftType = typeTranslation[firstShift.type] || firstShift.type;
+        
+        // Assegna colore in base al tipo
+        const typeColor = firstShift.type === 'work' ? '#4a6cf7' : 
+                          firstShift.type === 'vacation' ? '#e8aa33' : 
+                          firstShift.type === 'leave' ? '#10b981' : 
+                          firstShift.type === 'sick' ? '#ef4444' : '#6b7280';
+        
+        // Aggiungi riga alla tabella con formato semplificato
+        shiftsTable += `
+          <tr>
+            <td style="padding: 10px; border: 1px solid #e0e0e0;">${weekdayTranslation[day]}</td>
+            <td style="padding: 10px; border: 1px solid #e0e0e0;">${firstShift.startTime.substring(0, 5)} - ${lastShift.endTime.substring(0, 5)}</td>
+            <td style="padding: 10px; border: 1px solid #e0e0e0; color: ${typeColor}; font-weight: bold;">${shiftType}</td>
+          </tr>
+        `;
+      }
     }
     
     shiftsTable += `
