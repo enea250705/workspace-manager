@@ -41,18 +41,30 @@ export function EmployeeDashboard() {
     return days[new Date(date).getDay()];
   };
   
-  // Group shifts by day
+  // Group shifts by day and remove duplicates based on startTime-endTime combination
   const shiftsByDay = myShifts.reduce((acc: any, shift: any) => {
     if (!acc[shift.day]) {
       acc[shift.day] = [];
     }
-    acc[shift.day].push(shift);
+    
+    // Check if this exact time slot already exists for this day to avoid duplicates
+    const existingShiftIndex = acc[shift.day].findIndex((s: any) => 
+      s.startTime === shift.startTime && 
+      s.endTime === shift.endTime && 
+      s.type === shift.type
+    );
+    
+    // Add only if not duplicate
+    if (existingShiftIndex === -1) {
+      acc[shift.day].push(shift);
+    }
+    
     return acc;
   }, {});
   
   const upcomingShifts = Object.entries(shiftsByDay)
     .slice(0, 2)
-    .map(([day, shifts]) => ({ day, shifts }));
+    .map(([day, shifts]) => ({ day, shifts: shifts as any[] }));
   
   // Get the number of working days (solo giorni con turni di lavoro)
   const workingDays = Object.entries(shiftsByDay)
@@ -170,46 +182,99 @@ export function EmployeeDashboard() {
               {upcomingShifts.map(({ day, shifts }: any) => (
                 <div key={day} className="border rounded-lg p-3">
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium">{day}</h3>
-                    <div className="text-xs text-gray-500">
+                    <h3 className="font-medium">
+                      {/* Capitalizza il primo carattere del giorno */}
+                      {day.charAt(0).toUpperCase() + day.slice(1)}
+                    </h3>
+                    <div className="text-xs text-gray-500 font-medium">
                       {formatHours(calculateTotalWorkHours(shifts.filter((shift: any) => shift.type === "work")))}
                     </div>
                   </div>
                   
-                  {shifts.map((shift: any) => (
-                    <div 
-                      key={shift.id}
-                      className={`p-2 mb-2 rounded-md ${
-                        shift.type === "work" 
-                          ? "bg-blue-50 border border-blue-100" 
-                          : shift.type === "vacation"
-                          ? "bg-red-50 border border-red-100"
-                          : "bg-yellow-50 border border-yellow-100"
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-sm font-medium">
-                            {shift.type === "work" 
-                              ? `${shift.startTime} - ${shift.endTime}` 
-                              : shift.type === "vacation"
-                              ? "Ferie"
-                              : "Permesso"}
-                          </p>
-                          {shift.area && (
-                            <p className="text-xs text-gray-600">Area: {shift.area}</p>
-                          )}
-                        </div>
-                        <span className="material-icons text-sm text-gray-400">
-                          {shift.type === "work" 
-                            ? "work" 
-                            : shift.type === "vacation"
-                            ? "beach_access"
-                            : "time_to_leave"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                  {/* Raggruppa i turni per tipo */}
+                  {(() => {
+                    // Raggruppa i turni per tipo
+                    const workShifts = shifts.filter(s => s.type === "work");
+                    const vacationShifts = shifts.filter(s => s.type === "vacation");
+                    const leaveShifts = shifts.filter(s => s.type === "leave");
+                    
+                    // Ordina i turni di lavoro per orario di inizio
+                    const sortedWorkShifts = [...workShifts].sort((a, b) => {
+                      return convertToHours(a.startTime) - convertToHours(b.startTime);
+                    });
+                    
+                    return (
+                      <>
+                        {/* Turni di lavoro */}
+                        {sortedWorkShifts.length > 0 && (
+                          <div className="mb-3">
+                            {sortedWorkShifts.map((shift: any) => (
+                              <div 
+                                key={shift.id}
+                                className="p-2 mb-2 rounded-md bg-blue-50 border border-blue-100"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      {shift.startTime} - {shift.endTime}
+                                    </p>
+                                    {shift.area && (
+                                      <p className="text-xs text-gray-600">Area: {shift.area}</p>
+                                    )}
+                                  </div>
+                                  <span className="material-icons text-sm text-blue-500">work</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Ferie */}
+                        {vacationShifts.length > 0 && (
+                          <div className="mb-3">
+                            {vacationShifts.map((shift: any) => (
+                              <div 
+                                key={shift.id}
+                                className="p-2 mb-2 rounded-md bg-red-50 border border-red-100"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <p className="text-sm font-medium">Ferie</p>
+                                    {shift.area && (
+                                      <p className="text-xs text-gray-600">Area: {shift.area}</p>
+                                    )}
+                                  </div>
+                                  <span className="material-icons text-sm text-red-500">beach_access</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Permessi */}
+                        {leaveShifts.length > 0 && (
+                          <div className="mb-3">
+                            {leaveShifts.map((shift: any) => (
+                              <div 
+                                key={shift.id}
+                                className="p-2 mb-2 rounded-md bg-yellow-50 border border-yellow-100"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <p className="text-sm font-medium">Permesso</p>
+                                    {shift.area && (
+                                      <p className="text-xs text-gray-600">Area: {shift.area}</p>
+                                    )}
+                                  </div>
+                                  <span className="material-icons text-sm text-yellow-500">time_to_leave</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
