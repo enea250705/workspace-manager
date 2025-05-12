@@ -3,14 +3,15 @@ import { User } from '@shared/schema';
 
 // Modalità di sviluppo (non invia email effettivamente ma le mostra in console)
 // Imposta su false per inviare email reali con Nodemailer
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 // Configurazione per testing/sviluppo usando Ethereal (servizio gratuito per testing)
 // In produzione, sostituire con configurazione SMTP reale
 let transporter: nodemailer.Transporter;
 
 // Indirizzo email del mittente
-const SENDER_EMAIL = 'notifiche@staffsync.it';
+// Utilizza l'indirizzo configurato nelle variabili d'ambiente
+const SENDER_EMAIL = process.env.EMAIL_USER || 'admin@ilirionai.it';
 const SENDER_NAME = 'StaffSync';
 
 // Inizializza il transporter in modalità developement o production
@@ -32,15 +33,18 @@ async function initTransporter() {
     
     console.log('🔧 Account di test Ethereal creato:', testAccount.user);
   } else {
-    // In produzione, usare un servizio SMTP reale
-    // Esempio per Gmail:
+    // Configurazione del server SMTP personalizzato
     transporter = nodemailer.createTransport({
-      service: 'gmail',  // o altro servizio come 'outlook', 'yahoo', ecc.
+      host: 'authsmtp.securemail.pro',
+      port: 465,
+      secure: true, // true per 465, false per altre porte
       auth: {
         user: process.env.EMAIL_USER || '',
         pass: process.env.EMAIL_PASSWORD || '',
       },
     });
+    
+    console.log('🔧 Server SMTP configurato con indirizzo:', process.env.EMAIL_USER);
   }
 }
 
