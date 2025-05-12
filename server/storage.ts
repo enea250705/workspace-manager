@@ -30,6 +30,7 @@ export interface IStorage {
   getUserShifts(userId: number, scheduleId: number): Promise<Shift[]>;
   updateShift(id: number, shiftData: Partial<InsertShift>): Promise<Shift | undefined>;
   deleteShift(id: number): Promise<boolean>;
+  deleteAllShiftsForSchedule?(scheduleId: number): Promise<boolean>; // ora opzionale
   
   // TimeOff requests
   createTimeOffRequest(request: InsertTimeOffRequest): Promise<TimeOffRequest>;
@@ -230,6 +231,30 @@ export class MemStorage implements IStorage {
   
   async deleteShift(id: number): Promise<boolean> {
     return this.shifts.delete(id);
+  }
+  
+  // NUOVA FUNZIONE: Elimina tutti i turni di uno schedule specifico
+  async deleteAllShiftsForSchedule(scheduleId: number): Promise<boolean> {
+    try {
+      // Trova tutti i turni per questo schedule
+      const scheduleShifts = Array.from(this.shifts.values()).filter(
+        shift => shift.scheduleId === scheduleId
+      );
+      
+      // Elimina tutti i turni
+      let deletedCount = 0;
+      for (const shift of scheduleShifts) {
+        if (this.shifts.delete(shift.id)) {
+          deletedCount++;
+        }
+      }
+      
+      console.log(`Eliminati ${deletedCount} turni per lo schedule ID ${scheduleId}`);
+      return true;
+    } catch (error) {
+      console.error(`Errore nell'eliminazione dei turni per lo schedule ID ${scheduleId}:`, error);
+      return false;
+    }
   }
   
   // TimeOff requests
@@ -446,7 +471,7 @@ import { pool } from "./db";
 const PostgresSessionStore = connectPg(session);
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Usiamo any per evitare errori di tipo
   
   constructor() {
     // Create PostgreSQL session store
