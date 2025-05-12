@@ -68,6 +68,23 @@ export function EmployeeDashboard() {
   const latestTaxDoc = myDocuments
     .filter((doc: any) => doc.type === "tax_document")
     .sort((a: any, b: any) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
+    
+  // Funzioni per il download dei documenti
+  const handleDownloadPayslip = () => {
+    if (!latestPayslip) return;
+    downloadPdf(
+      generatePayslipFilename(latestPayslip.period, user?.fullName || user?.username || ""),
+      latestPayslip.fileData
+    );
+  };
+  
+  const handleDownloadTaxDoc = () => {
+    if (!latestTaxDoc) return;
+    downloadPdf(
+      generateTaxDocFilename(latestTaxDoc.period, user?.fullName || user?.username || ""),
+      latestTaxDoc.fileData
+    );
+  };
   
   return (
     <div className="space-y-6">
