@@ -764,7 +764,7 @@ export function ExcelGrid({
                             );
                           })}
                           
-                          <td className="p-1">
+                          <td className="p-1 sticky right-[60px] bg-white z-10">
                             <Input
                               size={20}
                               placeholder="Note..."
@@ -775,7 +775,7 @@ export function ExcelGrid({
                             />
                           </td>
                           
-                          <td className="p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm">
+                          <td className="p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm sticky right-0 bg-white z-10 min-w-[60px]">
                             {formatHours(Math.round((gridData[day.name]?.[user.id]?.total || 0) * 100) / 100)}
                           </td>
                         </tr>
