@@ -151,8 +151,7 @@ export function ExcelGrid({
         variant: "destructive",
       });
       
-      // Log dettagliato dell'errore
-      console.error('❌ Errore durante l\'eliminazione del turno:', error);
+      // Gestione silenziosa dell'errore per evitare messaggi di errore in console
     }
   });
   
@@ -179,16 +178,7 @@ export function ExcelGrid({
       (newScheduleParam && scheduleId?.toString() === newScheduleParam);
     
     if (shouldReset) {
-      // Log dettagliato delle condizioni di reset
-      console.log("RESET COMPLETO GRIGLIA:", {
-        forceResetGrid,
-        forceEmptyFromUrl, 
-        resetFromUrl, 
-        scheduleIdFromUrl,
-        newScheduleParam,
-        currentScheduleId: scheduleId,
-        timestamp: Date.now()
-      });
+      // Esegue il reset senza log
       
       // FASE 1: INIZIALIZZAZIONE DI UNA GRIGLIA COMPLETAMENTE VUOTA
       const newGridData: Record<string, Record<number, {
