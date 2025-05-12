@@ -23,7 +23,6 @@ export interface IStorage {
   getScheduleByDateRange(startDate: Date, endDate: Date): Promise<Schedule | undefined>;
   getAllSchedules(): Promise<Schedule[]>;
   publishSchedule(id: number): Promise<Schedule | undefined>;
-  unpublishSchedule?(id: number): Promise<Schedule | undefined>; // Funzione per annullare la pubblicazione
   deleteSchedule?(id: number): Promise<boolean>; // Nuova funzione opzionale per eliminare uno schedule
   
   // Shift management
@@ -194,27 +193,6 @@ export class MemStorage implements IStorage {
       ...schedule,
       isPublished: true,
       publishedAt: now,
-      updatedAt: now
-    };
-    
-    this.schedules.set(id, updatedSchedule);
-    return updatedSchedule;
-  }
-  
-  /**
-   * Annulla la pubblicazione di uno schedule, riportandolo allo stato di bozza
-   * @param id - ID dello schedule da annullare la pubblicazione
-   * @returns Lo schedule aggiornato o undefined se non trovato
-   */
-  async unpublishSchedule(id: number): Promise<Schedule | undefined> {
-    const schedule = await this.getSchedule(id);
-    if (!schedule) return undefined;
-    
-    const now = new Date();
-    const updatedSchedule: Schedule = {
-      ...schedule,
-      isPublished: false,
-      // Manteniamo il publishedAt originale per tracciare che era stato pubblicato in precedenza
       updatedAt: now
     };
     
@@ -666,22 +644,6 @@ export class DatabaseStorage implements IStorage {
     const [schedule] = await db
       .update(schedules)
       .set({ isPublished: true, publishedAt: now })
-      .where(eq(schedules.id, id))
-      .returning();
-    
-    return schedule;
-  }
-  
-  async unpublishSchedule(id: number): Promise<Schedule | undefined> {
-    const now = new Date();
-    
-    const [schedule] = await db
-      .update(schedules)
-      .set({ 
-        isPublished: false,
-        // Manteniamo publishedAt per tracciare che è stato pubblicato in precedenza
-        updatedAt: now 
-      })
       .where(eq(schedules.id, id))
       .returning();
     

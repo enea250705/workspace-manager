@@ -263,33 +263,6 @@ export default function Schedule() {
       });
     },
   });
-  
-  // Unpublish schedule mutation
-  const unpublishScheduleMutation = useMutation({
-    mutationFn: (scheduleId: number) =>
-      apiRequest("POST", `/api/schedules/${scheduleId}/unpublish`, { 
-        scheduleId 
-      }),
-    onSuccess: () => {
-      toast({
-        title: "Pubblicazione annullata",
-        description: "La pianificazione è stata riportata allo stato di bozza e può essere modificata.",
-      });
-      // Invalidiamo le query per aggiornare l'interfaccia
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/schedules/${existingSchedule?.id}/shifts`] });
-      // Forziamo il reload completo per aggiornare tutte le informazioni
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules", { id: existingSchedule?.id }] });
-    },
-    onError: (err) => {
-      console.error("Errore annullamento pubblicazione:", err);
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'annullamento della pubblicazione.",
-        variant: "destructive",
-      });
-    },
-  });
 
   // State for showing auto-generate modal
   const [showAutoGenerator, setShowAutoGenerator] = useState(false);
@@ -364,18 +337,6 @@ export default function Schedule() {
         description: "La pianificazione è stata registrata nel sistema.",
         variant: "default",
       });
-    }
-  };
-  
-  // Handle unpublish schedule
-  const handleUnpublish = () => {
-    if (existingSchedule?.id) {
-      // Annulla la pubblicazione dello schedule
-      unpublishScheduleMutation.mutate(existingSchedule.id);
-      
-      // Il toast è gestito nella definizione della mutazione
-      // Logghiamo l'operazione
-      console.log(`🔄 Annullata pubblicazione dello schedule ID ${existingSchedule.id}`);
     }
   };
   
@@ -732,7 +693,6 @@ export default function Schedule() {
               timeOffRequests={timeOffRequests || []}
               isPublished={existingSchedule?.isPublished || false}
               onPublish={handlePublish}
-              onUnpublish={handleUnpublish}
               forceResetGrid={forceResetGrid || isLoadingNewSchedule}
             />
             

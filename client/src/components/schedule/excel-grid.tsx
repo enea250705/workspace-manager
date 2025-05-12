@@ -31,7 +31,6 @@ type ScheduleGridProps = {
   timeOffRequests: any[];
   isPublished: boolean;
   onPublish: () => void;
-  onUnpublish?: () => void; // Funzione per annullare la pubblicazione
   forceResetGrid?: boolean; // Forza un reset completo della griglia
 };
 
@@ -44,7 +43,6 @@ export function ExcelGrid({
   timeOffRequests,
   isPublished,
   onPublish,
-  onUnpublish,
   forceResetGrid = false
 }: ScheduleGridProps) {
   const { toast } = useToast();
@@ -747,38 +745,6 @@ export function ExcelGrid({
             <span className="material-icons text-sm">print</span>
             Stampa
           </Button>
-          {isPublished && onUnpublish && (
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => {
-                // Conferma l'operazione con l'utente
-                toast({
-                  title: "Conferma annullamento pubblicazione",
-                  description: "Sei sicuro di voler annullare la pubblicazione di questo turno? Gli utenti verranno notificati che il turno è in revisione.",
-                  variant: "destructive",
-                  action: (
-                    <Button 
-                      onClick={() => {
-                        // Annulla la pubblicazione
-                        onUnpublish();
-                        toast({
-                          title: "Pubblicazione annullata",
-                          description: "Il turno è ora in stato di bozza e può essere modificato."
-                        });
-                      }}
-                    >
-                      Conferma
-                    </Button>
-                  )
-                });
-              }}
-              className="flex items-center gap-1"
-            >
-              <span className="material-icons text-sm">unpublished</span>
-              Annulla pubblicazione
-            </Button>
-          )}
           {!isPublished && (
             <Button 
               size="sm" 
