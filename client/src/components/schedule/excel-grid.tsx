@@ -28,6 +28,7 @@ type ScheduleGridProps = {
   timeOffRequests: any[];
   isPublished: boolean;
   onPublish: () => void;
+  forceResetGrid?: boolean; // Forza un reset completo della griglia
 };
 
 export function ExcelGrid({

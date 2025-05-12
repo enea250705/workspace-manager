@@ -16,7 +16,7 @@ import { ScheduleAutoGenerator } from "@/components/schedule/auto-generator/auto
 import { ExcelGrid } from "@/components/schedule/excel-grid";
 
 // Date utilities
-import { format, startOfWeek, addDays, isBefore } from "date-fns";
+import { format, startOfWeek, addDays, isBefore, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 
 export default function Schedule() {
@@ -37,27 +37,72 @@ export default function Schedule() {
     if (!isLoading && isAuthenticated && user?.role !== "admin") {
       navigate("/my-schedule");
     }
-    
+
     // Controlla se c'è un parametro newSchedule nell'URL, indicando che è stato creato un nuovo schedule
     const urlParams = new URLSearchParams(window.location.search);
     const newScheduleId = urlParams.get('newSchedule');
+    const refreshed = urlParams.get('refreshed');
     
     // Se c'è un newScheduleId, forza l'app a caricare esplicitamente questo schedule
     if (newScheduleId) {
-      console.log("Caricamento nuovo schedule creato:", newScheduleId);
-      // Rimuovi tutti i dati di schedule precedenti dalla cache
-      queryClient.removeQueries({ queryKey: ["/api/schedules"] });
-      // Forza l'aggiornamento dei dati
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/schedules/${newScheduleId}/shifts`] });
+      console.log("Caricamento nuovo schedule specifico:", newScheduleId);
       
-      // Rimuovi il parametro dall'URL per evitare ricaricamenti continui
+      // Segnala che stiamo caricando un nuovo schedule
+      setIsLoadingNewSchedule(true);
+      setForceResetGrid(true);
+      
+      // Passo 1: Svuota completamente la cache di React Query
+      queryClient.clear();
+      
+      // Passo 2: Forza il caricamento solo dello schedule specificato tramite fetch diretto
+      fetch(`/api/schedules/${newScheduleId}`)
+        .then(response => response.json())
+        .then(scheduleData => {
+          // Imposta il nuovo schedule direttamente nella cache
+          queryClient.setQueryData(["/api/schedules", { startDate: scheduleData.startDate }], scheduleData);
+          
+          // Aggiorna la data selezionata in base allo schedule caricato
+          try {
+            const startDate = parseISO(scheduleData.startDate);
+            setSelectedWeek(startDate);
+          } catch (e) {
+            console.error("Errore nell'impostare la data di inizio:", e);
+          }
+
+          // Forza un refresh dei dati per schedules and shifts
+          queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+          queryClient.invalidateQueries({ queryKey: [`/api/schedules/${newScheduleId}/shifts`] });
+          
+          // Completa il caricamento
+          setIsLoadingNewSchedule(false);
+          
+          // Mostra un toast di conferma solo se l'URL include il parametro refreshed
+          if (refreshed === 'true') {
+            toast({
+              title: "Nuova pianificazione pronta",
+              description: "Puoi iniziare a compilare la tabella per questa settimana",
+            });
+          }
+        })
+        .catch(error => {
+          console.error("Errore caricando lo schedule:", error);
+          setIsLoadingNewSchedule(false);
+          toast({
+            title: "Errore",
+            description: "Impossibile caricare il nuovo turno",
+            variant: "destructive"
+          });
+        });
+      
+      // Rimuovi i parametri dall'URL per evitare ricaricamenti continui
       if (window.history.replaceState) {
-        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?date=' + urlParams.get('date');
+        const dateParam = urlParams.get('date');
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + 
+                     (dateParam ? '?date=' + dateParam : '');
         window.history.replaceState({ path: newUrl }, '', newUrl);
       }
     }
-  }, [isLoading, isAuthenticated, navigate, user, queryClient]);
+  }, [isLoading, isAuthenticated, navigate, user, queryClient, toast]);
 
   // State for custom date selection
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
@@ -78,6 +123,8 @@ export default function Schedule() {
   // Fetch existing schedule data for the selected week
   const { data: existingSchedule = {}, isLoading: isScheduleLoading } = useQuery<any>({
     queryKey: ["/api/schedules", { startDate: format(selectedWeek, "yyyy-MM-dd") }],
+    staleTime: 0, // Disabilita la cache per questa query
+    refetchOnWindowFocus: true, // Ricarica quando la finestra torna in focus
   });
 
   // Fetch users for populating the schedule
@@ -146,6 +193,8 @@ export default function Schedule() {
   const [showScheduleBuilder, setShowScheduleBuilder] = useState(false);
   // Flag per il reset completo della griglia (per mostrare una tabella vuota dopo la creazione)
   const [forceResetGrid, setForceResetGrid] = useState(false);
+  // Flag per stabilire se stiamo caricando uno schedule nuovo o esistente
+  const [isLoadingNewSchedule, setIsLoadingNewSchedule] = useState(false);
   
   // State for creating a new schedule
   const [creatingNewSchedule, setCreatingNewSchedule] = useState(false);
@@ -299,14 +348,18 @@ export default function Schedule() {
           // Forza un completo reset dello stato e cambia la data selezionata
           setForceResetGrid(true);
           
-          // Rimuove completamente l'istanza corrente per evitare sovrapposizioni e forzare un refresh completo
-          // Usa il nuovo ID dello schedule appena creato per garantire che si carichi quello nuovo
-          window.location.href = `/schedule?date=${format(customStartDate!, "yyyy-MM-dd")}&newSchedule=${data.id}`;
-          
+          // Forza un refresh completo della pagina e carica esplicitamente il nuovo schedule appena creato
+          // Questa soluzione garantisce che si visualizzi SOLO il nuovo schedule con una tabella completamente vuota
           toast({
             title: "Nuova pianificazione creata",
-            description: `Pianificazione dal ${format(customStartDate!, "d MMMM", { locale: it })} al ${format(customEndDate!, "d MMMM", { locale: it })} creata con successo`,
+            description: "Caricamento della nuova pianificazione in corso...",
           });
+          
+          // Breve ritardo per garantire che il database sia aggiornato
+          setTimeout(() => {
+            // Forza un hard reload per cancellare completamente lo stato e la cache
+            window.location.href = `/schedule?date=${format(customStartDate!, "yyyy-MM-dd")}&newSchedule=${data.id}&refreshed=true`;
+          }, 500);
         } catch (err) {
           console.error("Errore nella gestione dello schedule:", err);
         }
