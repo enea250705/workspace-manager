@@ -204,14 +204,17 @@ export default function Schedule() {
   // Handle date change
   const handleDateChange = (type: 'start' | 'end', date: Date | null) => {
     if (type === 'start') {
-      setCustomStartDate(date);
+      // Usa una versione tipizzata di date
+      const typedDate = date as Date | null;
+      setCustomStartDate(typedDate);
+      
       // Se la data di fine non è impostata o è prima della nuova data di inizio,
       // impostiamo la data di fine a 6 giorni dopo la data di inizio
-      if (!customEndDate || (date && isBefore(customEndDate, date))) {
-        setCustomEndDate(date ? addDays(date, 6) : null);
+      if (!customEndDate || (typedDate && isBefore(customEndDate, typedDate))) {
+        setCustomEndDate(typedDate ? addDays(typedDate, 6) : null);
       }
     } else {
-      setCustomEndDate(date);
+      setCustomEndDate(date as Date | null);
     }
   };
   
@@ -521,8 +524,8 @@ export default function Schedule() {
                       <Label className="mb-2 block">Data di inizio</Label>
                       <Calendar
                         mode="single"
-                        selected={customStartDate as Date | undefined}
-                        onSelect={(date) => handleDateChange('start', date)}
+                        selected={customStartDate ?? undefined}
+                        onSelect={(date: Date | undefined) => handleDateChange('start', date || null)}
                         disabled={(date) => 
                           date < new Date()
                         }
@@ -536,8 +539,8 @@ export default function Schedule() {
                       <Label className="mb-2 block">Data di fine</Label>
                       <Calendar
                         mode="single"
-                        selected={customEndDate || undefined}
-                        onSelect={(date) => handleDateChange('end', date)}
+                        selected={customEndDate ?? undefined}
+                        onSelect={(date: Date | undefined) => handleDateChange('end', date || null)}
                         disabled={(date) => 
                           !customStartDate || date < customStartDate
                         }
