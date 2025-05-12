@@ -33,7 +33,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
   setMobileMenuOpen: (open: boolean) => void;
 }) {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const [pendingRequests, setPendingRequests] = useState(0);
   
   // Update pending requests count

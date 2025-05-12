@@ -29,7 +29,7 @@ type Notification = {
 export function NotificationBar() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
@@ -41,7 +41,7 @@ export function NotificationBar() {
   
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
-    enabled: !!user,
+    enabled: isAuthenticated,
   });
   
   const unreadCount = notifications.filter(n => !n.isRead).length;
