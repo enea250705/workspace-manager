@@ -28,10 +28,12 @@ const employeeItems: SidebarItem[] = [
   { href: "/messages", label: "Messaggi", icon: "email", badge: 0, role: "employee" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
+}) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
   
   // Update pending requests count

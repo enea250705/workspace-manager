@@ -324,7 +324,8 @@ export function ExcelGrid({
       // Ricalcola il totale delle ore
       calculateTotal(userId, day, newGridData);
     } else if (newType !== "") {
-      // Crea un nuovo turno
+      // Selezione estesa: permetti all'utente di trascinare per selezionare più celle
+      // Per semplicità, creiamo solo uno slot di 30 minuti quando l'utente clicca
       const newShiftData = {
         scheduleId,
         userId,
@@ -333,6 +334,7 @@ export function ExcelGrid({
         endTime: timeSlots[timeIndex + 1], // +1 per creare uno slot di 30 minuti
         type: newType,
         notes: userDayData.notes,
+        hours: 0.5 // 30 minuti = 0.5 ore
       };
       
       createShiftMutation.mutate(newShiftData);
