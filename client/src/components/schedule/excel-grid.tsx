@@ -48,8 +48,6 @@ export function ExcelGrid({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDay, setSelectedDay] = useState(0);
-  // Aggiungiamo una flag per tenere traccia del reset già eseguito
-  const [resetPerformed, setResetPerformed] = useState(false);
   
   // Generazione degli slot di tempo (30 minuti) dalle 4:00 alle 24:00
   const timeSlots = generateTimeSlots(4, 24);
@@ -170,15 +168,15 @@ export function ExcelGrid({
     const resetFromUrl = urlParams.get('reset') === 'true';
     const newScheduleParam = urlParams.get('newSchedule');
     
-    // Nuova logica ridotta per il reset della griglia
-    const shouldReset = !resetPerformed && (
+    // Condizioni per il reset completo della griglia (VERSIONE MIGLIORATA)
+    // Inclusi più casi per garantire sempre un reset quando necessario
+    const shouldReset = 
       forceResetGrid || 
       forceEmptyFromUrl || 
       resetFromUrl || 
       Object.keys(gridData).length === 0 ||
       (scheduleIdFromUrl && scheduleId?.toString() === scheduleIdFromUrl) ||
-      (newScheduleParam && scheduleId?.toString() === newScheduleParam)
-    );
+      (newScheduleParam && scheduleId?.toString() === newScheduleParam);
     
     if (shouldReset) {
       // Log dettagliato delle condizioni di reset
@@ -364,15 +362,12 @@ export function ExcelGrid({
       // FASE 4: AGGIORNAMENTO STATO CON LA NUOVA GRIGLIA
       setGridData(newGridData);
       
-      // Imposta il flag per evitare reset multipli
-      setResetPerformed(true);
-      
       // FASE 5: LOG DI COMPLETAMENTO
       console.log(`✅ Inizializzazione completa della griglia turni per schedule ID ${scheduleId}`);
     }
-  }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid, gridData, resetPerformed]);
+  }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid, gridData]);
   
-  // GESTIONE CLIC MIGLIORATA E STABILE
+  // GESTIONE CLIC MIGLIORATA
   // Gestisce in modo più robusto il clic su una cella della griglia
   const handleCellClick = (userId: number, timeIndex: number, day: string) => {
     // VALIDAZIONE PRELIMINARE
@@ -393,7 +388,7 @@ export function ExcelGrid({
     const userDayData = newGridData[day][userId];
     const currentCell = userDayData.cells[timeIndex];
     
-    // CICLO DELLE TIPOLOGIE MIGLIORATO
+    // CICLO DELLE TIPOLOGIE
     // Determina il nuovo tipo di turno secondo la rotazione stabilita
     let newType = "work"; // Default: se la cella è vuota, diventa lavoro
     
@@ -410,58 +405,26 @@ export function ExcelGrid({
     
     console.log(`🔄 Cambio tipo cella: ${currentCell.type || 'vuota'} -> ${newType || 'vuota'}`);
     
-    // Aggiorna immediatamente l'interfaccia utente per feedback immediato
-    // Questo rende l'applicazione più reattiva anche prima del completamento delle chiamate API
-    userDayData.cells[timeIndex] = { 
-      type: newType, 
-      shiftId: currentCell.shiftId, // Mantieni l'ID esistente se presente
-      isTimeOff: false
-    };
-    
-    // Aggiornamento del conteggio delle ore
-    const slotDuration = 0.5; // 30 minuti
-    
-    // Rimuovi ore per tipo work se necessario
-    if (currentCell.type === "work" && newType !== "work") {
-      userDayData.total = Math.max(0, userDayData.total - slotDuration);
-    }
-    // Aggiungi ore per tipo work se necessario
-    else if (currentCell.type !== "work" && newType === "work") {
-      userDayData.total += slotDuration;
-    }
-    
-    // AGGIORNIAMO SUBITO LO STATO PRIMA DELLA CHIAMATA API
-    // Questo fa sì che l'utente veda immediatamente l'effetto del clic
-    setGridData(newGridData);
-    
     // GESTIONE API PER TIPO DI AZIONE
     // 1. SE LA CELLA HA UN ID ESISTENTE
     if (currentCell.shiftId) {
       if (newType === "") {
         // CASO 1: ELIMINAZIONE
         // Elimina il turno dal database
-        deleteShiftMutation.mutate(currentCell.shiftId, {
-          onSuccess: () => {
-            // Invalida la query per aggiornare i dati
-            queryClient.invalidateQueries({ queryKey: [`/api/schedules/${scheduleId}/shifts`] });
-            
-            // A questo punto il turno non esiste più nel database
-            // Assicuriamoci di eliminare completamente il riferimento all'ID del turno
-            const updatedGridData = structuredClone(gridData);
-            if (updatedGridData[day] && updatedGridData[day][userId]) {
-              updatedGridData[day][userId].cells[timeIndex].shiftId = null;
-              setGridData(updatedGridData);
-            }
-          },
-          onError: () => {
-            // In caso di errore ripristina lo stato precedente
-            const revertGridData = structuredClone(gridData);
-            if (revertGridData[day] && revertGridData[day][userId]) {
-              revertGridData[day][userId].cells[timeIndex] = currentCell;
-              setGridData(revertGridData);
-            }
-          }
-        });
+        deleteShiftMutation.mutate(currentCell.shiftId);
+        
+        // Aggiorna il conteggio delle ore (solo se era un turno di lavoro)
+        if (currentCell.type === "work") {
+          const slotDuration = 0.5; // 30 minuti
+          userDayData.total = Math.max(0, userDayData.total - slotDuration);
+        }
+        
+        // Aggiorna la cella localmente
+        userDayData.cells[timeIndex] = { 
+          type: "", 
+          shiftId: null,
+          isTimeOff: false
+        };
       } else {
         // CASO 2: AGGIORNAMENTO
         // Prepara i dati per l'aggiornamento
@@ -477,43 +440,25 @@ export function ExcelGrid({
         };
         
         // Invia l'aggiornamento al server
-        updateShiftMutation.mutate(updateData, {
-          onError: (error) => {
-            // Se l'errore è 404 (Shift not found), significa che il turno è stato eliminato
-            if (error.message && error.message.includes("404")) {
-              // Rimuovi il riferimento all'ID del turno che non esiste più
-              const updatedGridData = structuredClone(gridData);
-              if (updatedGridData[day] && updatedGridData[day][userId]) {
-                updatedGridData[day][userId].cells[timeIndex].shiftId = null;
-                setGridData(updatedGridData);
-                
-                // Se vogliamo comunque mantenere il nuovo tipo, creiamo un nuovo turno
-                if (newType !== "") {
-                  const createData = {
-                    scheduleId,
-                    userId,
-                    day,
-                    startTime: timeSlots[timeIndex],
-                    endTime: timeSlots[timeIndex + 1],
-                    type: newType,
-                    notes: userDayData.notes || "",
-                    area: null
-                  };
-                  
-                  // Crea un nuovo turno nel database
-                  updateShiftMutation.mutate(createData);
-                }
-              }
-            } else {
-              // Per altri errori, ripristina lo stato precedente
-              const revertGridData = structuredClone(gridData);
-              if (revertGridData[day] && revertGridData[day][userId]) {
-                revertGridData[day][userId].cells[timeIndex] = currentCell;
-                setGridData(revertGridData);
-              }
-            }
-          }
-        });
+        updateShiftMutation.mutate(updateData);
+        
+        // Aggiorna il conteggio delle ore
+        if (currentCell.type === "work" && newType !== "work") {
+          // Se passiamo da lavoro a non-lavoro, sottraiamo ore
+          const slotDuration = 0.5;
+          userDayData.total = Math.max(0, userDayData.total - slotDuration);
+        } else if (currentCell.type !== "work" && newType === "work") {
+          // Se passiamo da non-lavoro a lavoro, aggiungiamo ore
+          const slotDuration = 0.5;
+          userDayData.total += slotDuration;
+        }
+        
+        // Aggiorna lo stato della cella
+        userDayData.cells[timeIndex] = { 
+          type: newType, 
+          shiftId: currentCell.shiftId,
+          isTimeOff: false // Non è un permesso automatico
+        };
       }
     } 
     // 2. CELLA SENZA ID O VUOTA CHE DIVENTA NON-VUOTA
@@ -534,6 +479,9 @@ export function ExcelGrid({
       // Crea un nuovo turno nel database
       updateShiftMutation.mutate(createData, {
         onSuccess: (data) => {
+          // Ora la risposta è già un oggetto JSON grazie alla mutationFn migliorata
+          // che converte automaticamente la risposta in JSON
+            
           // Se la risposta contiene un ID, aggiorniamo la cella con l'ID corretto
           if (data && data.id) {
             const updatedGridData = structuredClone(gridData);
@@ -543,17 +491,25 @@ export function ExcelGrid({
               console.log(`✅ Cella aggiornata con nuovo ID turno: ${data.id}`);
             }
           }
-        },
-        onError: () => {
-          // In caso di errore ripristina lo stato precedente
-          const revertGridData = structuredClone(gridData);
-          if (revertGridData[day] && revertGridData[day][userId]) {
-            revertGridData[day][userId].cells[timeIndex] = currentCell;
-            setGridData(revertGridData);
-          }
         }
       });
+      
+      // Aggiorna il conteggio delle ore (solo per tipo "work")
+      if (newType === "work") {
+        const slotDuration = 0.5;
+        userDayData.total += slotDuration;
+      }
+      
+      // Aggiorna lo stato della cella
+      userDayData.cells[timeIndex] = { 
+        type: newType, 
+        shiftId: null, // Verrà aggiornato nella callback di successo
+        isTimeOff: false
+      };
     }
+    
+    // AGGIORNAMENTO STATO FINALE
+    setGridData(newGridData);
   };
   
   // GESTIONE NOTE MIGLIORATA
