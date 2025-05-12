@@ -21,12 +21,14 @@ export function MobileNav({ isMobileMenuOpen, toggleMobileMenu }: MobileNavProps
         <motion.div
           animate={isMobileMenuOpen ? "open" : "closed"}
           className="w-6 h-6 flex flex-col justify-center items-center"
+          transition={{ duration: 0.12 }}
         >
           <motion.span
             variants={{
               closed: { rotate: 0, y: 0 },
               open: { rotate: 45, y: 7 },
             }}
+            transition={{ duration: 0.12, type: "spring", stiffness: 500 }}
             className="w-6 h-0.5 bg-gray-600 block mb-1.5 rounded-full"
           />
           <motion.span
@@ -34,6 +36,7 @@ export function MobileNav({ isMobileMenuOpen, toggleMobileMenu }: MobileNavProps
               closed: { opacity: 1 },
               open: { opacity: 0 },
             }}
+            transition={{ duration: 0.08 }}
             className="w-6 h-0.5 bg-gray-600 block mb-1.5 rounded-full"
           />
           <motion.span
@@ -41,6 +44,7 @@ export function MobileNav({ isMobileMenuOpen, toggleMobileMenu }: MobileNavProps
               closed: { rotate: 0, y: 0 },
               open: { rotate: -45, y: -7 },
             }}
+            transition={{ duration: 0.12, type: "spring", stiffness: 500 }}
             className="w-6 h-0.5 bg-gray-600 block rounded-full"
           />
         </motion.div>

@@ -38,7 +38,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
   
   // Update pending requests count
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (user?.role === "admin" && isAuthenticated) {
       // Fetch pending requests
       fetch("/api/time-off-requests", {
         credentials: "include",
@@ -58,7 +58,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
         })
         .catch((err) => console.error("Error fetching pending requests:", err));
     }
-  }, [user]);
+  }, [user, isAuthenticated]);
   
   // Toggle mobile menu
   const toggleMobileMenu = () => {
@@ -268,7 +268,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
           initial="hidden"
           animate="visible"
         >
-          {user.role === "admin" && (
+          {user?.role === "admin" && (
             <motion.div 
               id="admin-menu" 
               data-role="admin"
@@ -284,7 +284,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
             </motion.div>
           )}
           
-          {user.role === "employee" && (
+          {user?.role === "employee" && (
             <motion.div 
               id="employee-menu" 
               data-role="employee"
