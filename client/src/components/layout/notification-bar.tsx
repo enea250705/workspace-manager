@@ -156,12 +156,6 @@ export function NotificationBar() {
             )}
           </button>
         </div>
-        <button 
-          className="p-1.5 rounded-full hover:bg-gray-100" 
-          aria-label="Aiuto"
-        >
-          <span className="material-icons">help_outline</span>
-        </button>
       </div>
       
       <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
