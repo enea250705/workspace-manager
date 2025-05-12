@@ -719,7 +719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getAllUsers();
       
       // Import email service
-      const { sendScheduleNotification } = await import('./services/email-service');
+      const { sendScheduleNotification } = await import('./services/nodemailer-service');
       
       // Create notifications and send emails to all users
       for (const user of users) {
