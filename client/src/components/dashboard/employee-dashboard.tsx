@@ -4,6 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatHours, calculateTotalWorkHours } from "@/lib/utils";
 import { Link } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { CardHoverEffect } from "@/components/ui/card-hover-effect";
+import { AnimatedContainer } from "@/components/ui/animated-container";
 
 export function EmployeeDashboard() {
   const { user } = useAuth();

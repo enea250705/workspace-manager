@@ -13,6 +13,9 @@ import { formatDate, cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { CardHoverEffect } from "@/components/ui/card-hover-effect";
 
 type Notification = {
   id: number;
@@ -103,98 +106,229 @@ export function NotificationBar() {
     setIsNotificationsOpen(false);
   };
   
+  // Varianti di animazione per il titolo
+  const titleVariants = {
+    initial: { opacity: 0, y: -10 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+    exit: { opacity: 0, y: 10, transition: { duration: 0.2 } }
+  };
+
+  // Animazione per il contatore di notifiche
+  const badgeVariants = {
+    initial: { scale: 0, opacity: 0 },
+    animate: { 
+      scale: 1, 
+      opacity: 1,
+      transition: { 
+        type: "spring",
+        stiffness: 400,
+        damping: 10
+      }
+    },
+    exit: { scale: 0, opacity: 0 }
+  };
+
+  // Animazione per le notifiche
+  const notificationItemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({ 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.3
+      }
+    }),
+    exit: { opacity: 0, scale: 0.8, transition: { duration: 0.2 } }
+  };
+
+  // Determina il titolo della pagina corrente
+  const getPageTitle = () => {
+    if (location === "/" || location === "/dashboard") return "Dashboard";
+    if (location === "/users") return "Gestione Utenti";
+    if (location === "/schedule") return "Pianificazione Turni";
+    if (location === "/requests") return "Approvazioni";
+    if (location === "/documents") return "Documenti";
+    if (location === "/my-schedule") return "I Miei Turni";
+    if (location === "/time-off") return "Ferie e Permessi";
+    if (location === "/my-documents") return "I Miei Documenti";
+    return "StaffSync";
+  };
+
   return (
-    <div className="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
-      <h2 className="font-condensed text-xl">
-        {location === "/" || location === "/dashboard" 
-          ? "Dashboard" 
-          : location === "/users" 
-          ? "Gestione Utenti"
-          : location === "/schedule"
-          ? "Pianificazione Turni"
-          : location === "/requests"
-          ? "Approvazioni"
-          : location === "/documents"
-          ? "Documenti"
-          : location === "/my-schedule"
-          ? "I Miei Turni"
-          : location === "/time-off"
-          ? "Ferie e Permessi"
-          : location === "/my-documents"
-          ? "I Miei Documenti"
-          : "StaffSync"}
-      </h2>
+    <motion.div 
+      className="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10"
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <AnimatePresence mode="wait">
+        <motion.h2 
+          key={location} 
+          className="font-condensed text-xl bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent"
+          variants={titleVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+        >
+          {getPageTitle()}
+        </motion.h2>
+      </AnimatePresence>
+
       <div className="flex items-center space-x-4">
-        <div className="relative">
-          <button 
-            className="p-1 rounded-full hover:bg-gray-100 relative"
+        <motion.div 
+          className="relative"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          <motion.button 
+            className="p-2 rounded-full hover:bg-gray-100 relative"
             onClick={() => setIsNotificationsOpen(true)}
             aria-label="Notifiche"
+            whileTap={{ scale: 0.9 }}
           >
-            <span className="material-icons">notifications</span>
-            {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 h-4 w-4 bg-primary text-white text-xs rounded-full flex items-center justify-center">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-        </div>
-        <button className="p-1 rounded-full hover:bg-gray-100" aria-label="Aiuto">
-          <span className="material-icons">help_outline</span>
-        </button>
+            <motion.span 
+              className="material-icons text-gray-600"
+              animate={{ 
+                rotate: unreadCount > 0 ? [0, -10, 10, -10, 10, 0] : 0 
+              }}
+              transition={{ 
+                duration: 0.5, 
+                repeat: unreadCount > 0 ? Infinity : 0, 
+                repeatDelay: 5 
+              }}
+            >
+              notifications
+            </motion.span>
+            <AnimatePresence>
+              {unreadCount > 0 && (
+                <motion.span 
+                  className="absolute top-0 right-0 h-5 w-5 bg-primary text-white text-xs rounded-full flex items-center justify-center shadow-md"
+                  variants={badgeVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                >
+                  {unreadCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </motion.div>
+        
+        <motion.button 
+          className="p-2 rounded-full hover:bg-gray-100" 
+          aria-label="Aiuto"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          <span className="material-icons text-gray-600">help_outline</span>
+        </motion.button>
       </div>
       
       <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Notifiche</DialogTitle>
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <DialogTitle>
+                <span className="text-lg sm:text-xl flex items-center">
+                  <span className="material-icons mr-2 text-primary">notifications</span>
+                  Notifiche
+                </span>
+              </DialogTitle>
+            </motion.div>
             <DialogClose />
           </DialogHeader>
-          <div className="max-h-80 overflow-y-auto">
-            <div className="divide-y">
+          
+          <motion.div 
+            className="max-h-[60vh] overflow-y-auto pr-2 -mr-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <AnimatePresence>
               {notifications.length === 0 ? (
-                <div className="py-4 text-center text-gray-500">
-                  Nessuna notifica
-                </div>
+                <motion.div 
+                  className="py-8 text-center text-gray-500 flex flex-col items-center"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <span className="material-icons text-4xl mb-2 text-gray-300">notifications_off</span>
+                  <p>Nessuna notifica</p>
+                </motion.div>
               ) : (
-                notifications.map(notification => {
-                  const { icon, bgColor, textColor } = getNotificationIcon(notification.type);
-                  return (
-                    <div 
-                      key={notification.id} 
-                      className={cn(
-                        "py-3 flex cursor-pointer hover:bg-gray-50",
-                        !notification.isRead && "bg-blue-50/30"
-                      )}
-                      onClick={() => handleNotificationClick(notification)}
-                    >
-                      <div className={cn("p-1 rounded mr-3", bgColor)}>
-                        <span className={cn("material-icons text-sm", textColor)}>{icon}</span>
-                      </div>
-                      <div>
-                        <p className="text-sm">{notification.message}</p>
-                        <p className="text-xs text-gray-500">{getRelativeTime(notification.createdAt)}</p>
-                      </div>
-                    </div>
-                  );
-                })
+                <div className="space-y-2 my-2">
+                  {notifications.map((notification, index) => {
+                    const { icon, bgColor, textColor } = getNotificationIcon(notification.type);
+                    return (
+                      <motion.div
+                        key={notification.id}
+                        custom={index}
+                        variants={notificationItemVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <CardHoverEffect
+                          className={cn(
+                            "border p-3 cursor-pointer", 
+                            !notification.isRead && "border-primary-light"
+                          )}
+                          glowColor={!notification.isRead ? "rgba(59, 130, 246, 0.3)" : "rgba(209, 213, 219, 0.3)"}
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <div className="flex items-start">
+                            <div className={cn("p-2 rounded-full mr-3", bgColor)}>
+                              <span className={cn("material-icons", textColor)}>{icon}</span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between">
+                                <p className={cn(
+                                  "text-sm leading-snug", 
+                                  !notification.isRead && "font-medium"
+                                )}>
+                                  {notification.message}
+                                </p>
+                                {!notification.isRead && (
+                                  <span className="h-2 w-2 rounded-full bg-primary inline-block mr-1 flex-shrink-0" />
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">{getRelativeTime(notification.createdAt)}</p>
+                            </div>
+                          </div>
+                        </CardHoverEffect>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               )}
-            </div>
-          </div>
+            </AnimatePresence>
+          </motion.div>
+          
           {notifications.length > 0 && (
-            <div className="mt-3 text-center">
+            <motion.div 
+              className="mt-4 flex justify-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
               <Button 
-                variant="ghost" 
-                size="sm" 
+                variant="outline" 
                 onClick={markAllAsRead}
-                className="text-primary text-sm font-medium"
+                className="text-primary font-medium shadow-sm border-primary/30 hover:bg-primary/5"
               >
+                <span className="material-icons text-sm mr-1">done_all</span>
                 Segna tutte come lette
               </Button>
-            </div>
+            </motion.div>
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }
