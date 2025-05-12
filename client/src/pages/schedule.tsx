@@ -98,7 +98,9 @@ export default function Schedule() {
   // Publish schedule mutation
   const publishScheduleMutation = useMutation({
     mutationFn: (scheduleId: number) =>
-      apiRequest("POST", `/api/schedules/${scheduleId}/publish`, {}),
+      apiRequest("POST", `/api/schedules/${scheduleId}/publish`, { 
+        scheduleId 
+      }),
     onSuccess: () => {
       toast({
         title: "Turni pubblicati",
