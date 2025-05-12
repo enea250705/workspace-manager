@@ -19,6 +19,7 @@ import { ExportToPdfDialog } from "@/components/schedule/export-to-pdf";
 // Date utilities
 import { format, startOfWeek, addDays, isBefore, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
+import { calculateWorkHours, formatHours } from "@/lib/utils";
 
 export default function Schedule() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -500,7 +501,26 @@ export default function Schedule() {
     });
   };
 
-  // Handle PDF export
+  // Funzione per recuperare i turni di uno schedule specifico
+  const fetchShiftsForSchedule = async (scheduleId: number): Promise<any[]> => {
+    try {
+      const response = await fetch(`/api/schedules/${scheduleId}/shifts`);
+      if (!response.ok) {
+        throw new Error(`Errore nel recuperare i turni per lo schedule ${scheduleId}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Errore nel recuperare i turni per lo schedule ${scheduleId}:`, error);
+      return [];
+    }
+  };
+
+  // Funzione per aprire il dialogo di esportazione PDF di tutte le settimane
+  const handleExportAllToPdf = () => {
+    setShowExportPdfDialog(true);
+  };
+  
+  // Handle PDF export per la settimana corrente
   const handleExportPdf = () => {
     if (!existingSchedule || !users || !shifts) return;
     
@@ -567,12 +587,20 @@ export default function Schedule() {
         
         pdfContent += `
           <tr>
-            <td class="name-cell">${user.name}</td>
+            <td class="name-cell">${user.fullName || user.username}</td>
         `;
         
         // Add days of week
         ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'].forEach(day => {
-          const userShifts = shifts.filter((s: any) => s.userId === user.id && s.day === day);
+          // Mappatura tra il nome del giorno e il formato yyyy-MM-dd
+          const dayIndex = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'].indexOf(day);
+          if (dayIndex === -1) return;
+          
+          const dateObj = new Date(existingSchedule.startDate);
+          dateObj.setDate(dateObj.getDate() + dayIndex);
+          const formattedDate = format(dateObj, "yyyy-MM-dd");
+          
+          const userShifts = shifts.filter((s: any) => s.userId === user.id && s.day === formattedDate);
           let daySummary = '-';
           let cellClass = '';
           
@@ -591,21 +619,10 @@ export default function Schedule() {
               cellClass = 'working';
               daySummary = `${firstShift.startTime} - ${lastShift.endTime}`;
               
-              // Calculate hours for this day
+              // Calculate hours for this day using utility function
               let dayHours = 0;
               userShifts.forEach(shift => {
-                const [startHour, startMin] = shift.startTime.split(":").map(Number);
-                const [endHour, endMin] = shift.endTime.split(":").map(Number);
-                
-                let hours = endHour - startHour;
-                let minutes = endMin - startMin;
-                
-                if (minutes < 0) {
-                  hours -= 1;
-                  minutes += 60;
-                }
-                
-                dayHours += hours + (minutes / 60);
+                dayHours += calculateWorkHours(shift.startTime, shift.endTime);
               });
               
               // Add to total
@@ -622,8 +639,8 @@ export default function Schedule() {
           pdfContent += `<td class="${cellClass}">${daySummary}</td>`;
         });
         
-        // Add total hours
-        pdfContent += `<td class="total-cell">${userTotalHours.toFixed(1)}</td></tr>`;
+        // Add total hours with proper formatting
+        pdfContent += `<td class="total-cell">${formatHours(userTotalHours)}</td></tr>`;
       });
     
     pdfContent += `
