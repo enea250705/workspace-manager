@@ -2,6 +2,7 @@ import { MailService } from '@sendgrid/mail';
 import { User } from '@shared/schema';
 
 // Modalità di sviluppo (non invia email effettivamente ma le mostra in console)
+// Imposta su false per inviare email reali con SendGrid (richiede SENDGRID_API_KEY)
 const DEV_MODE = true;
 
 if (!process.env.SENDGRID_API_KEY) {
@@ -13,8 +14,8 @@ if (process.env.SENDGRID_API_KEY) {
   mailService.setApiKey(process.env.SENDGRID_API_KEY);
 }
 
-// Indirizzo email del mittente
-const SENDER_EMAIL = 'notifiche@staffsync.it';
+// Indirizzo email del mittente (deve essere verificato su SendGrid)
+const SENDER_EMAIL = 'eneamuja87@gmail.com';
 
 /**
  * Interfaccia per i parametri di invio email
