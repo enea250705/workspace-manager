@@ -452,7 +452,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const schedules = await storage.getAllSchedules();
       console.log("Retrieved all schedules:", schedules);
-      res.json(schedules);
+      
+      // SOLUZIONE DRASTICA: Ordina gli schedule per data e per ID (decrescente)
+      // Gli schedule più recenti (ID più alto) appariranno per primi
+      const sortedSchedules = [...schedules].sort((a, b) => {
+        // Prima ordina per data di inizio (più recente prima)
+        const dateComparison = new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+        if (dateComparison !== 0) return dateComparison;
+        
+        // Se le date sono uguali, ordina per ID (più alto prima)
+        return b.id - a.id;
+      });
+      
+      console.log("🔄 SCHEDULES ORDINATI per data (più recente prima) e ID (più alto prima)");
+      res.json(sortedSchedules);
     } catch (err) {
       console.error("Error getting all schedules:", err);
       res.status(500).json({ message: "Failed to get schedules" });
@@ -492,13 +505,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Schedule not found" });
       }
       
-      // Reset shifts per questo schedule specifico
-      // Questo crea uno schedule completamente vuoto
-      console.log("Resetting shifts for schedule:", scheduleId);
+      // SOLUZIONE RADICALE: Eliminazione fisica di tutti i turni per questo schedule
+      try {
+        // Ottieni tutti i turni esistenti
+        const allShifts = await storage.getShifts(scheduleId);
+        console.log(`🧹 PULIZIA TOTALE: Trovati ${allShifts.length} turni da eliminare per lo schedule ID ${scheduleId}`);
+        
+        // Elimina manualmente ogni turno
+        let eliminatiCount = 0;
+        for (const shift of allShifts) {
+          await storage.deleteShift(shift.id);
+          eliminatiCount++;
+        }
+        
+        console.log(`✅ PULIZIA COMPLETA: Eliminati ${eliminatiCount} turni per lo schedule ID ${scheduleId}`);
+      } catch (error) {
+        console.error(`❌ Errore nell'eliminazione dei turni:`, error);
+      }
       
       res.json({
         ...schedule,
         isNew: true,
+        isEmpty: true,
+        isClean: true,
         shifts: [] // Inviamo esplicitamente un array vuoto di turni
       });
     } catch (err) {
@@ -534,7 +563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Date del nuovo schedule:", { startDate, endDate });
       console.log("Schedule in conflitto IDs:", conflictingSchedules.map(s => s.id));
       
-      // PASSAGGIO 2: Se ci sono conflitti, elimina fisicamente i turni collegati
+      // PASSAGGIO 2: SOLUZIONE DRASTICA - Eliminazione fisica di tutti i turni per gli schedule non pubblicati
       for (const conflictSchedule of conflictingSchedules) {
         if (conflictSchedule.isPublished) {
           // Se è già pubblicato, non lo tocchiamo
@@ -542,18 +571,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
         
-        console.log(`🗑️ Eliminazione di TUTTI i turni collegati allo schedule ID ${conflictSchedule.id}`);
+        console.log(`🗑️ ELIMINAZIONE DRASTICA: Eliminazione manuale di TUTTI i turni collegati allo schedule ID ${conflictSchedule.id}`);
         
-        // Elimina tutti i turni collegati a questo schedule
-        // Implementa questa funzione nel tuo storage
-        const scheduleId = conflictSchedule.id;
-        
-        // Questo è un approccio drastico ma necessario
         try {
-          await storage.deleteAllShiftsForSchedule(scheduleId);
-          console.log(`✅ Tutti i turni per lo schedule ID ${scheduleId} sono stati eliminati con successo`);
+          // Elimina tutti i turni per questo schedule direttamente usando la Map
+          const scheduleId = conflictSchedule.id;
+          
+          // Ottieni tutti i turni esistenti
+          const allShifts = await storage.getShifts(scheduleId);
+          console.log(`   - Trovati ${allShifts.length} turni da eliminare per lo schedule ID ${scheduleId}`);
+          
+          // Elimina manualmente ogni turno
+          let eliminatiCount = 0;
+          for (const shift of allShifts) {
+            await storage.deleteShift(shift.id);
+            eliminatiCount++;
+          }
+          
+          console.log(`✅ Eliminati manualmente ${eliminatiCount} turni per lo schedule ID ${scheduleId}`);
         } catch (error) {
-          console.error(`❌ Errore nell'eliminazione dei turni per lo schedule ID ${scheduleId}:`, error);
+          console.error(`❌ Errore nell'eliminazione drastica dei turni:`, error);
         }
       }
       
