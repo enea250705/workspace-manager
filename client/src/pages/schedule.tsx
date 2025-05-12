@@ -183,7 +183,6 @@ export default function Schedule() {
     
     // Resetta completamente lo stato
     setCreatingNewSchedule(true);
-    setExistingSchedule(null);
     setForceResetGrid(true);
     
     // Imposta date predefinite per il nuovo calendario (a partire dalla prossima settimana)
@@ -272,37 +271,24 @@ export default function Schedule() {
     // Create the schedule in the background
     createScheduleMutation.mutate(newScheduleData, {
       onSuccess: async (response) => {
-        // Converti la risposta in JSON per ottenere i dati
-        const data = await response.json();
-        console.log("Schedule creato con successo:", data);
-        
-        // Forza un completo reset dello stato
-        setForceResetGrid(true);
-        
-        // Aggiorna l'interfaccia con le nuove date
-        if (customStartDate) {
-          setSelectedWeek(customStartDate);
-        }
-        
-        // Cancella completamente i dati vecchi prima di richiedere i nuovi
-        queryClient.removeQueries({ queryKey: ["/api/schedules"] });
-        
-        // Pausa breve per assicurarsi che il reset sia completato
-        setTimeout(() => {
-          // Ora richiedi i dati freschi dal server
-          queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
+        try {
+          // Converti la risposta in JSON per ottenere i dati
+          const data = await response.json();
+          console.log("Schedule creato con successo:", data);
+          
+          // Forza un completo reset dello stato e cambia la data selezionata
+          setForceResetGrid(true);
+          
+          // Rimuove completamente l'istanza corrente per evitare sovrapposizioni
+          window.location.href = `/schedule?date=${format(customStartDate!, "yyyy-MM-dd")}`;
           
           toast({
             title: "Nuova pianificazione creata",
             description: `Pianificazione dal ${format(customStartDate!, "d MMMM", { locale: it })} al ${format(customEndDate!, "d MMMM", { locale: it })} creata con successo`,
           });
-          
-          // Resetta il flag di creazione dopo che tutto è stato impostato
-          setTimeout(() => {
-            setCreatingNewSchedule(false);
-          }, 500);
-        }, 500);
+        } catch (err) {
+          console.error("Errore nella gestione dello schedule:", err);
+        }
       },
       onError: (error) => {
         console.error("Errore nella creazione dello schedule:", error);
