@@ -56,6 +56,36 @@ router.post("/", isAdmin, async (req: Request, res: Response) => {
       uploadedBy: req.user!.id,
     });
     
+    // Ottieni informazioni sull'utente per l'invio email
+    const user = await storage.getUser(userId);
+    
+    if (user && user.isActive && user.email) {
+      try {
+        // Import email service
+        const { sendDocumentNotification } = await import('../services/email-service');
+        
+        // Invia email di notifica all'utente
+        await sendDocumentNotification(user, type, period);
+        
+        console.log(`📧 Email di notifica documento inviata a ${user.name} (${user.email})`);
+        
+        // Crea anche una notifica in-app
+        await storage.createNotification({
+          userId: userId,
+          type: "document_uploaded",
+          message: `Nuovo documento disponibile: ${type === "payslip" ? "Busta Paga" : "Documento"} ${period}`,
+          isRead: false,
+          data: {
+            documentId: document.id,
+            documentType: type,
+            period
+          }
+        });
+      } catch (emailError) {
+        console.error(`❌ Errore nell'invio email a ${user.email}:`, emailError);
+      }
+    }
+    
     res.status(201).json(document);
   } catch (error) {
     console.error("Error creating document:", error);
