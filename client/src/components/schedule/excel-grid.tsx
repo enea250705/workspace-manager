@@ -371,15 +371,8 @@ export function ExcelGrid({
   // Gestisce in modo più robusto il clic su una cella della griglia
   const handleCellClick = (userId: number, timeIndex: number, day: string) => {
     // VALIDAZIONE PRELIMINARE
-    // Non procedere se non c'è uno schedule valido o se è già pubblicato
-    if (!scheduleId || isPublished) {
-      if (isPublished) {
-        toast({
-          title: "Turno pubblicato",
-          description: "Non puoi modificare un turno già pubblicato.",
-          variant: "destructive"
-        });
-      }
+    // Non procedere se non c'è uno schedule valido
+    if (!scheduleId) {
       return;
     }
     
@@ -758,56 +751,56 @@ export function ExcelGrid({
             <span className="material-icons text-sm">print</span>
             Stampa
           </Button>
-          {!isPublished && (
-            <Button 
-              size="sm" 
-              onClick={() => {
-                // Controllo se ci sono turni prima di pubblicare
-                const hasShifts = shifts && shifts.length > 0;
-                
-                // Se non ci sono turni, mostra un avviso
-                if (!hasShifts) {
-                  toast({
-                    title: "Attenzione",
-                    description: "Stai per pubblicare un turno vuoto. Sei sicuro di voler procedere?",
-                    variant: "destructive",
-                    action: (
-                      <Button 
-                        variant="outline"
-                        onClick={() => {
-                          // Procedi con la pubblicazione anche se vuoto
-                          onPublish();
-                          toast({
-                            title: "Turno vuoto pubblicato",
-                            description: "Il turno vuoto è stato pubblicato con successo."
-                          });
-                        }}
-                      >
-                        Pubblica vuoto
-                      </Button>
-                    )
-                  });
-                  return;
-                }
-                
-                // Se ci sono turni, procedi con la pubblicazione
-                onPublish();
-                
-                // Notifica l'utente
+          <Button 
+            size="sm" 
+            onClick={() => {
+              // Controllo se ci sono turni prima di pubblicare (solo per i turni non pubblicati)
+              const hasShifts = shifts && shifts.length > 0;
+              
+              // Se non è pubblicato e non ci sono turni, mostra un avviso
+              if (!isPublished && !hasShifts) {
                 toast({
-                  title: "Turno pubblicato",
-                  description: "Il turno è stato pubblicato con successo. Gli utenti possono ora visualizzarlo."
+                  title: "Attenzione",
+                  description: "Stai per pubblicare un turno vuoto. Sei sicuro di voler procedere?",
+                  variant: "destructive",
+                  action: (
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        // Procedi con la pubblicazione anche se vuoto
+                        onPublish();
+                        toast({
+                          title: "Turno vuoto pubblicato",
+                          description: "Il turno vuoto è stato pubblicato con successo."
+                        });
+                      }}
+                    >
+                      Pubblica vuoto
+                    </Button>
+                  )
                 });
-                
-                // Log
-                console.log(`✅ Schedule ID ${scheduleId} pubblicato con successo`);
-              }} 
-              className="flex items-center gap-1"
-            >
-              <span className="material-icons text-sm">publish</span>
-              Pubblica
-            </Button>
-          )}
+                return;
+              }
+              
+              // Procedi con la pubblicazione o l'aggiornamento
+              onPublish();
+              
+              // Notifica l'utente con messaggio appropriato
+              toast({
+                title: isPublished ? "Turno aggiornato" : "Turno pubblicato",
+                description: isPublished 
+                  ? "Le modifiche al turno sono state salvate e pubblicate." 
+                  : "Il turno è stato pubblicato con successo. Gli utenti possono ora visualizzarlo."
+              });
+              
+              // Log
+              console.log(`✅ Schedule ID ${scheduleId} ${isPublished ? 'aggiornato' : 'pubblicato'} con successo`);
+            }} 
+            className="flex items-center gap-1"
+          >
+            <span className="material-icons text-sm">publish</span>
+            {isPublished ? "Aggiorna" : "Pubblica"}
+          </Button>
         </div>
       </div>
       
