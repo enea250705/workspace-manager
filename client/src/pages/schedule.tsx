@@ -671,13 +671,10 @@ export default function Schedule() {
           </div>
         ) : showScheduleBuilder && !existingSchedule ? (
           <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-center items-center mb-4">
               <h3 className="text-lg font-medium">
-                Pianificazione Turni: {dateRangeText}
+                Pianificazione {dateRangeText}
               </h3>
-              <div className="text-sm text-gray-500">
-                In attesa di salvataggio...
-              </div>
             </div>
             <ExcelGrid
               scheduleId={null}
@@ -692,28 +689,13 @@ export default function Schedule() {
           </div>
         ) : existingSchedule && !showDatePicker && !creatingNewSchedule ? (
           <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-center items-center mb-4">
               <h3 className="text-lg font-medium">
-                Pianificazione Turni: {dateRangeText}
+                {existingSchedule.isPublished && 
+                  <span className="material-icons text-green-500 text-sm align-middle mr-1">check_circle</span>
+                }
+                Pianificazione {dateRangeText}
               </h3>
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleChangeWeek}
-                >
-                  <span className="material-icons text-sm mr-1">history</span>
-                  Cronologia turni
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNewWeeklySchedule}
-                >
-                  <span className="material-icons text-sm mr-1">add</span>
-                  Nuovo turno settimanale
-                </Button>
-              </div>
             </div>
             <ExcelGrid
               scheduleId={existingSchedule?.id || null}
@@ -726,6 +708,26 @@ export default function Schedule() {
               onPublish={handlePublish}
               forceResetGrid={forceResetGrid || isLoadingNewSchedule}
             />
+            
+            {/* Pulsanti di azione posizionati sotto la tabella */}
+            <div className="flex justify-center gap-4 mt-6 pt-4 border-t border-gray-200">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleChangeWeek}
+              >
+                <span className="material-icons text-sm mr-1">history</span>
+                Cronologia turni
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNewWeeklySchedule}
+              >
+                <span className="material-icons text-sm mr-1">add</span>
+                Nuovo turno settimanale
+              </Button>
+            </div>
           </div>
         ) : (
           <div>
