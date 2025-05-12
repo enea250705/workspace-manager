@@ -152,20 +152,24 @@ export default function Schedule() {
     queryKey: ["/api/time-off-requests"],
   });
 
-  // Create schedule mutation
+  // Create schedule mutation - Versione completamente nuova e migliorata
+  // Usa il nuovo endpoint che garantisce la pulizia completa e l'unicità
   const createScheduleMutation = useMutation({
-    mutationFn: (scheduleData: any) => apiRequest("POST", "/api/schedules", scheduleData),
+    mutationFn: (scheduleData: any) => apiRequest("POST", "/api/schedules/new-empty", scheduleData),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      // Non invalidare qui la cache, lo faremo in modo più controllato
+      console.log("✅ Nuovo schedule creato correttamente con ID:", data);
+      
       toast({
-        title: "Turni creati",
-        description: "La pianificazione è stata creata con successo.",
+        title: "Nuovo pianificazione creata",
+        description: "È stata creata una nuova pianificazione completamente vuota.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("❌ Errore nella creazione dello schedule:", error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante la creazione della pianificazione.",
+        description: "Impossibile creare la nuova pianificazione. Controlla le date selezionate.",
         variant: "destructive",
       });
     },
@@ -309,18 +313,21 @@ export default function Schedule() {
     }
   };
   
-  // Create a new schedule
+  // IMPLEMENTAZIONE COMPLETAMENTE NUOVA:
+  // Crea un nuovo schedule completamente pulito con garanzia di integrità
   const handleCreateSchedule = () => {
+    // Controllo preliminare sulle date
     if (!customStartDate || !customEndDate) {
       toast({
         title: "Date mancanti",
-        description: "Seleziona una data di inizio e di fine per creare una pianificazione.",
+        description: "Seleziona una data di inizio e di fine per la nuova pianificazione.",
         variant: "destructive",
       });
       return;
     }
     
-    console.log("Date selezionate:", { 
+    // Log delle date selezionate per debug
+    console.log("🗓️ Date selezionate per nuovo schedule:", { 
       startDate: format(customStartDate, "yyyy-MM-dd"), 
       endDate: format(customEndDate, "yyyy-MM-dd") 
     });
@@ -328,15 +335,16 @@ export default function Schedule() {
     // Nascondi il selettore di date
     setShowDatePicker(false);
     
-    // Mostra il costruttore di pianificazione immediatamente
+    // Mostra subito il costruttore di pianificazione
     setShowScheduleBuilder(true);
     
-    // Se stiamo creando un nuovo schedule, rimuoviamo le query esistenti per evitare conflitti
+    // FASE 1: PULIZIA CACHE E PREPARAZIONE
+    // Se stiamo creando un nuovo schedule, puliamo completamente la cache
     if (creatingNewSchedule) {
-      queryClient.removeQueries({ queryKey: ["/api/schedules"] });
+      queryClient.clear(); // Pulizia totale per evitare conflitti
     }
     
-    // Crea un nuovo schedule con date personalizzate
+    // Crea la struttura dati per il nuovo schedule
     const newScheduleData = {
       startDate: format(customStartDate, "yyyy-MM-dd"),
       endDate: format(customEndDate, "yyyy-MM-dd"),
@@ -344,54 +352,60 @@ export default function Schedule() {
       createdBy: user?.id,
     };
     
-    console.log("Creando nuovo schedule:", newScheduleData);
+    console.log("🏗️ Creazione nuovo schedule con il sistema migliorato:", newScheduleData);
     
-    // Ora usa il nuovo endpoint speciale che garantisce che lo schedule sia completamente pulito
+    // FASE 2: INVOCAZIONE ENDPOINT MIGLIORATO
+    // Usa il nuovo endpoint che garantisce la pulizia completa e l'unicità
     createScheduleMutation.mutate(newScheduleData, {
       onSuccess: async (response) => {
         try {
-          // Converti la risposta in JSON per ottenere i dati
+          // Converti la risposta in JSON
           const data = await response.json();
-          console.log("NUOVO SCHEDULE VUOTO CREATO CON SUCCESSO:", data);
+          console.log("✅ CREAZIONE SCHEDULE COMPLETATA:", data);
           
-          // Forza un reset completo di tutta la griglia
+          // Forza il reset completo della griglia
           setForceResetGrid(true);
           
+          // Notifica all'utente
           toast({
-            title: "Nuova pianificazione creata",
-            description: "Caricamento della nuova tabella completamente vuota...",
+            title: "Pianificazione creata con successo",
+            description: "Caricamento della tabella completamente vuota...",
           });
           
-          // Usa un timeout più lungo per essere sicuri
+          // FASE 3: AGGIORNAMENTO INTERFACCIA
+          // Usa un timeout per garantire che la UI sia aggiornata correttamente
           setTimeout(() => {
-            // Purga completamente la cache di React Query
+            // Pulisci completamente la cache
             queryClient.clear();
             
-            console.log("Esecuzione pulizia totale e caricamento tabella vuota per ID:", data.id);
+            console.log("🧹 Pulizia e ricaricamento tabella vuota per ID:", data.id);
             
-            // Aggiungiamo un timestamp per evitare che il browser usi la cache
+            // Aggiungi un timestamp per evitare cache del browser
             const timestamp = Date.now();
             
-            // Forza un refresh completo della pagina con una nuova URL
-            window.location.href = `/schedule?reset=true&scheduleId=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&forceEmpty=true&ts=${timestamp}`;
+            // FASE 4: REDIRECT CON PARAMETRI MIGLIORATI
+            // Usa parametri URL più espliciti
+            window.location.href = `/schedule?reset=true&scheduleId=${data.id}&newSchedule=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&forceEmpty=true&refreshed=true&ts=${timestamp}`;
           }, 1000);
         } catch (err) {
-          console.error("Errore nella gestione dello schedule:", err);
+          console.error("❌ Errore nella gestione dello schedule:", err);
           toast({
-            title: "Errore",
-            description: "Si è verificato un errore nel caricamento del nuovo turno.",
+            title: "Errore di elaborazione",
+            description: "Problema nel caricamento del nuovo turno. Riprova tra qualche secondo.",
             variant: "destructive"
           });
         }
       },
       onError: (error) => {
-        console.error("Errore nella creazione dello schedule:", error);
+        console.error("❌ Errore nella creazione dello schedule:", error);
         toast({
           title: "Errore",
-          description: "Si è verificato un errore durante la creazione della pianificazione",
+          description: "Impossibile creare la pianificazione. Verificare le date e riprovare.",
           variant: "destructive",
         });
+        // Reset dello stato
         setCreatingNewSchedule(false);
+        setShowScheduleBuilder(false);
       }
     });
   };

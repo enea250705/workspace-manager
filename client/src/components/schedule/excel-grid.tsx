@@ -120,8 +120,9 @@ export function ExcelGrid({
     }
   });
   
-  // Inizializzazione della griglia
+  // INIZIALIZZAZIONE MIGLIORATA DELLA GRIGLIA
   useEffect(() => {
+    // Verifica che ci siano utenti disponibili
     if (!users.length) return;
     
     // Controlla i parametri URL per vedere se dobbiamo forzare un reset
@@ -129,42 +130,66 @@ export function ExcelGrid({
     const forceEmptyFromUrl = urlParams.get('forceEmpty') === 'true';
     const scheduleIdFromUrl = urlParams.get('scheduleId');
     const resetFromUrl = urlParams.get('reset') === 'true';
+    const newScheduleParam = urlParams.get('newSchedule');
     
-    // Forza il reset completo della griglia se richiesto
-    if (forceResetGrid || forceEmptyFromUrl || resetFromUrl || Object.keys(gridData).length === 0) {
+    // Condizioni per il reset completo della griglia (VERSIONE MIGLIORATA)
+    // Inclusi più casi per garantire sempre un reset quando necessario
+    const shouldReset = 
+      forceResetGrid || 
+      forceEmptyFromUrl || 
+      resetFromUrl || 
+      Object.keys(gridData).length === 0 ||
+      (scheduleIdFromUrl && scheduleId?.toString() === scheduleIdFromUrl) ||
+      (newScheduleParam && scheduleId?.toString() === newScheduleParam);
+    
+    if (shouldReset) {
+      // Log dettagliato delle condizioni di reset
       console.log("RESET COMPLETO GRIGLIA:", {
         forceResetGrid,
         forceEmptyFromUrl, 
         resetFromUrl, 
         scheduleIdFromUrl,
+        newScheduleParam,
+        currentScheduleId: scheduleId,
         timestamp: Date.now()
       });
       
-      // Crea una nuova griglia COMPLETAMENTE VUOTA
+      // FASE 1: INIZIALIZZAZIONE DI UNA GRIGLIA COMPLETAMENTE VUOTA
       const newGridData: Record<string, Record<number, {
         cells: Array<{ type: string; shiftId: number | null; isTimeOff?: boolean }>;
         notes: string;
         total: number;
       }>> = {};
     
-      // Inizializza la griglia vuota per tutti i giorni e utenti
+      // FASE 2: PREPARAZIONE STRUTTURA VUOTA
+      // Inizializza tutti i giorni con una struttura completamente vuota
       weekDays.forEach(day => {
         newGridData[day.name] = {};
         
-        // Filtra solo i dipendenti attivi
-        const activeUsers = users.filter(u => u.role === "employee" && u.isActive);
+        // Filtra solo i dipendenti attivi (evita di creare celle per utenti non attivi)
+        // In questa versione migliorata, filtra più rigorosamente
+        const activeUsers = users.filter(u => 
+          u.role === "employee" && 
+          u.isActive === true && 
+          u.id !== undefined
+        );
         
+        // Per ogni utente attivo, crea una struttura vuota per questo giorno
         activeUsers.forEach(user => {
-          // Creiamo celle COMPLETAMENTE vuote
+          // Crea celle completamente vuote inizializzate correttamente
           newGridData[day.name][user.id] = {
-            cells: timeSlots.map(() => ({ type: "", shiftId: null })),
+            cells: timeSlots.map(() => ({ 
+              type: "", 
+              shiftId: null,
+              isTimeOff: false // Aggiungiamo esplicitamente isTimeOff = false per chiarezza
+            })),
             notes: "",
             total: 0
           };
         });
       });
       
-      console.log("Pulizia completa della tabella dei turni. Tutte le celle sono state reimpostate completamente vuote.");
+      console.log("✅ Pulizia completa della tabella dei turni completata. Griglia reimpostata vuota.");
       
       // Popola la griglia con i turni esistenti
       if (shifts && shifts.length > 0 && scheduleId) {
@@ -212,10 +237,20 @@ export function ExcelGrid({
         });
       }
       
-      // Aggiungi le richieste di ferie/permessi approvate
+      // FASE 3: SOVRAPPOSIZIONE DELLE RICHIESTE FERIE/PERMESSI
+      // Aggiungi le richieste di ferie/permessi approvate - VERSIONE MIGLIORATA
       if (timeOffRequests && timeOffRequests.length > 0) {
-        const approvedRequests = timeOffRequests.filter(req => req.status === "approved");
+        // Filtra solo le richieste approvate 
+        const approvedRequests = timeOffRequests.filter(req => 
+          req.status === "approved" && 
+          req.userId !== undefined && 
+          req.startDate && 
+          req.endDate
+        );
         
+        console.log(`📋 Applicazione di ${approvedRequests.length} richieste di ferie/permessi approvate`);
+        
+        // Processa ogni richiesta approvata
         approvedRequests.forEach(request => {
           const userId = request.userId;
           const startDate = new Date(request.startDate);
@@ -227,12 +262,15 @@ export function ExcelGrid({
             
             // Se il giorno è compreso nel periodo della richiesta
             if (dayDate >= startDate && dayDate <= endDate) {
+              // Verifica che la struttura dei dati esista
               if (newGridData[day.name] && newGridData[day.name][userId]) {
-                // Determina tipo di permesso
+                // Determina il tipo di permesso (usa "vacation" per ferie, "leave" per permessi)
                 const requestType = request.type === "vacation" ? "vacation" : "leave";
                 
-                // Per i permessi di mezza giornata
+                // Gestione migliorata dei permessi di mezza giornata
                 if (request.halfDay) {
+                  const halfDayText = request.type === "vacation" ? "Ferie" : "Permesso";
+                  
                   // Mattina (fino alle 13:00)
                   if (request.halfDayPeriod === "morning") {
                     for (let i = 0; i < timeSlots.length; i++) {
@@ -241,11 +279,12 @@ export function ExcelGrid({
                         newGridData[day.name][userId].cells[i] = {
                           type: requestType,
                           shiftId: null,
-                          isTimeOff: true
+                          isTimeOff: true // Flag esplicito per identificare le celle di ferie/permessi
                         };
                       }
                     }
-                    newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} mattina`;
+                    // Aggiorna le note con dettagli più chiari
+                    newGridData[day.name][userId].notes = `${halfDayText} mattina (${format(startDate, "dd/MM")}-${format(endDate, "dd/MM")})`;
                   }
                   // Pomeriggio (dalle 13:00)
                   else {
@@ -259,8 +298,24 @@ export function ExcelGrid({
                         };
                       }
                     }
-                    newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} pomeriggio`;
+                    // Aggiorna le note con dettagli più chiari 
+                    newGridData[day.name][userId].notes = `${halfDayText} pomeriggio (${format(startDate, "dd/MM")}-${format(endDate, "dd/MM")})`;
                   }
+                }
+                // Gestione dei permessi a giornata intera
+                else {
+                  // Marca tutte le celle del giorno come ferie/permessi
+                  for (let i = 0; i < timeSlots.length; i++) {
+                    newGridData[day.name][userId].cells[i] = {
+                      type: requestType,
+                      shiftId: null,
+                      isTimeOff: true
+                    };
+                  }
+                  
+                  // Aggiorna le note
+                  const fullDayText = request.type === "vacation" ? "Ferie" : "Permesso";
+                  newGridData[day.name][userId].notes = `${fullDayText} giornata intera (${format(startDate, "dd/MM")}-${format(endDate, "dd/MM")})`;
                 }
               }
             }
@@ -268,7 +323,11 @@ export function ExcelGrid({
         });
       }
       
+      // FASE 4: AGGIORNAMENTO STATO CON LA NUOVA GRIGLIA
       setGridData(newGridData);
+      
+      // FASE 5: LOG DI COMPLETAMENTO
+      console.log(`✅ Inizializzazione completa della griglia turni per schedule ID ${scheduleId}`);
     }
   }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid, gridData]);
   
