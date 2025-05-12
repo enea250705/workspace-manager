@@ -81,7 +81,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
     return null; // Don't show sidebar if not logged in
   }
   
-  // Animazioni sidebar
+  // Animazioni sidebar - più veloci
   const sidebarVariants = {
     hidden: { x: -300, opacity: 0 },
     visible: { 
@@ -89,42 +89,46 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
       opacity: 1,
       transition: {
         type: "spring",
-        stiffness: 260,
-        damping: 20,
-        duration: 0.3
+        stiffness: 400,
+        damping: 30,
+        duration: 0.15,
+        mass: 0.8
       }
     }
   };
 
-  // Animazioni per i menu items
+  // Animazioni per i menu items - più veloci
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08,
-        when: "beforeChildren"
+        staggerChildren: 0.03, // Più veloce, prima era 0.08
+        when: "beforeChildren",
+        duration: 0.1
       }
     }
   };
 
   const itemVariants = {
-    hidden: { x: -20, opacity: 0 },
+    hidden: { x: -15, opacity: 0 },
     visible: { 
       x: 0, 
       opacity: 1,
       transition: {
         type: "spring",
-        stiffness: 300,
-        damping: 24
+        stiffness: 400,
+        damping: 30,
+        duration: 0.1,
+        mass: 0.8
       }
     }
   };
 
-  // Animazione per overlay mobile
+  // Animazione per overlay mobile - più veloce
   const mobileOverlayVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.2 } }
+    visible: { opacity: 1, transition: { duration: 0.12 } }
   };
 
   const createMenuItem = (item: SidebarItem, index: number) => {
@@ -243,7 +247,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
           className="p-4 sm:p-5 border-b flex items-center space-x-3 sm:space-x-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
+          transition={{ delay: 0.1, duration: 0.2 }}
         >
           <motion.div 
             className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full w-10 sm:w-12 h-10 sm:h-12 flex items-center justify-center shadow-md"
@@ -253,8 +257,8 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
             <span className="material-icons text-white text-base sm:text-lg">person</span>
           </motion.div>
           <div>
-            <p className="font-medium text-sm sm:text-base">{user.name}</p>
-            <p className="text-xs sm:text-sm text-gray-600">{user.role === "admin" ? "Amministratore" : "Dipendente"}</p>
+            <p className="font-medium text-sm sm:text-base">{user?.name || "Utente"}</p>
+            <p className="text-xs sm:text-sm text-gray-600">{user?.role === "admin" ? "Amministratore" : "Dipendente"}</p>
           </div>
         </motion.div>
         
