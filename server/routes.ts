@@ -475,22 +475,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ottieni una programmazione specifica per data o l'attuale
   app.get("/api/schedules", isAuthenticated, async (req, res) => {
     try {
+      // Verifica e log di tutti i parametri per debug
+      console.log("📊 PARAMETRI RICHIESTA SCHEDULE:", { 
+        query: req.query,
+        id: req.query.id,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate
+      });
+      
+      // MIGLIORAMENTO: gestione esplicita dell'ID
       // Se viene fornito un ID specifico, restituisce quella programmazione
       if (req.query.id) {
-        const scheduleId = parseInt(req.query.id as string);
+        // Usa Number() per assicurarsi che sia un numero
+        const scheduleId = Number(req.query.id);
+        console.log(`🔍 Ricerca schedule per ID specifico: ${scheduleId}`);
+        
         const schedule = await storage.getSchedule(scheduleId);
-        return res.json(schedule || null);
+        
+        if (schedule) {
+          console.log(`✅ Schedule trovato con ID ${scheduleId}:`, schedule);
+          return res.json(schedule);
+        } else {
+          console.log(`⚠️ Nessuno schedule trovato con ID ${scheduleId}`);
+          return res.json(null);
+        }
       }
       
       // Altrimenti cerca per intervallo di date
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date();
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
       
-      endDate.setDate(endDate.getDate() + 7); // Default to one week period
+      // Se non è specificata una data di fine, usa una settimana di default
+      if (!req.query.endDate) {
+        endDate.setDate(endDate.getDate() + 7);
+      }
+      
+      console.log(`🔍 Ricerca schedule per intervallo date: ${startDate.toISOString()} - ${endDate.toISOString()}`);
       
       const schedule = await storage.getScheduleByDateRange(startDate, endDate);
+      
+      if (schedule) {
+        console.log(`✅ Schedule trovato per intervallo date:`, schedule);
+      } else {
+        console.log(`⚠️ Nessuno schedule trovato per intervallo date`);
+      }
+      
       res.json(schedule || null);
     } catch (err) {
+      console.error("❌ Errore nel recupero schedule:", err);
       res.status(500).json({ message: "Failed to get schedule" });
     }
   });
