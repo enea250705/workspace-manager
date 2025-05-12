@@ -441,6 +441,18 @@ export function ExcelGrid({
         // CASO 1: ELIMINAZIONE
         // Elimina il turno dal database
         deleteShiftMutation.mutate(currentCell.shiftId, {
+          onSuccess: () => {
+            // Invalida la query per aggiornare i dati
+            queryClient.invalidateQueries({ queryKey: [`/api/schedules/${scheduleId}/shifts`] });
+            
+            // A questo punto il turno non esiste più nel database
+            // Assicuriamoci di eliminare completamente il riferimento all'ID del turno
+            const updatedGridData = structuredClone(gridData);
+            if (updatedGridData[day] && updatedGridData[day][userId]) {
+              updatedGridData[day][userId].cells[timeIndex].shiftId = null;
+              setGridData(updatedGridData);
+            }
+          },
           onError: () => {
             // In caso di errore ripristina lo stato precedente
             const revertGridData = structuredClone(gridData);
@@ -466,12 +478,39 @@ export function ExcelGrid({
         
         // Invia l'aggiornamento al server
         updateShiftMutation.mutate(updateData, {
-          onError: () => {
-            // In caso di errore ripristina lo stato precedente
-            const revertGridData = structuredClone(gridData);
-            if (revertGridData[day] && revertGridData[day][userId]) {
-              revertGridData[day][userId].cells[timeIndex] = currentCell;
-              setGridData(revertGridData);
+          onError: (error) => {
+            // Se l'errore è 404 (Shift not found), significa che il turno è stato eliminato
+            if (error.message && error.message.includes("404")) {
+              // Rimuovi il riferimento all'ID del turno che non esiste più
+              const updatedGridData = structuredClone(gridData);
+              if (updatedGridData[day] && updatedGridData[day][userId]) {
+                updatedGridData[day][userId].cells[timeIndex].shiftId = null;
+                setGridData(updatedGridData);
+                
+                // Se vogliamo comunque mantenere il nuovo tipo, creiamo un nuovo turno
+                if (newType !== "") {
+                  const createData = {
+                    scheduleId,
+                    userId,
+                    day,
+                    startTime: timeSlots[timeIndex],
+                    endTime: timeSlots[timeIndex + 1],
+                    type: newType,
+                    notes: userDayData.notes || "",
+                    area: null
+                  };
+                  
+                  // Crea un nuovo turno nel database
+                  updateShiftMutation.mutate(createData);
+                }
+              }
+            } else {
+              // Per altri errori, ripristina lo stato precedente
+              const revertGridData = structuredClone(gridData);
+              if (revertGridData[day] && revertGridData[day][userId]) {
+                revertGridData[day][userId].cells[timeIndex] = currentCell;
+                setGridData(revertGridData);
+              }
             }
           }
         });
