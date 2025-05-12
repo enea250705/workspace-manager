@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
-import { formatDate, formatHours } from "@/lib/utils";
+import { formatDate, formatHours, calculateTotalWorkHours, calculateWorkHours } from "@/lib/utils";
 
 type ScheduleViewerProps = {
   schedule: any;
@@ -55,24 +55,8 @@ export function ScheduleViewer({ schedule, shifts, onDownloadPdf }: ScheduleView
     shiftsByDay[shift.day].push(shift);
   });
   
-  // Calculate total hours
-  const totalHours = shifts.reduce((total, shift) => {
-    if (shift.type === "work") {
-      const [startHour, startMin] = shift.startTime.split(":").map(Number);
-      const [endHour, endMin] = shift.endTime.split(":").map(Number);
-      
-      let hours = endHour - startHour;
-      let minutes = endMin - startMin;
-      
-      if (minutes < 0) {
-        hours -= 1;
-        minutes += 60;
-      }
-      
-      return total + hours + (minutes / 60);
-    }
-    return total;
-  }, 0);
+  // Calculate total hours using the improved utility function
+  const totalHours = calculateTotalWorkHours(shifts.filter(shift => shift.type === "work"));
   
   // Calculate working days
   const workingDays = Object.keys(shiftsByDay).length;
@@ -107,24 +91,8 @@ export function ScheduleViewer({ schedule, shifts, onDownloadPdf }: ScheduleView
             const hasVacation = dayShifts.some(s => s.type === "vacation");
             const hasLeave = dayShifts.some(s => s.type === "leave");
             
-            // Calculate total hours for the day
-            const dayHours = dayShifts.reduce((total, shift) => {
-              if (shift.type === "work") {
-                const [startHour, startMin] = shift.startTime.split(":").map(Number);
-                const [endHour, endMin] = shift.endTime.split(":").map(Number);
-                
-                let hours = endHour - startHour;
-                let minutes = endMin - startMin;
-                
-                if (minutes < 0) {
-                  hours -= 1;
-                  minutes += 60;
-                }
-                
-                return total + hours + (minutes / 60);
-              }
-              return total;
-            }, 0);
+            // Calculate total hours for the day using the improved utility function
+            const dayHours = calculateTotalWorkHours(dayShifts.filter(shift => shift.type === "work"));
             
             return (
               <div key={day.name} className="bg-gray-50 p-3 rounded border border-gray-200">

@@ -151,25 +151,7 @@ export function EmployeeDashboard() {
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="font-medium">{day}</h3>
                     <div className="text-xs text-gray-500">
-                      {formatHours(
-                        shifts.reduce((total: number, shift: any) => {
-                          if (shift.type === "work") {
-                            const [startHour, startMin] = shift.startTime.split(":").map(Number);
-                            const [endHour, endMin] = shift.endTime.split(":").map(Number);
-                            
-                            let hours = endHour - startHour;
-                            let minutes = endMin - startMin;
-                            
-                            if (minutes < 0) {
-                              hours -= 1;
-                              minutes += 60;
-                            }
-                            
-                            return total + hours + (minutes / 60);
-                          }
-                          return total;
-                        }, 0)
-                      )}
+                      {formatHours(calculateTotalWorkHours(shifts.filter((shift: any) => shift.type === "work")))}
                     </div>
                   </div>
                   
