@@ -160,11 +160,10 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
   // Crea tabella HTML con i turni dell'utente
   let shiftsTable = '';
   
+  console.log(`Preparazione email per ${user.name} con ${shifts.length} turni...`);
+  
   if (shifts && shifts.length > 0) {
-    // Ordina i turni per giorno della settimana
-    const weekdayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-    
-    // Traduci i giorni della settimana in italiano
+    // Mappa i giorni della settimana in italiano
     const weekdayTranslation: Record<string, string> = {
       "Monday": "Lunedì",
       "Tuesday": "Martedì",
@@ -175,7 +174,7 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
       "Sunday": "Domenica"
     };
 
-    // Traduci i tipi di turno
+    // Mappa i tipi di turno in italiano
     const typeTranslation: Record<string, string> = {
       "work": "Lavoro",
       "vacation": "Ferie",
@@ -183,17 +182,50 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
       "sick": "Malattia"
     };
     
+    // Converti i giorni della settimana in inglese (necessario per il raggruppamento)
+    const italianToDayMap: Record<string, string> = {
+      "lunedì": "Monday",
+      "martedì": "Tuesday", 
+      "mercoledì": "Wednesday",
+      "giovedì": "Thursday",
+      "venerdì": "Friday",
+      "sabato": "Saturday", 
+      "domenica": "Sunday"
+    };
+    
+    // Ordine dei giorni della settimana per la visualizzazione
+    const weekdayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    
     // Raggruppa i turni per giorno
     const shiftsByDay: Record<string, any[]> = {};
     
-    shifts.forEach(shift => {
-      if (!shiftsByDay[shift.day]) {
-        shiftsByDay[shift.day] = [];
-      }
-      shiftsByDay[shift.day].push(shift);
+    // Pre-inizializza tutti i giorni con array vuoti
+    weekdayOrder.forEach(day => {
+      shiftsByDay[day] = [];
     });
     
-    // Crea la tabella dei turni con formato semplificato (giorno: da ora a ora)
+    // Raggruppa i turni per giorno
+    shifts.forEach(shift => {
+      // Assicurati che il giorno sia in inglese per corrispondenza con weekdayOrder
+      const dayKey = shift.day;
+      if (shiftsByDay[dayKey] !== undefined) {
+        shiftsByDay[dayKey].push(shift);
+      } else {
+        // Fallback: prova a convertire dall'italiano all'inglese
+        const englishDay = italianToDayMap[shift.day.toLowerCase()];
+        if (englishDay && shiftsByDay[englishDay] !== undefined) {
+          shiftsByDay[englishDay].push({...shift, day: englishDay});
+        } else {
+          console.warn(`Giorno non riconosciuto: ${shift.day}`);
+        }
+      }
+    });
+    
+    // Log per debug
+    console.log("Turni raggruppati per giorno:", 
+      Object.entries(shiftsByDay).map(([day, shifts]) => `${day}: ${shifts.length} turni`));
+    
+    // Crea la tabella HTML dei turni
     shiftsTable = `
       <div style="margin-top: 25px; margin-bottom: 25px;">
         <h3 style="color: #4a6cf7; margin-bottom: 15px;">I tuoi turni:</h3>
@@ -208,16 +240,24 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
           <tbody>
     `;
     
-    // Itera sui giorni nell'ordine corretto
+    // Contatore per verificare se ci sono righe nella tabella
+    let rowsAdded = 0;
+    
+    // Itera sui giorni nel corretto ordine
     for (const day of weekdayOrder) {
       const dayShifts = shiftsByDay[day] || [];
       
-      if (dayShifts.length === 0) continue; // Salta i giorni senza turni
+      // Salta i giorni senza turni
+      if (dayShifts.length === 0) continue;
+      
+      console.log(`Elaborazione ${dayShifts.length} turni per ${day}`);
       
       // Ordina i turni per orario di inizio
-      dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      dayShifts.sort((a, b) => {
+        return a.startTime.localeCompare(b.startTime);
+      });
       
-      // Per ogni giorno, mostra un singolo orario di inizio e fine (primo e ultimo turno)
+      // Per ogni giorno, aggrega l'orario dal primo all'ultimo turno
       if (dayShifts.length > 0) {
         const firstShift = dayShifts[0];
         const lastShift = dayShifts[dayShifts.length - 1];
@@ -231,7 +271,7 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
                           firstShift.type === 'leave' ? '#10b981' : 
                           firstShift.type === 'sick' ? '#ef4444' : '#6b7280';
         
-        // Aggiungi riga alla tabella con formato semplificato
+        // Aggiungi riga alla tabella
         shiftsTable += `
           <tr>
             <td style="padding: 10px; border: 1px solid #e0e0e0;">${weekdayTranslation[day]}</td>
@@ -239,6 +279,8 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
             <td style="padding: 10px; border: 1px solid #e0e0e0; color: ${typeColor}; font-weight: bold;">${shiftType}</td>
           </tr>
         `;
+        
+        rowsAdded++;
       }
     }
     
@@ -247,6 +289,15 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
         </table>
       </div>
     `;
+    
+    // Se non ci sono righe nella tabella, mostra un messaggio alternativo
+    if (rowsAdded === 0) {
+      shiftsTable = `
+        <div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; background-color: #f9fafb; border-radius: 5px; text-align: center;">
+          <p style="margin: 0; color: #6b7280;">Non sono stati trovati turni da visualizzare per questo periodo.</p>
+        </div>
+      `;
+    }
   } else {
     // Messaggio se non ci sono turni
     shiftsTable = `
