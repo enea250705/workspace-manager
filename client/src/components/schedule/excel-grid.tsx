@@ -156,40 +156,30 @@ export function ExcelGrid({
     }
   });
   
-  // INIZIALIZZAZIONE MIGLIORATA DELLA GRIGLIA
+  // INIZIALIZZAZIONE UNA TANTUM DELLA GRIGLIA
   useEffect(() => {
     // Verifica che ci siano utenti disponibili
     if (!users.length) return;
     
-    // Controlla i parametri URL per vedere se dobbiamo forzare un reset
-    const urlParams = new URLSearchParams(window.location.search);
-    const forceEmptyFromUrl = urlParams.get('forceEmpty') === 'true';
-    const scheduleIdFromUrl = urlParams.get('scheduleId');
-    const resetFromUrl = urlParams.get('reset') === 'true';
-    const newScheduleParam = urlParams.get('newSchedule');
+    // Utilizziamo una variabile statica per indicare se l'inizializzazione è già avvenuta
+    // per ridurre il numero di resetting
+    const initKey = `grid_init_${scheduleId}`;
     
-    // Condizioni per il reset completo della griglia (VERSIONE MIGLIORATA)
-    // Inclusi più casi per garantire sempre un reset quando necessario
-    // Limitiamo le condizioni di reset per evitare cicli infiniti
-    const shouldReset = 
-      (forceResetGrid && Object.keys(gridData).length === 0) || // Solo se la griglia è vuota
-      forceEmptyFromUrl || 
-      resetFromUrl || 
-      (Object.keys(gridData).length === 0 && weekDays.length > 0 && users.length > 0) ||
-      (scheduleIdFromUrl && scheduleId?.toString() === scheduleIdFromUrl && Object.keys(gridData).length === 0) ||
-      (newScheduleParam && scheduleId?.toString() === newScheduleParam && Object.keys(gridData).length === 0);
+    // Otteniamo dal sessionStorage se l'init è già avvenuto
+    const isAlreadyInitialized = sessionStorage.getItem(initKey) === "true";
     
-    if (shouldReset) {
-      // Log dettagliato delle condizioni di reset
-      console.log("RESET COMPLETO GRIGLIA:", {
-        forceResetGrid,
-        forceEmptyFromUrl, 
-        resetFromUrl, 
-        scheduleIdFromUrl,
-        newScheduleParam,
-        currentScheduleId: scheduleId,
-        timestamp: Date.now()
-      });
+    // Non reinizializziamo se è già stato fatto, a meno che non sia forceResetGrid
+    if (isAlreadyInitialized && !forceResetGrid) {
+      return;
+    }
+    
+    // Marca come inizializzato
+    sessionStorage.setItem(initKey, "true");
+    
+    // Semplifichiamo i log per evitare spam nella console
+    console.log("⚡ Inizializzazione singola griglia per schedule ID:", scheduleId);
+      
+    // FASE 1: INIZIALIZZAZIONE DI UNA GRIGLIA COMPLETAMENTE VUOTA
       
       // FASE 1: INIZIALIZZAZIONE DI UNA GRIGLIA COMPLETAMENTE VUOTA
       const newGridData: Record<string, Record<number, {
