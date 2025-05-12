@@ -279,14 +279,17 @@ export function ExcelGrid({
     // Ciclo: vuoto -> lavoro -> ferie -> permesso -> malattia -> vuoto
     let newType = "";
     
+    // Implementa il ciclo rotativo: vuoto → X (work) → F (vacation) → P (leave) → vuoto
     if (currentCell.type === "") {
-      newType = "work";
+      newType = "work"; // X (in servizio)
     } else if (currentCell.type === "work") {
-      newType = "vacation"; // Ferie (F)
+      newType = "vacation"; // F (ferie)
     } else if (currentCell.type === "vacation") {
-      newType = "leave"; // Permesso (P)
+      newType = "leave"; // P (permesso)
     } else if (currentCell.type === "leave") {
-      newType = "sick"; // Malattia (M)
+      newType = ""; // Torna vuoto (ciclo completo)
+    } else if (currentCell.type === "sick") {
+      newType = ""; // Malattia torna a vuoto
     }
     
     // Trova le celle consecutive dello stesso tipo
