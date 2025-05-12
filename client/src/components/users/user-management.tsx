@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { UserForm } from "./user-form";
@@ -141,9 +141,12 @@ export function UserManagement() {
                     <span className="sm:hidden inline">Importa</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-xl">
+                <DialogContent className="sm:max-w-xl w-[92%] md:w-full" aria-describedby="bulk-users-description">
                   <DialogHeader>
                     <DialogTitle>Importa Utenti in Blocco</DialogTitle>
+                    <DialogDescription id="bulk-users-description" className="sr-only">
+                      Form per importare utenti in blocco
+                    </DialogDescription>
                   </DialogHeader>
                   <BulkUsersForm 
                     onSubmit={(result) => {
@@ -167,9 +170,12 @@ export function UserManagement() {
                     <span className="sm:hidden inline">Nuovo</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md w-[92%] md:w-full" aria-describedby="new-user-description">
                   <DialogHeader>
                     <DialogTitle>Aggiungi Nuovo Utente</DialogTitle>
+                    <DialogDescription id="new-user-description" className="sr-only">
+                      Form per aggiungere un nuovo utente
+                    </DialogDescription>
                   </DialogHeader>
                   <UserForm 
                     onSubmit={(userData) => {
@@ -217,7 +223,7 @@ export function UserManagement() {
                 <SelectTrigger className="w-full sm:w-[140px]">
                   <SelectValue placeholder="Tutti i ruoli" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   <SelectItem value="all">Tutti i ruoli</SelectItem>
                   <SelectItem value="admin">Amministratore</SelectItem>
                   <SelectItem value="employee">Dipendente</SelectItem>
@@ -235,7 +241,7 @@ export function UserManagement() {
                 <SelectTrigger className="w-full sm:w-[140px]">
                   <SelectValue placeholder="Tutti gli stati" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   <SelectItem value="all">Tutti gli stati</SelectItem>
                   <SelectItem value="active">Attivo</SelectItem>
                   <SelectItem value="inactive">Disattivato</SelectItem>
@@ -435,9 +441,12 @@ export function UserManagement() {
           
           {/* Edit User Dialog */}
           <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md w-[92%] md:w-full" aria-describedby="edit-user-description">
               <DialogHeader>
                 <DialogTitle>Modifica Utente</DialogTitle>
+                <DialogDescription id="edit-user-description" className="sr-only">
+                  Form per modificare i dati dell'utente
+                </DialogDescription>
               </DialogHeader>
               {selectedUser && (
                 <UserForm 
