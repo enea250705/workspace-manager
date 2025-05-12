@@ -715,6 +715,15 @@ export default function Schedule() {
               forceResetGrid={forceResetGrid || isLoadingNewSchedule}
             />
             
+            {/* Dialogo di esportazione PDF */}
+            <ExportToPdfDialog
+              open={showExportPdfDialog}
+              onOpenChange={setShowExportPdfDialog}
+              schedules={allSchedules || []}
+              users={users || []}
+              fetchShifts={fetchShiftsForSchedule}
+            />
+            
             {/* Pulsanti di azione posizionati sotto la tabella */}
             <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mt-6 pt-4 border-t border-gray-200">
               <Button
@@ -734,6 +743,24 @@ export default function Schedule() {
               >
                 <span className="material-icons text-xs sm:text-sm mr-1">add</span>
                 Nuovo turno settimanale
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPdf}
+                className="text-xs sm:text-sm"
+              >
+                <span className="material-icons text-xs sm:text-sm mr-1">download</span>
+                Esporta PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportAllToPdf}
+                className="text-xs sm:text-sm"
+              >
+                <span className="material-icons text-xs sm:text-sm mr-1">file_download</span>
+                Esporta tutte le settimane
               </Button>
             </div>
           </div>
