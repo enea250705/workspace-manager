@@ -37,7 +37,27 @@ export default function Schedule() {
     if (!isLoading && isAuthenticated && user?.role !== "admin") {
       navigate("/my-schedule");
     }
-  }, [isLoading, isAuthenticated, navigate, user]);
+    
+    // Controlla se c'è un parametro newSchedule nell'URL, indicando che è stato creato un nuovo schedule
+    const urlParams = new URLSearchParams(window.location.search);
+    const newScheduleId = urlParams.get('newSchedule');
+    
+    // Se c'è un newScheduleId, forza l'app a caricare esplicitamente questo schedule
+    if (newScheduleId) {
+      console.log("Caricamento nuovo schedule creato:", newScheduleId);
+      // Rimuovi tutti i dati di schedule precedenti dalla cache
+      queryClient.removeQueries({ queryKey: ["/api/schedules"] });
+      // Forza l'aggiornamento dei dati
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/schedules/${newScheduleId}/shifts`] });
+      
+      // Rimuovi il parametro dall'URL per evitare ricaricamenti continui
+      if (window.history.replaceState) {
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?date=' + urlParams.get('date');
+        window.history.replaceState({ path: newUrl }, '', newUrl);
+      }
+    }
+  }, [isLoading, isAuthenticated, navigate, user, queryClient]);
 
   // State for custom date selection
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
@@ -279,8 +299,9 @@ export default function Schedule() {
           // Forza un completo reset dello stato e cambia la data selezionata
           setForceResetGrid(true);
           
-          // Rimuove completamente l'istanza corrente per evitare sovrapposizioni
-          window.location.href = `/schedule?date=${format(customStartDate!, "yyyy-MM-dd")}`;
+          // Rimuove completamente l'istanza corrente per evitare sovrapposizioni e forzare un refresh completo
+          // Usa il nuovo ID dello schedule appena creato per garantire che si carichi quello nuovo
+          window.location.href = `/schedule?date=${format(customStartDate!, "yyyy-MM-dd")}&newSchedule=${data.id}`;
           
           toast({
             title: "Nuova pianificazione creata",
