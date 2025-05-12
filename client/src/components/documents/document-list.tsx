@@ -6,10 +6,17 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { downloadPdf, generatePayslipFilename, generateTaxDocFilename } from "@/lib/pdf-utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
 
 export function DocumentList() {
   const { user } = useAuth();
@@ -185,11 +192,12 @@ export function DocumentList() {
                   </Badge>
                 </div>
                 
-                <div className="flex flex-wrap gap-2 mt-3 sm:justify-end">
+                {/* Desktop actions */}
+                <div className="hidden sm:flex sm:flex-wrap gap-2 mt-3 sm:justify-end">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-blue-600 border-blue-300 hover:bg-blue-50 text-xs w-full sm:w-auto"
+                    className="text-blue-600 border-blue-300 hover:bg-blue-50 text-xs"
                     onClick={() => handlePreview(doc)}
                   >
                     <span className="material-icons text-sm mr-1">visibility</span>
@@ -198,7 +206,7 @@ export function DocumentList() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-green-600 border-green-300 hover:bg-green-50 text-xs w-full sm:w-auto"
+                    className="text-green-600 border-green-300 hover:bg-green-50 text-xs"
                     onClick={() => handleDownload(doc)}
                   >
                     <span className="material-icons text-sm mr-1">download</span>
@@ -208,7 +216,7 @@ export function DocumentList() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-red-600 border-red-300 hover:bg-red-50 text-xs w-full sm:w-auto"
+                      className="text-red-600 border-red-300 hover:bg-red-50 text-xs"
                       onClick={() => handleDelete(doc.id)}
                       disabled={deleteMutation.isPending}
                     >
@@ -216,6 +224,36 @@ export function DocumentList() {
                       Elimina
                     </Button>
                   )}
+                </div>
+
+                {/* Mobile actions */}
+                <div className="sm:hidden flex items-center justify-center mt-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full">
+                        Azioni <MoreVertical className="ml-2 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-[180px]">
+                      <DropdownMenuItem onClick={() => handlePreview(doc)}>
+                        <span className="material-icons text-sm mr-2 text-blue-600">visibility</span>
+                        Anteprima
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload(doc)}>
+                        <span className="material-icons text-sm mr-2 text-green-600">download</span>
+                        Scarica
+                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem 
+                          onClick={() => handleDelete(doc.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <span className="material-icons text-sm mr-2 text-red-600">delete</span>
+                          Elimina
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             ))}

@@ -120,14 +120,14 @@ export function DocumentUpload({ users }: { users: any[] }) {
     : "es. 2024";
 
   return (
-    <Card className="bg-white">
+    <Card className="bg-white max-w-3xl mx-auto">
       <CardHeader>
         <CardTitle>Carica nuovo documento</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
               <FormField
                 control={form.control}
                 name="type"
@@ -207,25 +207,27 @@ export function DocumentUpload({ users }: { users: any[] }) {
               control={form.control}
               name="file"
               render={({ field: { onChange, value, ...fieldProps } }) => (
-                <FormItem>
+                <FormItem className="space-y-1">
                   <FormLabel>File PDF</FormLabel>
                   <FormControl>
-                    <Input
-                      type="file"
-                      accept="application/pdf"
-                      onChange={(e) => onChange(e.target.files)}
-                      {...fieldProps}
-                      className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => onChange(e.target.files)}
+                        {...fieldProps}
+                        className="flex-1 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 focus:outline-none"
+                      />
+                    </div>
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full mt-4"
               disabled={isUploading || uploadMutation.isPending}
             >
               {isUploading || uploadMutation.isPending ? (
