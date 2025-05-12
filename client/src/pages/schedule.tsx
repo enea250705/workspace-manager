@@ -267,17 +267,29 @@ export default function Schedule() {
       onSuccess: (response) => {
         console.log("Schedule creato con successo:", response);
         
-        // Reset the creating new schedule flag
-        setCreatingNewSchedule(false);
+        // NON resettare ancora il flag di creazione nuovo turno
+        // permettiamo all'utente di inserire gli orari
         
         // Refresh data
         if (customStartDate) {
           setSelectedWeek(customStartDate);
         }
         
-        // Forza il refresh dei dati
+        // Forza il refresh dei dati e seleziona il nuovo schedule
         queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
         queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
+        
+        // Dopo aver creato lo schedule, imposta lo scheduleId corrente
+        if (response && response.id) {
+          // Seleziona lo schedule appena creato
+          console.log("Impostazione scheduleId a:", response.id);
+          setExistingSchedule({
+            id: response.id,
+            startDate: customStartDate,
+            endDate: customEndDate,
+            isPublished: false
+          });
+        }
         
         // Mostra messaggio di successo
         toast({
