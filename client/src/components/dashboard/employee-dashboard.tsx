@@ -53,8 +53,11 @@ export function EmployeeDashboard() {
     .slice(0, 2)
     .map(([day, shifts]) => ({ day, shifts }));
   
-  // Get the number of working days
-  const workingDays = Object.keys(shiftsByDay).length;
+  // Get the number of working days (solo giorni con turni di lavoro)
+  const workingDays = Object.entries(shiftsByDay)
+    .filter(([_, shifts]: [string, any[]]) => 
+      shifts.some((shift: any) => shift.type === "work")
+    ).length;
   
   // Get latest documents
   const latestPayslip = myDocuments
