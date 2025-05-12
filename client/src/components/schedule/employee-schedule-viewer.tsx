@@ -207,16 +207,8 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                 }
                               }
                               
-                              // Calcola il totale delle ore di lavoro
-                              const totalHours = consolidatedWorkShifts.reduce((total, shift) => {
-                                const startParts = shift.startTime.split(':').map(Number);
-                                const endParts = shift.endTime.split(':').map(Number);
-                                
-                                const startMinutes = startParts[0] * 60 + startParts[1];
-                                const endMinutes = endParts[0] * 60 + endParts[1];
-                                
-                                return total + (endMinutes - startMinutes) / 60;
-                              }, 0);
+                              // Calcola il totale delle ore di lavoro usando la funzione di utilità centralizzata
+                              const totalHours = calculateTotalWorkHours(consolidatedWorkShifts);
                               
                               return (
                                 <>

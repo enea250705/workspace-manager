@@ -10,6 +10,7 @@ import { EmployeeScheduleViewer } from "@/components/schedule/employee-schedule-
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { WeekSelectorDialog } from "@/components/schedule/week-selector-dialog";
+import { formatHours, calculateTotalWorkHours } from "@/lib/utils";
 
 export default function MySchedule() {
   const { user } = useAuth();
