@@ -4,13 +4,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { Layout } from "@/components/layout/layout";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format, addDays, startOfWeek, endOfWeek } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { EmployeeScheduleViewer } from "@/components/schedule/employee-schedule-viewer";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { WeekSelectorDialog } from "@/components/schedule/week-selector-dialog";
 
 export default function MySchedule() {
   const { user } = useAuth();
   const [date, setDate] = useState<Date>(new Date());
+  const [showWeekSelector, setShowWeekSelector] = useState(false);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
   
   // Calcola date della settimana
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
@@ -27,11 +32,14 @@ export default function MySchedule() {
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
   
   // Trova il programma che contiene la settimana corrente o se non esiste, quello più recente
-  const currentSchedule = publishedSchedules.find(
-    schedule => 
-      new Date(schedule.startDate) <= date && 
-      new Date(schedule.endDate) >= date
-  ) || publishedSchedules[0];
+  // Se l'utente ha selezionato manualmente un programma, usa quello
+  const currentSchedule = selectedScheduleId 
+    ? publishedSchedules.find(schedule => schedule.id === selectedScheduleId)
+    : publishedSchedules.find(
+        schedule => 
+          new Date(schedule.startDate) <= date && 
+          new Date(schedule.endDate) >= date
+      ) || publishedSchedules[0];
   
   // Carica i turni dell'utente corrente dal programma attuale
   const { data: userShifts = [] } = useQuery<any[]>({
@@ -44,6 +52,18 @@ export default function MySchedule() {
     queryKey: [`/api/schedules/${currentSchedule?.id}/shifts`],
     enabled: !!currentSchedule?.id,
   });
+  
+  // Gestisce la selezione di un programma specifico
+  const handleSelectSchedule = (scheduleId: number) => {
+    setSelectedScheduleId(scheduleId);
+    setShowWeekSelector(false);
+    
+    const selectedSchedule = publishedSchedules.find(s => s.id === scheduleId);
+    if (selectedSchedule) {
+      // Aggiorna la data corrente per visualizzare la settimana giusta
+      setDate(new Date(selectedSchedule.startDate));
+    }
+  };
   
   // Funzione che genera le date per la settimana visualizzata
   const generateWeekDates = () => {
@@ -61,6 +81,14 @@ export default function MySchedule() {
     <Layout>
       <div className="container mx-auto py-6">
         <h1 className="text-2xl font-bold mb-6">I Miei Turni</h1>
+        
+        {/* Dialog per selezionare una settimana dallo storico */}
+        <WeekSelectorDialog
+          open={showWeekSelector}
+          onOpenChange={setShowWeekSelector}
+          schedules={publishedSchedules}
+          onSelectSchedule={handleSelectSchedule}
+        />
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Colonna sinistra con calendario */}
@@ -97,9 +125,22 @@ export default function MySchedule() {
                     <div className="text-sm">
                       <div className="font-medium">Pubblicato:</div>
                       <div>
-                        {format(new Date(currentSchedule.publishedAt), "d MMMM yyyy, HH:mm", { locale: it })}
+                        {currentSchedule.publishedAt ? 
+                          format(new Date(currentSchedule.publishedAt), "d MMMM yyyy, HH:mm", { locale: it }) :
+                          "Non ancora pubblicato"
+                        }
                       </div>
                     </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-4"
+                      onClick={() => setShowWeekSelector(true)}
+                    >
+                      <span className="material-icons text-sm mr-1">history</span>
+                      Visualizza altri turni
+                    </Button>
                     
                     <div className="text-sm">
                       <div className="font-medium">Totale ore settimanali:</div>

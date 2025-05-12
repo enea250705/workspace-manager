@@ -521,7 +521,7 @@ export default function Schedule() {
                       <Label className="mb-2 block">Data di inizio</Label>
                       <Calendar
                         mode="single"
-                        selected={customStartDate || undefined}
+                        selected={customStartDate as Date | undefined}
                         onSelect={(date) => handleDateChange('start', date)}
                         disabled={(date) => 
                           date < new Date()
@@ -603,6 +603,7 @@ export default function Schedule() {
       </div>
       
       {/* Automatic Schedule Generator Dialog */}
+      {/* Dialog per generazione automatica */}
       <Dialog open={showAutoGenerator} onOpenChange={setShowAutoGenerator}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
@@ -616,6 +617,14 @@ export default function Schedule() {
           />
         </DialogContent>
       </Dialog>
+      
+      {/* Dialog per selezionare una settimana dallo storico */}
+      <WeekSelectorDialog
+        open={showWeekSelector}
+        onOpenChange={setShowWeekSelector}
+        schedules={allSchedules}
+        onSelectSchedule={handleSelectSchedule}
+      />
     </Layout>
   );
 }
