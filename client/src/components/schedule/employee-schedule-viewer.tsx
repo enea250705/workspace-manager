@@ -139,11 +139,15 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                               if (shift.type === "vacation") {
                                 bgColor = "bg-red-100";
                                 icon = "beach_access";
-                                label = "Ferie";
+                                label = "Ferie (F)";
                               } else if (shift.type === "leave") {
                                 bgColor = "bg-yellow-100";
                                 icon = "event_busy";
-                                label = "Permesso";
+                                label = "Permesso (P)";
+                              } else if (shift.type === "sick") {
+                                bgColor = "bg-purple-100";
+                                icon = "healing";
+                                label = "Malattia (M)";
                               }
                               
                               return (

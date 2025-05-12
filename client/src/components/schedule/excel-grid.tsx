@@ -276,15 +276,17 @@ export function ExcelGrid({
       return;
     }
     
-    // Ciclo: vuoto -> lavoro -> ferie -> permesso -> vuoto
+    // Ciclo: vuoto -> lavoro -> ferie -> permesso -> malattia -> vuoto
     let newType = "";
     
     if (currentCell.type === "") {
       newType = "work";
     } else if (currentCell.type === "work") {
-      newType = "vacation";
+      newType = "vacation"; // Ferie (F)
     } else if (currentCell.type === "vacation") {
-      newType = "leave";
+      newType = "leave"; // Permesso (P)
+    } else if (currentCell.type === "leave") {
+      newType = "sick"; // Malattia (M)
     }
     
     // Trova le celle consecutive dello stesso tipo
@@ -346,6 +348,7 @@ export function ExcelGrid({
       };
       
       // Ricalcola il totale delle ore
+      // Solo i turni di tipo "work" contano per il totale delle ore
       if (newType === 'work') {
         userDayData.total += 0.5; // 30 minuti = 0.5 ore
       }
