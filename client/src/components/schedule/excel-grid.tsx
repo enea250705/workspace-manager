@@ -250,10 +250,14 @@ export function ExcelGrid({
               // Aggiorna il conteggio delle ore (solo per il tipo "work")
               if (shift.type === "work") {
                 try {
-                  // Calcola la durata in ore (ad es. 4.5 per 4 ore e 30 minuti)
+                  // Calcola correttamente la durata in ore (ad es. 4.5 per 4 ore e 30 minuti)
                   const hours = calculateWorkHours(shift.startTime, shift.endTime);
+                  
+                  // Correggiamo il calcolo arrotondando a 2 decimali per evitare errori di approssimazione
+                  const roundedHours = Math.round(hours * 100) / 100;
+                  
                   // Aggiorna il totale delle ore dell'utente per questo giorno
-                  newGridData[day][userId].total += hours;
+                  newGridData[day][userId].total += roundedHours;
                 } catch (e) {
                   console.error(`Errore nel calcolo delle ore per il turno ID ${shift.id}:`, e);
                 }
@@ -305,7 +309,7 @@ export function ExcelGrid({
                     }
                   }
                   // Aggiorna le note con dettagli più chiari
-                  newGridData[day.name][userId].notes = `${halfDayText} mattina (${format(startDate, "dd/MM")}-${format(endDate, "dd/MM")})`;
+                  newGridData[day.name][userId].notes = "Ferie/permesso mattina (" + format(startDate, "dd/MM") + "-" + format(endDate, "dd/MM") + ")";
                 }
                 // Pomeriggio (dalle 13:00)
                 else {
@@ -320,7 +324,7 @@ export function ExcelGrid({
                     }
                   }
                   // Aggiorna le note con dettagli più chiari 
-                  newGridData[day.name][userId].notes = `${halfDayText} pomeriggio (${format(startDate, "dd/MM")}-${format(endDate, "dd/MM")})`;
+                  newGridData[day.name][userId].notes = "Ferie/permesso pomeriggio (" + format(startDate, "dd/MM") + "-" + format(endDate, "dd/MM") + ")";
                 }
               }
               // Gestione dei permessi a giornata intera
@@ -448,11 +452,13 @@ export function ExcelGrid({
         if (currentCell.type === "work" && newType !== "work") {
           // Se passiamo da lavoro a non-lavoro, sottraiamo ore
           const slotDuration = 0.5;
-          userDayData.total = Math.max(0, userDayData.total - slotDuration);
+          // Arrotondiamo a due decimali per evitare problemi di precisione
+          userDayData.total = Math.round(Math.max(0, userDayData.total - slotDuration) * 100) / 100;
         } else if (currentCell.type !== "work" && newType === "work") {
           // Se passiamo da non-lavoro a lavoro, aggiungiamo ore
           const slotDuration = 0.5;
-          userDayData.total += slotDuration;
+          // Arrotondiamo a due decimali per evitare problemi di precisione
+          userDayData.total = Math.round((userDayData.total + slotDuration) * 100) / 100;
         }
         
         // Aggiorna lo stato della cella
@@ -498,8 +504,10 @@ export function ExcelGrid({
       
       // Aggiorna il conteggio delle ore (solo per tipo "work")
       if (newType === "work") {
+        // Durata di uno slot è 30 minuti = 0.5 ore
         const slotDuration = 0.5;
-        userDayData.total += slotDuration;
+        // Arrotondiamo a due decimali per evitare problemi di precisione nei calcoli
+        userDayData.total = Math.round((userDayData.total + slotDuration) * 100) / 100;
       }
       
       // Aggiorna lo stato della cella
