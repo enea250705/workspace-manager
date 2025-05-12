@@ -62,7 +62,7 @@ router.post("/", isAdmin, async (req: Request, res: Response) => {
     if (user && user.isActive && user.email) {
       try {
         // Import email service
-        const { sendDocumentNotification } = await import('../services/email-service');
+        const { sendDocumentNotification } = await import('../../server/services/email-service');
         
         // Invia email di notifica all'utente
         await sendDocumentNotification(user, type, period);

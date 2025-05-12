@@ -27,12 +27,19 @@ export interface EmailParams {
  * Invia un'email utilizzando SendGrid
  */
 export async function sendEmail(params: EmailParams): Promise<boolean> {
+  console.log("ℹ️ Tentativo di invio email:", params.subject);
+  
   if (!process.env.SENDGRID_API_KEY) {
-    console.warn("Email non inviata (SENDGRID_API_KEY mancante):", params.subject);
+    console.warn("❌ Email non inviata (SENDGRID_API_KEY mancante):", params.subject);
     return false;
   }
 
   try {
+    console.log("📧 Configurazione invio email...");
+    console.log("📧 Destinatario:", params.to);
+    console.log("📧 Mittente:", SENDER_EMAIL);
+    console.log("📧 Oggetto:", params.subject);
+    
     await mailService.send({
       to: params.to,
       from: SENDER_EMAIL,
@@ -40,10 +47,15 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       text: params.text || '',
       html: params.html,
     });
-    console.log(`✅ Email inviata a ${params.to}: ${params.subject}`);
+    
+    console.log(`✅ Email inviata con successo a ${params.to}: ${params.subject}`);
     return true;
   } catch (error) {
     console.error('❌ Errore nell\'invio email:', error);
+    if (error instanceof Error) {
+      console.error('Dettagli errore:', error.message);
+      console.error('Stack:', error.stack);
+    }
     return false;
   }
 }
