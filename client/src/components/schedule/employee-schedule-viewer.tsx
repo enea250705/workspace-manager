@@ -293,7 +293,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
         
         {/* Visualizzazione a lista */}
         {view === "list" && (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {weekDays.map(day => {
               const dayShifts = shiftsByDay[day.name] || [];
               
@@ -302,12 +302,12 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
               
               return (
                 <div key={day.formattedDate} className="border rounded-md overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-2 font-medium">
+                  <div className="bg-gray-50 px-3 sm:px-4 py-2 font-medium text-xs sm:text-sm">
                     {day.name} {day.formattedDate}
                   </div>
                   
                   {dayShifts.length === 0 ? (
-                    <div className="p-4 text-gray-500 text-sm">
+                    <div className="p-3 sm:p-4 text-gray-500 text-xs sm:text-sm">
                       Non in servizio oggi
                     </div>
                   ) : (
@@ -331,27 +331,27 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                         return (
                           <div 
                             key={idx} 
-                            className={`p-4 ${bgColor}`}
+                            className={`p-3 sm:p-4 ${bgColor}`}
                           >
                             <div className="flex justify-between items-start">
                               <div>
-                                <div className="font-medium flex items-center mb-1">
-                                  <span className="material-icons text-sm mr-1">{icon}</span>
+                                <div className="font-medium flex items-center mb-1 text-xs sm:text-sm">
+                                  <span className="material-icons text-xs sm:text-sm mr-1">{icon}</span>
                                   {label}
                                 </div>
                                 
                                 {shift.type === "work" && (
                                   <>
-                                    <div className="text-base font-medium">{shift.startTime} - {shift.endTime}</div>
+                                    <div className="text-sm sm:text-base font-medium">{shift.startTime} - {shift.endTime}</div>
                                     {shift.notes && (
-                                      <div className="text-sm mt-1 text-gray-600 italic">{shift.notes}</div>
+                                      <div className="text-xs sm:text-sm mt-1 text-gray-600 italic">{shift.notes}</div>
                                     )}
                                   </>
                                 )}
                               </div>
                               
                               {shift.type === "work" && (
-                                <div className="text-sm font-medium">
+                                <div className="text-xs sm:text-sm font-medium">
                                   {formatHours(Number(shift.hours))}
                                 </div>
                               )}
