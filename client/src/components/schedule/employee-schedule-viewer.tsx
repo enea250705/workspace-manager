@@ -64,8 +64,8 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
   
   return (
     <Card className="bg-white shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-6">
-        <CardTitle className="text-lg font-medium">I Miei Turni</CardTitle>
+      <CardHeader className="flex flex-col sm:flex-row items-center justify-between gap-2 pb-2 pt-4 sm:pt-6">
+        <CardTitle className="text-base sm:text-lg font-medium">I Miei Turni</CardTitle>
         <div className="flex bg-gray-100 rounded-md p-0.5">
           <Button
             variant={view === "week" ? "default" : "ghost"}
@@ -73,8 +73,9 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
             onClick={() => setView("week")}
             className="text-xs"
           >
-            <span className="material-icons text-sm mr-1">view_week</span>
-            Settimana
+            <span className="material-icons text-xs sm:text-sm mr-1">view_week</span>
+            <span className="hidden xs:inline">Settimana</span>
+            <span className="xs:hidden">Sett.</span>
           </Button>
           <Button
             variant={view === "list" ? "default" : "ghost"}
@@ -82,7 +83,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
             onClick={() => setView("list")}
             className="text-xs"
           >
-            <span className="material-icons text-sm mr-1">list</span>
+            <span className="material-icons text-xs sm:text-sm mr-1">list</span>
             Lista
           </Button>
         </div>

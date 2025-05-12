@@ -690,11 +690,12 @@ export default function Schedule() {
         ) : existingSchedule && !showDatePicker && !creatingNewSchedule ? (
           <div>
             <div className="flex justify-center items-center mb-4">
-              <h3 className="text-lg font-medium">
+              <h3 className="text-base sm:text-lg font-medium text-center">
                 {existingSchedule.isPublished && 
                   <span className="material-icons text-green-500 text-sm align-middle mr-1">check_circle</span>
                 }
-                Pianificazione {dateRangeText}
+                <span className="block sm:inline">Pianificazione</span>{" "}
+                <span className="block sm:inline text-sm sm:text-base">{dateRangeText}</span>
               </h3>
             </div>
             <ExcelGrid
@@ -710,21 +711,23 @@ export default function Schedule() {
             />
             
             {/* Pulsanti di azione posizionati sotto la tabella */}
-            <div className="flex justify-center gap-4 mt-6 pt-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mt-6 pt-4 border-t border-gray-200">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleChangeWeek}
+                className="text-xs sm:text-sm"
               >
-                <span className="material-icons text-sm mr-1">history</span>
+                <span className="material-icons text-xs sm:text-sm mr-1">history</span>
                 Cronologia turni
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleNewWeeklySchedule}
+                className="text-xs sm:text-sm"
               >
-                <span className="material-icons text-sm mr-1">add</span>
+                <span className="material-icons text-xs sm:text-sm mr-1">add</span>
                 Nuovo turno settimanale
               </Button>
             </div>
