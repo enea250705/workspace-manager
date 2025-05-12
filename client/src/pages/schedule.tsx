@@ -346,54 +346,42 @@ export default function Schedule() {
     
     console.log("Creando nuovo schedule:", newScheduleData);
     
-    // Create the schedule in the background
+    // Ora usa il nuovo endpoint speciale che garantisce che lo schedule sia completamente pulito
     createScheduleMutation.mutate(newScheduleData, {
       onSuccess: async (response) => {
         try {
           // Converti la risposta in JSON per ottenere i dati
           const data = await response.json();
-          console.log("Schedule creato con successo:", data);
+          console.log("NUOVO SCHEDULE VUOTO CREATO CON SUCCESSO:", data);
           
-          // Forza un completo reset dello stato e cambia la data selezionata
+          // Forza un reset completo di tutta la griglia
           setForceResetGrid(true);
           
-          // Mostra una conferma che lo schedule è stato creato
           toast({
             title: "Nuova pianificazione creata",
-            description: "Caricamento della nuova pianificazione in corso...",
+            description: "Caricamento della nuova tabella completamente vuota...",
           });
           
-          // Attendiamo la registrazione nel database e usiamo la nostra nuova API speciale
-          setTimeout(async () => {
-            try {
-              console.log("Caricamento del nuovo schedule pulito ID:", data.id);
-              
-              // Cancella prima tutti i dati di cache
-              queryClient.clear();
-              
-              // Utilizza la nuova API speciale per ottenere uno schedule completamente vuoto
-              const cleanScheduleResponse = await fetch(`/api/schedules/${data.id}/new`);
-              
-              if (!cleanScheduleResponse.ok) {
-                throw new Error('Errore nel caricamento del nuovo turno');
-              }
-              
-              const cleanSchedule = await cleanScheduleResponse.json();
-              console.log("Schedule pulito ottenuto:", cleanSchedule);
-              
-              // Forza un refresh completo della pagina con parametri speciali
-              window.location.href = `/schedule?scheduleId=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&isNew=true&forceEmpty=true`;
-            } catch (error) {
-              console.error("Errore nel reset dello schedule:", error);
-              toast({
-                title: "Errore",
-                description: "Si è verificato un errore nel caricamento del nuovo turno.",
-                variant: "destructive"
-              });
-            }
-          }, 800);
+          // Usa un timeout più lungo per essere sicuri
+          setTimeout(() => {
+            // Purga completamente la cache di React Query
+            queryClient.clear();
+            
+            console.log("Esecuzione pulizia totale e caricamento tabella vuota per ID:", data.id);
+            
+            // Aggiungiamo un timestamp per evitare che il browser usi la cache
+            const timestamp = Date.now();
+            
+            // Forza un refresh completo della pagina con una nuova URL
+            window.location.href = `/schedule?reset=true&scheduleId=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&forceEmpty=true&ts=${timestamp}`;
+          }, 1000);
         } catch (err) {
           console.error("Errore nella gestione dello schedule:", err);
+          toast({
+            title: "Errore",
+            description: "Si è verificato un errore nel caricamento del nuovo turno.",
+            variant: "destructive"
+          });
         }
       },
       onError: (error) => {

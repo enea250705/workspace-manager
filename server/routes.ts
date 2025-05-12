@@ -507,6 +507,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint speciale per la creazione di un NUOVO schedule completamente pulito
+  app.post("/api/schedules/new-empty", isAdmin, async (req, res) => {
+    try {
+      const scheduleData = insertScheduleSchema.parse({
+        ...req.body,
+        createdBy: (req.user as any).id
+      });
+      
+      // Step 1: Crea un nuovo schedule nel database
+      console.log("Creazione di un nuovo schedule COMPLETAMENTE VUOTO");
+      const schedule = await storage.createSchedule(scheduleData);
+      
+      // Step 2: Marca questo schedule come "pulito" nella risposta
+      const emptySchedule = {
+        ...schedule,
+        isNew: true,  // flag speciale per indicare che è nuovo
+        isEmpty: true // flag speciale per indicare che è vuoto
+      };
+      
+      // Registra i dettagli dell'operazione
+      console.log("NUOVO SCHEDULE CREATO:", {
+        id: schedule.id, 
+        startDate: schedule.startDate,
+        endDate: schedule.endDate,
+        isEmpty: true
+      });
+      
+      res.status(201).json(emptySchedule);
+    } catch (err) {
+      console.error("ERRORE nella creazione del nuovo schedule:", err);
+      res.status(400).json({ message: "Impossibile creare il nuovo schedule", error: String(err) });
+    }
+  });
+  
+  // Endpoint standard per la creazione di schedule (manteniamo per backward compatibility)
   app.post("/api/schedules", isAdmin, async (req, res) => {
     try {
       const scheduleData = insertScheduleSchema.parse({

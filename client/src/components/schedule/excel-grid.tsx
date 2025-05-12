@@ -124,9 +124,21 @@ export function ExcelGrid({
   useEffect(() => {
     if (!users.length) return;
     
+    // Controlla i parametri URL per vedere se dobbiamo forzare un reset
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceEmptyFromUrl = urlParams.get('forceEmpty') === 'true';
+    const scheduleIdFromUrl = urlParams.get('scheduleId');
+    const resetFromUrl = urlParams.get('reset') === 'true';
+    
     // Forza il reset completo della griglia se richiesto
-    if (forceResetGrid || Object.keys(gridData).length === 0) {
-      console.log("Inizializzando griglia vuota", forceResetGrid ? "(forzato)" : "");
+    if (forceResetGrid || forceEmptyFromUrl || resetFromUrl || Object.keys(gridData).length === 0) {
+      console.log("RESET COMPLETO GRIGLIA:", {
+        forceResetGrid,
+        forceEmptyFromUrl, 
+        resetFromUrl, 
+        scheduleIdFromUrl,
+        timestamp: Date.now()
+      });
       
       // Crea una nuova griglia COMPLETAMENTE VUOTA
       const newGridData: Record<string, Record<number, {
@@ -152,8 +164,7 @@ export function ExcelGrid({
         });
       });
       
-      // Pulisci anche eventuali shifts in memoria
-      console.log("Forzando pulizia completa dei turni");
+      console.log("Pulizia completa della tabella dei turni. Tutte le celle sono state reimpostate completamente vuote.");
       
       // Popola la griglia con i turni esistenti
       if (shifts && shifts.length > 0 && scheduleId) {
