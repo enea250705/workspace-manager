@@ -196,14 +196,14 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
         className={cn(
           "bg-white shadow-md w-full md:w-72 md:min-h-screen transition-all duration-300 flex flex-col",
           mobileMenuOpen 
-            ? "fixed h-screen z-50 inset-0 flex overflow-y-auto" 
+            ? "fixed h-screen z-50 inset-0" 
             : "h-auto hidden md:flex",
         )}
         variants={sidebarVariants}
         initial="hidden"
         animate="visible"
       >
-        <div className="p-4 sm:p-5 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+        <div className="p-4 sm:p-5 border-b flex items-center justify-between">
           <motion.div 
             className="flex items-center space-x-2"
             initial={{ opacity: 0, y: -10 }}

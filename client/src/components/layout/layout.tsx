@@ -49,10 +49,7 @@ export function Layout({ children }: PropsWithChildren) {
           "sticky top-0 z-30 transition-all duration-300",
           scrolled && "shadow-md"
         )}>
-          <NotificationBar 
-            mobileMenuOpen={mobileMenuOpen} 
-            setMobileMenuOpen={setMobileMenuOpen} 
-          />
+          <NotificationBar />
         </div>
         
         <AnimatePresence mode="wait">
@@ -62,7 +59,7 @@ export function Layout({ children }: PropsWithChildren) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
             transition={{ duration: 0.3 }}
-            className="p-3 md:p-6 pb-16 md:pb-20 overflow-x-auto"
+            className="p-4 md:p-6 pb-20"
           >
             {children}
           </motion.div>

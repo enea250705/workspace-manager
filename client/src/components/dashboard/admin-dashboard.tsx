@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, calculateTotalWorkHours, formatHours } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { Link } from "wouter";
 import {
   BarChart,
@@ -13,12 +13,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  LineChart,
-  Line
 } from "recharts";
 import { apiRequest } from "@/lib/queryClient";
 import { RecentActivities } from "./recent-activities";
@@ -37,11 +31,6 @@ export function AdminDashboard() {
 
   const { data: currentSchedule } = useQuery({
     queryKey: ["/api/schedules"],
-  });
-  
-  const { data: allShifts = [] } = useQuery({
-    queryKey: [`/api/schedules/${currentSchedule?.id}/shifts`],
-    enabled: !!currentSchedule?.id,
   });
 
   const pendingRequests = timeOffRequests.filter(
@@ -71,39 +60,12 @@ export function AdminDashboard() {
     (req: any) => req.status === "approved" && req.type === "vacation" && 
     new Date(req.endDate) >= new Date()
   ).length;
-  
-  // Calcola il totale delle ore programmate utilizzando la funzione utility
-  const totalScheduledHours = calculateTotalWorkHours(
-    allShifts.filter((shift: any) => shift.type === "work")
-  );
 
   // Weekly hours data for chart
   const shiftDistributionData = [
     { name: "Mattina", hours: 54 },
     { name: "Pomeriggio", hours: 48 },
     { name: "Sera", hours: 36 },
-  ];
-  
-  // Pie chart colors
-  const pieChartColors = ['#3b82f6', '#f97316', '#a855f7', '#10b981'];
-  
-  // Weekly hours data
-  const weeklyHoursData = [
-    { name: "Lun", hours: 42 },
-    { name: "Mar", hours: 46 },
-    { name: "Mer", hours: 44 },
-    { name: "Gio", hours: 48 },
-    { name: "Ven", hours: 50 },
-    { name: "Sab", hours: 32 },
-  ];
-  
-  // Monthly request data
-  const monthlyRequestsData = [
-    { name: "Gen", value: 4 },
-    { name: "Feb", value: 6 },
-    { name: "Mar", value: 8 },
-    { name: "Apr", value: 5 },
-    { name: "Mag", value: 9 },
   ];
 
   // Funzioni di utilità rimosse perché ora gestite dal componente RecentActivities
@@ -158,7 +120,7 @@ export function AdminDashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-gray-500 text-sm">Ore Programmate</p>
-                <p className="text-2xl font-medium">{formatHours(totalScheduledHours)}</p>
+                <p className="text-2xl font-medium">186</p>
               </div>
               <div className="bg-green-100 p-2 rounded-lg">
                 <span className="material-icons text-success">schedule</span>
@@ -188,84 +150,11 @@ export function AdminDashboard() {
         </Card>
       </div>
       
-      {/* Sezione grafici */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b p-4">
-            <CardTitle className="text-base font-medium flex items-center">
-              <span className="material-icons text-primary mr-2">pie_chart</span>
-              Ore per Tipologia di Turno
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={shiftDistributionData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="hours"
-                  nameKey="name"
-                  label
-                >
-                  {shiftDistributionData.map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={pieChartColors[index % pieChartColors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" height={36} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        
-        <Card className="overflow-hidden"> 
-          <CardHeader className="border-b p-4">
-            <CardTitle className="text-base font-medium flex items-center">
-              <span className="material-icons text-primary mr-2">bar_chart</span>
-              Richieste per Mese
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyRequestsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        
-        <Card className="overflow-hidden col-span-1 md:col-span-2 lg:col-span-1"> 
-          <CardHeader className="border-b p-4">
-            <CardTitle className="text-base font-medium flex items-center">
-              <span className="material-icons text-primary mr-2">trending_up</span>
-              Ore Lavorate per Settimana
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weeklyHoursData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="hours" stroke="#3b82f6" activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-      
+      {/* Recent Activity */}
       <RecentActivities />
       
       {/* Single column layout for Pending Approvals only */}
-      <div className="grid grid-cols-1 gap-4 mt-4">
+      <div className="grid grid-cols-1 gap-4">
         {/* Pending Approvals */}
         <Card>
           <CardHeader className="border-b px-4 py-3 flex justify-between items-center">

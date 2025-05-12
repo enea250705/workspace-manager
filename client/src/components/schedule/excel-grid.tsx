@@ -805,9 +805,9 @@ export function ExcelGrid({
             setSelectedDay(dayIndex);
           }
         }}>
-          <TabsList className="mb-4 w-full overflow-x-auto flex-nowrap">
+          <TabsList className="mb-4 w-full">
             {weekDays.map((day, idx) => (
-              <TabsTrigger key={day.name} value={day.name} className="flex-1 min-w-[60px]">
+              <TabsTrigger key={day.name} value={day.name} className="flex-1">
                 <span className="hidden sm:inline">{day.name}</span>
                 <span className="sm:hidden">{day.shortName}</span>
                 <span className="ml-1 text-xs text-muted-foreground hidden sm:inline">
@@ -819,23 +819,23 @@ export function ExcelGrid({
           
           {weekDays.map((day) => (
             <TabsContent key={day.name} value={day.name} className="relative">
-              <div className="overflow-x-auto max-w-full border rounded-md">
-                <table className="w-full border-collapse min-w-[800px]">
+              <div className="overflow-auto border rounded-md">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="p-2 text-sm font-semibold text-muted-foreground text-left sticky left-0 bg-muted/50 z-10 min-w-[100px]">
+                      <th className="p-2 text-sm font-semibold text-muted-foreground text-left sticky left-0 bg-muted/50 z-10">
                         Dipendente
                       </th>
                       {timeSlots.map((slot, idx) => (
-                        <th key={idx} className="p-1 text-xs font-medium text-muted-foreground w-6 sm:w-10 md:w-12 text-center">
+                        <th key={idx} className="p-1 text-xs font-medium text-muted-foreground w-8 sm:w-12 text-center">
                           <span className="hidden sm:inline">{slot}</span>
                           <span className="sm:hidden">{slot.replace(":00", "").replace(":30", "½")}</span>
                         </th>
                       ))}
-                      <th className="p-2 text-sm font-semibold text-muted-foreground text-left min-w-[100px] sm:min-w-[150px] lg:min-w-[200px]">
+                      <th className="p-2 text-sm font-semibold text-muted-foreground text-left min-w-[120px] sm:min-w-[200px]">
                         Note
                       </th>
-                      <th className="p-2 text-xs sm:text-sm font-semibold text-muted-foreground text-center w-12 sm:w-16 md:w-20">
+                      <th className="p-2 text-xs sm:text-sm font-semibold text-muted-foreground text-center w-12 sm:w-20">
                         Ore
                       </th>
                     </tr>
@@ -845,7 +845,7 @@ export function ExcelGrid({
                       .filter(user => user.role === "employee" && user.isActive)
                       .map(user => (
                         <tr key={user.id} className="border-b">
-                          <td className="p-2 text-xs sm:text-sm font-medium sticky left-0 bg-white z-10 whitespace-nowrap">
+                          <td className="p-2 text-xs sm:text-sm font-medium sticky left-0 bg-white z-10">
                             {user.name}
                           </td>
                           
@@ -878,7 +878,6 @@ export function ExcelGrid({
                                 key={idx}
                                 className={`p-0 text-center ${cellStyle}`}
                                 onClick={() => handleCellClick(user.id, idx, day.name)}
-                                style={{ minWidth: '24px' }}
                               >
                                 <div className="w-full h-full p-0 sm:p-1 text-xs sm:text-sm">
                                   {cellContent}
