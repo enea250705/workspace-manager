@@ -485,22 +485,18 @@ export function ExcelGrid({
       
       // Crea un nuovo turno nel database
       updateShiftMutation.mutate(createData, {
-        onSuccess: async (response) => {
-          try {
-            // Estrai i dati dal response
-            const responseData = await response.json();
+        onSuccess: (data) => {
+          // Ora la risposta è già un oggetto JSON grazie alla mutationFn migliorata
+          // che converte automaticamente la risposta in JSON
             
-            // Se la risposta contiene un ID, aggiorniamo la cella con l'ID corretto
-            if (responseData && responseData.id) {
-              const updatedGridData = structuredClone(gridData);
-              if (updatedGridData[day] && updatedGridData[day][userId]) {
-                updatedGridData[day][userId].cells[timeIndex].shiftId = responseData.id;
-                setGridData(updatedGridData);
-                console.log(`✅ Cella aggiornata con nuovo ID turno: ${responseData.id}`);
-              }
+          // Se la risposta contiene un ID, aggiorniamo la cella con l'ID corretto
+          if (data && data.id) {
+            const updatedGridData = structuredClone(gridData);
+            if (updatedGridData[day] && updatedGridData[day][userId]) {
+              updatedGridData[day][userId].cells[timeIndex].shiftId = data.id;
+              setGridData(updatedGridData);
+              console.log(`✅ Cella aggiornata con nuovo ID turno: ${data.id}`);
             }
-          } catch (error) {
-            console.error("Errore nell'elaborazione della risposta:", error);
           }
         }
       });
@@ -765,7 +761,51 @@ export function ExcelGrid({
             Stampa
           </Button>
           {!isPublished && (
-            <Button size="sm" onClick={onPublish} className="flex items-center gap-1">
+            <Button 
+              size="sm" 
+              onClick={() => {
+                // Controllo se ci sono turni prima di pubblicare
+                const hasShifts = shifts && shifts.length > 0;
+                
+                // Se non ci sono turni, mostra un avviso
+                if (!hasShifts) {
+                  toast({
+                    title: "Attenzione",
+                    description: "Stai per pubblicare un turno vuoto. Sei sicuro di voler procedere?",
+                    variant: "destructive",
+                    action: (
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          // Procedi con la pubblicazione anche se vuoto
+                          onPublish();
+                          toast({
+                            title: "Turno vuoto pubblicato",
+                            description: "Il turno vuoto è stato pubblicato con successo."
+                          });
+                        }}
+                      >
+                        Pubblica vuoto
+                      </Button>
+                    )
+                  });
+                  return;
+                }
+                
+                // Se ci sono turni, procedi con la pubblicazione
+                onPublish();
+                
+                // Notifica l'utente
+                toast({
+                  title: "Turno pubblicato",
+                  description: "Il turno è stato pubblicato con successo. Gli utenti possono ora visualizzarlo."
+                });
+                
+                // Log
+                console.log(`✅ Schedule ID ${scheduleId} pubblicato con successo`);
+              }} 
+              className="flex items-center gap-1"
+            >
               <span className="material-icons text-sm">publish</span>
               Pubblica
             </Button>
