@@ -3,7 +3,7 @@ import { User } from '@shared/schema';
 
 // Modalità di sviluppo (non invia email effettivamente ma le mostra in console)
 // Imposta su false per inviare email reali con SendGrid (richiede SENDGRID_API_KEY)
-const DEV_MODE = false;
+const DEV_MODE = true;
 
 if (!process.env.SENDGRID_API_KEY) {
   console.warn("ATTENZIONE: SENDGRID_API_KEY non è configurata nell'ambiente. Le email non verranno inviate.");
