@@ -750,9 +750,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const userShifts = await storage.getUserShifts(user.id, schedule.id);
             console.log(`🔍 Recuperati ${userShifts.length} turni per ${user.name}`);
             
-            // Invia email con i dettagli dei turni inclusi
-            await sendScheduleNotification(user, schedule.startDate, schedule.endDate, userShifts);
-            console.log(`📧 Email di notifica turno inviata a ${user.name} (${user.email}) con ${userShifts.length} turni inclusi`);
+            // Controlla se l'utente ha almeno un turno di lavoro (nello schedule)
+            const hasWorkShifts = userShifts.some(shift => shift.type === "work");
+            
+            // Se non ha turni di lavoro, significa che è in ferie/permesso/malattia per tutto il periodo
+            const isUserOnVacation = !hasWorkShifts && userShifts.length > 0;
+            
+            // Invia email solo se l'utente NON è in ferie
+            if (!isUserOnVacation) {
+              await sendScheduleNotification(user, schedule.startDate, schedule.endDate, userShifts);
+              console.log(`📧 Email di notifica turno inviata a ${user.name} (${user.email}) con ${userShifts.length} turni inclusi`);
+            } else {
+              // Determina il motivo esatto per cui non inviamo l'email
+              const vacationShifts = userShifts.filter(shift => shift.type === "vacation").length;
+              const leaveShifts = userShifts.filter(shift => shift.type === "leave").length;
+              const sickShifts = userShifts.filter(shift => shift.type === "sick").length;
+              
+              let reason = "è assente per tutto il periodo";
+              if (vacationShifts > 0) reason = "è in ferie";
+              else if (sickShifts > 0) reason = "è in malattia";
+              else if (leaveShifts > 0) reason = "è in permesso";
+              
+              console.log(`⏩ Nessuna email inviata a ${user.name} (${user.email}) perché ${reason}`);
+            }
           } catch (emailError) {
             console.error(`❌ Errore nell'invio email a ${user.email}:`, emailError);
           }
