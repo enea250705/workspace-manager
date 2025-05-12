@@ -63,6 +63,7 @@ export function CardHoverEffect({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onMouseMove={handleMouseMove}
+      onClick={onClick}
       style={{
         transformStyle: "preserve-3d",
       }}
