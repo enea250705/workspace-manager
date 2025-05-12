@@ -124,6 +124,8 @@ export default function Schedule() {
   
   // State for showing schedule builder
   const [showScheduleBuilder, setShowScheduleBuilder] = useState(false);
+  // Flag per il reset completo della griglia (per mostrare una tabella vuota dopo la creazione)
+  const [forceResetGrid, setForceResetGrid] = useState(false);
   
   // State for creating a new schedule
   const [creatingNewSchedule, setCreatingNewSchedule] = useState(false);
@@ -177,13 +179,16 @@ export default function Schedule() {
   const handleNewWeeklySchedule = () => {
     console.log("Creazione nuovo turno settimanale");
     
-    // Resetta lo stato attuale
+    // Resetta completamente lo stato
     setCreatingNewSchedule(true);
+    setExistingSchedule(null);
+    setForceResetGrid(true);
     
     // Imposta date predefinite per il nuovo calendario (a partire dalla prossima settimana)
     const nextWeekStart = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 7);
     setCustomStartDate(nextWeekStart);
     setCustomEndDate(addDays(nextWeekStart, 6));
+    setSelectedWeek(nextWeekStart);
     
     // Mostra il selettore di date per consentire all'utente di modificarle
     setShowDatePicker(true);
@@ -279,17 +284,10 @@ export default function Schedule() {
         queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
         queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
         
-        // Dopo aver creato lo schedule, imposta lo scheduleId corrente
-        if (response && response.id) {
-          // Seleziona lo schedule appena creato
-          console.log("Impostazione scheduleId a:", response.id);
-          setExistingSchedule({
-            id: response.id,
-            startDate: customStartDate,
-            endDate: customEndDate,
-            isPublished: false
-          });
-        }
+        console.log("Schedule creato con successo con date:", { 
+          startDate: customStartDate, 
+          endDate: customEndDate 
+        });
         
         // Mostra messaggio di successo
         toast({
