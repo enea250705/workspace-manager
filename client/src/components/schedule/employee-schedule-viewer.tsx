@@ -129,46 +129,87 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                             Non in servizio
                           </div>
                         ) : (
-                          <div className="space-y-2">
-                            {dayShifts.map((shift, idx) => {
-                              // Determina il tipo di turno
-                              let bgColor = "bg-blue-100";
-                              let icon = "schedule";
-                              let label = "In servizio";
+                          <div>
+                            {/* Prima raggruppiamo i turni per tipo */}
+                            {(() => {
+                              // Raggruppa i turni per tipo
+                              const workShifts = dayShifts.filter(s => s.type === "work");
+                              const vacationShifts = dayShifts.filter(s => s.type === "vacation");
+                              const leaveShifts = dayShifts.filter(s => s.type === "leave");
+                              const sickShifts = dayShifts.filter(s => s.type === "sick");
                               
-                              if (shift.type === "vacation") {
-                                bgColor = "bg-red-100";
-                                icon = "beach_access";
-                                label = "Ferie (F)";
-                              } else if (shift.type === "leave") {
-                                bgColor = "bg-yellow-100";
-                                icon = "event_busy";
-                                label = "Permesso (P)";
-                              } else if (shift.type === "sick") {
-                                bgColor = "bg-purple-100";
-                                icon = "healing";
-                                label = "Malattia (M)";
-                              }
+                              // Calcola il totale delle ore di lavoro
+                              const totalHours = workShifts.reduce((total, shift) => {
+                                const startParts = shift.startTime.split(':').map(Number);
+                                const endParts = shift.endTime.split(':').map(Number);
+                                
+                                const startMinutes = startParts[0] * 60 + startParts[1];
+                                const endMinutes = endParts[0] * 60 + endParts[1];
+                                
+                                return total + (endMinutes - startMinutes) / 60;
+                              }, 0);
                               
                               return (
-                                <div 
-                                  key={idx} 
-                                  className={`${bgColor} rounded-md p-2 text-sm`}
-                                >
-                                  <div className="font-medium flex items-center">
-                                    <span className="material-icons text-sm mr-1">{icon}</span>
-                                    {label}
-                                  </div>
-                                  
-                                  {shift.type === "work" && (
-                                    <div className="mt-1 text-gray-700">
-                                      <div>{shift.startTime} - {shift.endTime}</div>
-                                      <div className="text-xs mt-1 text-gray-600">{shift.notes}</div>
+                                <>
+                                  {/* Mostra totale ore se ci sono turni di lavoro */}
+                                  {workShifts.length > 0 && (
+                                    <div className="font-medium text-sm mb-2">
+                                      Ore di lavoro: {totalHours.toFixed(1)}h
                                     </div>
                                   )}
-                                </div>
+                                  
+                                  {/* Mostra gli slot di lavoro in modo compatto */}
+                                  {workShifts.length > 0 && (
+                                    <div className="bg-blue-100 rounded-md p-3 mb-2">
+                                      <div className="font-medium flex items-center mb-2">
+                                        <span className="material-icons text-sm mr-1">schedule</span>
+                                        In servizio
+                                      </div>
+                                      <div className="grid grid-cols-1 gap-1">
+                                        {workShifts.map((shift, idx) => (
+                                          <div key={idx} className="text-sm">
+                                            <div className="flex items-center">
+                                              <div className="w-24">{shift.startTime} - {shift.endTime}</div>
+                                              {shift.notes && <div className="ml-2 text-xs text-gray-600">{shift.notes}</div>}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Mostra ferie */}
+                                  {vacationShifts.length > 0 && (
+                                    <div className="bg-red-100 rounded-md p-3 mb-2">
+                                      <div className="font-medium flex items-center">
+                                        <span className="material-icons text-sm mr-1">beach_access</span>
+                                        Ferie (F)
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Mostra permessi */}
+                                  {leaveShifts.length > 0 && (
+                                    <div className="bg-yellow-100 rounded-md p-3 mb-2">
+                                      <div className="font-medium flex items-center">
+                                        <span className="material-icons text-sm mr-1">event_busy</span>
+                                        Permesso (P)
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Mostra malattia */}
+                                  {sickShifts.length > 0 && (
+                                    <div className="bg-purple-100 rounded-md p-3 mb-2">
+                                      <div className="font-medium flex items-center">
+                                        <span className="material-icons text-sm mr-1">healing</span>
+                                        Malattia (M)
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               );
-                            })}
+                            })()}
                           </div>
                         )}
                       </td>
