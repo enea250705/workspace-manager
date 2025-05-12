@@ -740,7 +740,10 @@ export function ExcelGrid({
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div className="flex items-center justify-end p-4 border-b">
+      <div className="flex items-center justify-between p-4 border-b">
+        <h3 className="text-base font-semibold">
+          {format(startDate, "d MMMM", { locale: it })} - {format(endDate, "d MMMM yyyy", { locale: it })}
+        </h3>
         <div className="flex items-center gap-2">
           {isPublished ? (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">

@@ -671,6 +671,11 @@ export default function Schedule() {
           </div>
         ) : showScheduleBuilder && !existingSchedule ? (
           <div>
+            <div className="flex justify-center items-center mb-4">
+              <h3 className="text-lg font-medium">
+                {dateRangeText}
+              </h3>
+            </div>
             <ExcelGrid
               scheduleId={null}
               users={users || []}
@@ -684,6 +689,11 @@ export default function Schedule() {
           </div>
         ) : existingSchedule && !showDatePicker && !creatingNewSchedule ? (
           <div>
+            <div className="flex justify-center items-center mb-4">
+              <h3 className="text-base sm:text-lg font-medium text-center">
+                <span className="block sm:inline text-sm sm:text-base">{dateRangeText}</span>
+              </h3>
+            </div>
             <ExcelGrid
               scheduleId={existingSchedule?.id || null}
               users={users || []}
