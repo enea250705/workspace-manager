@@ -11,7 +11,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { UserForm } from "./user-form";
 import { BulkUsersForm } from "./bulk-users-form";
 import { User } from "@shared/schema";
-import { Loader2, Search, Edit, UserPlus, CheckCircle, XCircle, Upload, Users } from "lucide-react";
+import { Loader2, Search, Edit, UserPlus, CheckCircle, XCircle, Upload, Users, MoreVertical } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { AnimatedContainer } from "@/components/ui/animated-container";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function UserManagement() {
   const { toast } = useToast();
@@ -119,122 +127,124 @@ export function UserManagement() {
   };
   
   return (
-    <Card className="shadow-sm">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Gestione Utenti</h2>
-          <div className="flex gap-2">
-            <Dialog open={isBulkAddDialogOpen} onOpenChange={setIsBulkAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-1" variant="outline">
-                  <Users className="h-4 w-4 mr-2" />
-                  Importa Multipli
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-xl">
-                <DialogHeader>
-                  <DialogTitle>Importa Utenti in Blocco</DialogTitle>
-                </DialogHeader>
-                <BulkUsersForm 
-                  onSubmit={(result) => {
-                    setIsBulkAddDialogOpen(false);
-                    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                    toast({
-                      title: "Utenti importati",
-                      description: `${result.createdCount} utenti sono stati creati con successo.`,
-                    });
-                  }}
-                  onCancel={() => setIsBulkAddDialogOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-            
-            <Dialog open={isNewUserDialogOpen} onOpenChange={setIsNewUserDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-1">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Nuovo Utente
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Aggiungi Nuovo Utente</DialogTitle>
-                </DialogHeader>
-                <UserForm 
-                  onSubmit={(userData) => {
-                    setIsNewUserDialogOpen(false);
-                    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                    toast({
-                      title: "Utente creato",
-                      description: "Il nuovo utente è stato creato con successo.",
-                    });
-                  }}
-                  onCancel={() => setIsNewUserDialogOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-        
-        {/* Search & Filter */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <div className="flex-1 min-w-[240px]">
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-2">
-                <Search className="h-4 w-4 text-gray-400" />
-              </span>
-              <Input
-                type="text"
-                placeholder="Cerca utenti..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
+    <AnimatedContainer>
+      <Card className="shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
+            <h2 className="text-xl font-bold">Gestione Utenti</h2>
+            <div className="flex flex-wrap gap-2">
+              <Dialog open={isBulkAddDialogOpen} onOpenChange={setIsBulkAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="flex items-center gap-1 text-xs sm:text-sm" variant="outline">
+                    <Users className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="sm:inline hidden">Importa Multipli</span>
+                    <span className="sm:hidden inline">Importa</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-xl">
+                  <DialogHeader>
+                    <DialogTitle>Importa Utenti in Blocco</DialogTitle>
+                  </DialogHeader>
+                  <BulkUsersForm 
+                    onSubmit={(result) => {
+                      setIsBulkAddDialogOpen(false);
+                      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                      toast({
+                        title: "Utenti importati",
+                        description: `${result.createdCount} utenti sono stati creati con successo.`,
+                      });
+                    }}
+                    onCancel={() => setIsBulkAddDialogOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
+              
+              <Dialog open={isNewUserDialogOpen} onOpenChange={setIsNewUserDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="flex items-center gap-1 text-xs sm:text-sm">
+                    <UserPlus className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="sm:inline hidden">Nuovo Utente</span>
+                    <span className="sm:hidden inline">Nuovo</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Aggiungi Nuovo Utente</DialogTitle>
+                  </DialogHeader>
+                  <UserForm 
+                    onSubmit={(userData) => {
+                      setIsNewUserDialogOpen(false);
+                      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                      toast({
+                        title: "Utente creato",
+                        description: "Il nuovo utente è stato creato con successo.",
+                      });
+                    }}
+                    onCancel={() => setIsNewUserDialogOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
-          <div>
-            <Select
-              value={roleFilter}
-              onValueChange={(value) => {
-                setRoleFilter(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Tutti i ruoli" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti i ruoli</SelectItem>
-                <SelectItem value="admin">Amministratore</SelectItem>
-                <SelectItem value="employee">Dipendente</SelectItem>
-              </SelectContent>
-            </Select>
+          
+          {/* Search & Filter */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+            <div className="sm:col-span-1">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-2">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </span>
+                <Input
+                  type="text"
+                  placeholder="Cerca utenti..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <Select
+                value={roleFilter}
+                onValueChange={(value) => {
+                  setRoleFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="Tutti i ruoli" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti i ruoli</SelectItem>
+                  <SelectItem value="admin">Amministratore</SelectItem>
+                  <SelectItem value="employee">Dipendente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="Tutti gli stati" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti gli stati</SelectItem>
+                  <SelectItem value="active">Attivo</SelectItem>
+                  <SelectItem value="inactive">Disattivato</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Tutti gli stati" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti gli stati</SelectItem>
-                <SelectItem value="active">Attivo</SelectItem>
-                <SelectItem value="inactive">Disattivato</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
-        {/* Users Table */}
-        <div className="overflow-x-auto">
+          
+          {/* Users Table/Cards */}
           {isLoading ? (
             <div className="py-8 text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
@@ -246,144 +256,206 @@ export function UserManagement() {
               <p className="mt-2 text-gray-500">Nessun utente trovato</p>
             </div>
           ) : (
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-4 py-2 text-left">Nome</th>
-                  <th className="px-4 py-2 text-left">Email</th>
-                  <th className="px-4 py-2 text-left">Ruolo</th>
-                  <th className="px-4 py-2 text-left">Stato</th>
-                  <th className="px-4 py-2 text-left">Ultimo accesso</th>
-                  <th className="px-4 py-2 text-right">Azioni</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
+            <>
+              {/* Desktop Table (Hidden on Mobile) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-4 py-2 text-left">Nome</th>
+                      <th className="px-4 py-2 text-left">Email</th>
+                      <th className="px-4 py-2 text-left">Ruolo</th>
+                      <th className="px-4 py-2 text-left">Stato</th>
+                      <th className="px-4 py-2 text-left">Ultimo accesso</th>
+                      <th className="px-4 py-2 text-right">Azioni</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {paginatedUsers.map((user: User) => (
+                      <tr key={user.id}>
+                        <td className="px-4 py-3">{user.name}</td>
+                        <td className="px-4 py-3">{user.email}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            user.role === "admin" 
+                              ? "bg-primary/10 text-primary" 
+                              : "bg-gray-100 text-gray-600"
+                          }`}>
+                            {user.role === "admin" ? "Amministratore" : "Dipendente"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center">
+                            <span className={`w-2 h-2 rounded-full ${
+                              user.isActive ? "bg-green-500" : "bg-red-500"
+                            } mr-1`}></span>
+                            {user.isActive ? "Attivo" : "Disattivato"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">{formatLastLogin(user.lastLogin)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEditUser(user)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 ml-2"
+                            onClick={() => toggleUserStatus(user)}
+                          >
+                            {user.isActive ? (
+                              <XCircle className="h-4 w-4 text-red-500" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            )}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards (Visible only on mobile) */}
+              <div className="md:hidden space-y-3">
                 {paginatedUsers.map((user: User) => (
-                  <tr key={user.id}>
-                    <td className="px-4 py-3">{user.name}</td>
-                    <td className="px-4 py-3">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        user.role === "admin" 
-                          ? "bg-primary/10 text-primary" 
-                          : "bg-gray-100 text-gray-600"
-                      }`}>
+                  <div key={user.id} className="bg-white border rounded-lg p-3 shadow-sm">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="font-medium">{user.name}</h3>
+                        <p className="text-sm text-gray-500">{user.email}</p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Modifica
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleUserStatus(user)}>
+                            {user.isActive ? (
+                              <>
+                                <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                                Disattiva
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                                Attiva
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="flex items-center mt-2 gap-2 flex-wrap">
+                      <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs">
                         {user.role === "admin" ? "Amministratore" : "Dipendente"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center">
-                        <span className={`w-2 h-2 rounded-full ${
+                      </Badge>
+                      <Badge variant={user.isActive ? "outline" : "destructive"} className="text-xs">
+                        <span className={`w-1.5 h-1.5 rounded-full ${
                           user.isActive ? "bg-green-500" : "bg-red-500"
-                        } mr-1`}></span>
+                        } mr-1 inline-block`}></span>
                         {user.isActive ? "Attivo" : "Disattivato"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">{formatLastLogin(user.lastLogin)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEditUser(user)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 ml-2"
-                        onClick={() => toggleUserStatus(user)}
-                      >
-                        {user.isActive ? (
-                          <XCircle className="h-4 w-4 text-red-500" />
-                        ) : (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        )}
-                      </Button>
-                    </td>
-                  </tr>
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      Ultimo accesso: {formatLastLogin(user.lastLogin)}
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
-        </div>
-        
-        {/* Pagination */}
-        {filteredUsers.length > 0 && (
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-sm text-gray-500">
-              Mostra {(currentPage - 1) * usersPerPage + 1}-{Math.min(currentPage * usersPerPage, filteredUsers.length)} di {filteredUsers.length} utenti
-            </div>
-            <div className="flex space-x-1">
-              <Button
-                variant={currentPage === 1 ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-              >
-                Precedente
-              </Button>
-              
-              {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-                let pageNumber;
+          
+          {/* Pagination */}
+          {filteredUsers.length > 0 && (
+            <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <div className="text-xs sm:text-sm text-gray-500 order-2 sm:order-1">
+                Mostra {(currentPage - 1) * usersPerPage + 1}-{Math.min(currentPage * usersPerPage, filteredUsers.length)} di {filteredUsers.length} utenti
+              </div>
+              <div className="flex space-x-1 order-1 sm:order-2">
+                <Button
+                  variant={currentPage === 1 ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="text-xs"
+                >
+                  Precedente
+                </Button>
                 
-                if (totalPages <= 3) {
-                  pageNumber = i + 1;
-                } else if (currentPage <= 2) {
-                  pageNumber = i + 1;
-                } else if (currentPage >= totalPages - 1) {
-                  pageNumber = totalPages - 2 + i;
-                } else {
-                  pageNumber = currentPage - 1 + i;
-                }
+                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                  let pageNumber;
+                  
+                  if (totalPages <= 3) {
+                    pageNumber = i + 1;
+                  } else if (currentPage <= 2) {
+                    pageNumber = i + 1;
+                  } else if (currentPage >= totalPages - 1) {
+                    pageNumber = totalPages - 2 + i;
+                  } else {
+                    pageNumber = currentPage - 1 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNumber}
+                      variant={currentPage === pageNumber ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className="text-xs"
+                    >
+                      {pageNumber}
+                    </Button>
+                  );
+                })}
                 
-                return (
-                  <Button
-                    key={pageNumber}
-                    variant={currentPage === pageNumber ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(pageNumber)}
-                  >
-                    {pageNumber}
-                  </Button>
-                );
-              })}
-              
-              <Button
-                variant={currentPage === totalPages ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Successivo
-              </Button>
+                <Button
+                  variant={currentPage === totalPages ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="text-xs"
+                >
+                  Successivo
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
-        
-        {/* Edit User Dialog */}
-        <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Modifica Utente</DialogTitle>
-            </DialogHeader>
-            {selectedUser && (
-              <UserForm 
-                user={selectedUser}
-                onSubmit={(userData) => {
-                  updateUserMutation.mutate({
-                    ...userData,
-                    id: selectedUser.id,
-                  });
-                }}
-                onCancel={() => setIsEditUserDialogOpen(false)}
-                isEdit={true}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+          )}
+          
+          {/* Edit User Dialog */}
+          <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Modifica Utente</DialogTitle>
+              </DialogHeader>
+              {selectedUser && (
+                <UserForm 
+                  user={selectedUser}
+                  onSubmit={(userData) => {
+                    updateUserMutation.mutate({
+                      ...userData,
+                      id: selectedUser.id,
+                    });
+                  }}
+                  onCancel={() => setIsEditUserDialogOpen(false)}
+                  isEdit={true}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
+    </AnimatedContainer>
   );
 }
