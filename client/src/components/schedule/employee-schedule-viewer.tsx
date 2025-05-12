@@ -5,6 +5,43 @@ import { format, parseISO, addDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { formatHours, calculateTotalWorkHours, calculateWorkHours } from "@/lib/utils";
 
+/**
+ * Corregge l'orario di fine turno per la visualizzazione
+ * Rimuove 30 minuti dall'orario di fine per compensare l'offset introdotto dal sistema di celle
+ */
+function adjustEndTime(endTime: string): string {
+  try {
+    const [hours, minutes] = endTime.split(':').map(Number);
+    
+    // Se il formato non è corretto, restituisci l'orario originale
+    if (isNaN(hours) || isNaN(minutes)) {
+      return endTime;
+    }
+    
+    // Sottraiamo 30 minuti
+    let newMinutes = minutes - 30;
+    let newHours = hours;
+    
+    // Gestione del riporto negativo
+    if (newMinutes < 0) {
+      newMinutes += 60;
+      newHours -= 1;
+    }
+    
+    // Gestione passaggio dalla mezzanotte
+    if (newHours < 0) {
+      newHours += 24;
+    }
+    
+    // Formattazione con zero padding
+    return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+  } catch (e) {
+    // In caso di errore, restituisci l'orario originale
+    console.error('Errore nella correzione orario:', e);
+    return endTime;
+  }
+}
+
 type EmployeeScheduleViewerProps = {
   schedule: any;
   shifts: any[];
@@ -231,7 +268,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                           <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-blue-50 rounded-md p-2 sm:p-3 mb-1">
                                             <div className="flex items-center">
                                               <span className="material-icons text-blue-600 mr-1 sm:mr-2 text-xs sm:text-sm">access_time</span>
-                                              <div className="font-medium text-sm sm:text-base">{shift.startTime} - {shift.endTime}</div>
+                                              <div className="font-medium text-sm sm:text-base">{shift.startTime} - {adjustEndTime(shift.endTime)}</div>
                                             </div>
                                             {shift.notes && <div className="ml-0 sm:ml-3 text-xs sm:text-sm text-gray-600 italic mt-1 sm:mt-0">{shift.notes}</div>}
                                           </div>
@@ -334,7 +371,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                 
                                 {shift.type === "work" && (
                                   <>
-                                    <div className="text-sm sm:text-base font-medium">{shift.startTime} - {shift.endTime}</div>
+                                    <div className="text-sm sm:text-base font-medium">{shift.startTime} - {adjustEndTime(shift.endTime)}</div>
                                     {shift.notes && (
                                       <div className="text-xs sm:text-sm mt-1 text-gray-600 italic">{shift.notes}</div>
                                     )}
