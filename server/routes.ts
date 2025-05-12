@@ -821,13 +821,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             });
             
-            // NOTIFICA EMAIL: Qui verrà implementata la notifica via email ai dipendenti
-            // La funzionalità è predisposta ma disabilitata in attesa di configurazione server SMTP
-            console.log(`[INFO] Simulazione invio email turni a ${user.email || user.username}`);
-            // Quando pronti per attivare:
-            // 1. Configura variabili SMTP in un file .env
-            // 2. Imposta EMAIL_ENABLED=true
-            // 3. Rimuovi la direttiva di commento dall'import del servizio email
+            // NOTIFICA EMAIL: Invia notifica via email ai dipendenti con i loro turni
+            try {
+              log(`Invio notifica email turni a ${user.email || user.username}`);
+              
+              // Invio della notifica email usando lo script Python
+              await sendEmailViaScript('shift', {
+                user: {
+                  id: user.id,
+                  name: user.name || user.username,
+                  email: user.email || 'test@example.com' // Fallback solo per test
+                },
+                schedule: {
+                  id: schedule.id,
+                  startDate: schedule.startDate,
+                  endDate: schedule.endDate
+                },
+                shifts: formattedShifts
+              }).catch((error: Error) => {
+                // Log degli errori ma non bloccare l'esecuzione
+                log(`Errore nell'invio della notifica turni via email: ${error.message}`);
+              });
+              
+              log(`Notifica turni inviata con successo a ${user.email || user.username}`);
+            } catch (emailError) {
+              // Log degli errori ma non bloccare l'esecuzione
+              const error = emailError as Error;
+              log(`Errore nel processo di notifica email turni: ${error.message}`);
+            }
           }
         }
       }
