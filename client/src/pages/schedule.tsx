@@ -175,7 +175,7 @@ export default function Schedule() {
   
   // Handle new weekly schedule
   const handleNewWeeklySchedule = () => {
-    // Imposta lo stato per la creazione di una nuova pianificazione
+    // Resetta lo stato attuale
     setCreatingNewSchedule(true);
     
     // Imposta date predefinite per il nuovo calendario (a partire dalla prossima settimana)
@@ -183,11 +183,14 @@ export default function Schedule() {
     setCustomStartDate(nextWeekStart);
     setCustomEndDate(addDays(nextWeekStart, 6));
     
+    // Forza il reset dello schedule esistente
+    queryClient.removeQueries({ queryKey: ["/api/schedules"] });
+    
     // Mostra il selettore di date per consentire all'utente di modificarle
     setShowDatePicker(true);
     
-    // Forza il reset dello schedule esistente
-    queryClient.removeQueries({ queryKey: ["/api/schedules"] });
+    // Passa alla visualizzazione del selettore di date
+    console.log("Aprendo selettore date per nuovo turno");
   };
 
   // Handle auto-generate schedule
@@ -229,9 +232,15 @@ export default function Schedule() {
       return;
     }
     
+    console.log("Date selezionate:", { 
+      startDate: format(customStartDate, "yyyy-MM-dd"), 
+      endDate: format(customEndDate, "yyyy-MM-dd") 
+    });
+    
+    // Nascondi il selettore di date
     setShowDatePicker(false);
     
-    // Show the schedule builder immediately
+    // Mostra il costruttore di pianificazione immediatamente
     setShowScheduleBuilder(true);
     
     // Se stiamo creando un nuovo schedule, rimuoviamo le query esistenti per evitare conflitti
@@ -475,7 +484,7 @@ export default function Schedule() {
               onPublish={() => {}}
             />
           </div>
-        ) : existingSchedule ? (
+        ) : existingSchedule && !showDatePicker ? (
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">
