@@ -468,8 +468,8 @@ export default function Schedule() {
             const timestamp = Date.now();
             
             // FASE 4: REDIRECT CON PARAMETRI MIGLIORATI
-            // Usa parametri URL più espliciti
-            window.location.href = `/schedule?reset=true&scheduleId=${data.id}&newSchedule=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&forceEmpty=true&refreshed=true&ts=${timestamp}`;
+            // Usa parametri URL più espliciti e aggiungi currentScheduleId in modo esplicito
+            window.location.href = `/schedule?reset=true&scheduleId=${data.id}&currentScheduleId=${data.id}&newSchedule=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&forceEmpty=true&refreshed=true&ts=${timestamp}`;
           }, 1000);
         } catch (err) {
           console.error("❌ Errore nella gestione dello schedule:", err);
