@@ -140,22 +140,24 @@ export function TimeOffList() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="w-full mb-4 overflow-x-auto flex-nowrap whitespace-nowrap pb-0.5">
-            <TabsTrigger value="all" className="flex-shrink-0">
-              Tutte <span className="ml-1 text-xs bg-gray-100 px-2 py-0.5 rounded-full">{timeOffRequests.length}</span>
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="flex-shrink-0">
-              In attesa <span className="ml-1 text-xs bg-yellow-100 px-2 py-0.5 rounded-full">{pendingRequests.length}</span>
-            </TabsTrigger>
-            <TabsTrigger value="approved" className="flex-shrink-0">
-              Approvate <span className="ml-1 text-xs bg-green-100 px-2 py-0.5 rounded-full">{approvedRequests.length}</span>
-            </TabsTrigger>
-            <TabsTrigger value="rejected" className="flex-shrink-0">
-              Respinte <span className="ml-1 text-xs bg-red-100 px-2 py-0.5 rounded-full">{rejectedRequests.length}</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="w-full mb-4 overflow-x-auto">
+            <TabsList className="flex whitespace-nowrap min-w-full w-max">
+              <TabsTrigger value="all">
+                Tutte <span className="ml-1 text-xs bg-gray-100 px-2 py-0.5 rounded-full">{timeOffRequests.length}</span>
+              </TabsTrigger>
+              <TabsTrigger value="pending">
+                In attesa <span className="ml-1 text-xs bg-yellow-100 px-2 py-0.5 rounded-full">{pendingRequests.length}</span>
+              </TabsTrigger>
+              <TabsTrigger value="approved">
+                Approvate <span className="ml-1 text-xs bg-green-100 px-2 py-0.5 rounded-full">{approvedRequests.length}</span>
+              </TabsTrigger>
+              <TabsTrigger value="rejected">
+                Respinte <span className="ml-1 text-xs bg-red-100 px-2 py-0.5 rounded-full">{rejectedRequests.length}</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
-          <ScrollArea className="max-h-[400px] pr-2 -mr-2">
+          <div className="overflow-auto max-h-[400px] h-full">
             <TabsContent value="all" className="mt-0">
               <AnimatePresence>
                 <motion.div layout className="space-y-3">
@@ -268,7 +270,7 @@ export function TimeOffList() {
                 )}
               </AnimatePresence>
             </TabsContent>
-          </ScrollArea>
+          </div>
         </Tabs>
       </CardContent>
     </Card>
