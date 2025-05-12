@@ -498,12 +498,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/schedules/:id/publish", isAdmin, async (req, res) => {
     try {
+      console.log("Publishing schedule:", req.params.id);
       const scheduleId = parseInt(req.params.id);
       const schedule = await storage.publishSchedule(scheduleId);
       
       if (!schedule) {
+        console.log("Schedule not found:", scheduleId);
         return res.status(404).json({ message: "Schedule not found" });
       }
+      
+      console.log("Schedule published successfully:", schedule);
       
       // Get all users
       const users = await storage.getAllUsers();
@@ -514,7 +518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const notification = await storage.createNotification({
             userId: user.id,
             type: "schedule_update",
-            message: "A new work schedule has been published",
+            message: "Nuova pianificazione turni pubblicata",
             isRead: false,
             data: {
               scheduleId: schedule.id,
@@ -526,7 +530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Send real-time notification
           sendNotification(user.id, {
             type: "schedule_update",
-            message: "A new work schedule has been published",
+            message: "Nuova pianificazione turni pubblicata",
             data: notification
           });
         }
@@ -534,7 +538,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(schedule);
     } catch (err) {
-      res.status(500).json({ message: "Failed to publish schedule" });
+      console.error("Failed to publish schedule:", err);
+      res.status(500).json({ message: "Failed to publish schedule", error: String(err) });
     }
   });
   
