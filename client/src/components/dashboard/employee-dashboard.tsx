@@ -240,24 +240,45 @@ export function EmployeeDashboard() {
                         {/* Turni di lavoro */}
                         {consolidatedWorkShifts.length > 0 && (
                           <div className="mb-3">
-                            {consolidatedWorkShifts.map((shift: any) => (
-                              <div 
-                                key={shift.id}
-                                className="p-2 mb-2 rounded-md bg-blue-50 border border-blue-100"
-                              >
-                                <div className="flex justify-between items-center">
-                                  <div>
-                                    <p className="text-sm font-medium">
-                                      {shift.startTime} - {shift.endTime}
-                                    </p>
-                                    {shift.area && (
-                                      <p className="text-xs text-gray-600">Area: {shift.area}</p>
-                                    )}
-                                  </div>
-                                  <span className="material-icons text-sm text-blue-500">work</span>
+                            {/* Mostra un unico turno giornaliero complessivo */}
+                            <div className="p-2 mb-2 rounded-md bg-blue-50 border border-blue-100">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {/* Mostra solo il primo orario di inizio e l'ultimo orario di fine */}
+                                    {sortedWorkShifts[0]?.startTime} - {sortedWorkShifts[sortedWorkShifts.length - 1]?.endTime}
+                                  </p>
+                                  {/* Mostra tutte le aree coinvolte se diverse */}
+                                  {(() => {
+                                    const uniqueAreas = [...new Set(sortedWorkShifts
+                                      .filter(s => s.area)
+                                      .map(s => s.area)
+                                    )];
+                                    
+                                    if (uniqueAreas.length === 0) return null;
+                                    
+                                    return (
+                                      <p className="text-xs text-gray-600">
+                                        Area: {uniqueAreas.join(', ')}
+                                      </p>
+                                    );
+                                  })()}
                                 </div>
+                                <span className="material-icons text-sm text-blue-500">work</span>
                               </div>
-                            ))}
+                              
+                              {/* Se ci sono orari non consecutivi, mostrali come dettaglio */}
+                              {consolidatedWorkShifts.length > 1 && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                  <p className="font-medium">Dettaglio turni:</p>
+                                  <ul className="list-disc pl-4 mt-1">
+                                    {consolidatedWorkShifts.map((shift, index) => (
+                                      <li key={index}>{shift.startTime} - {shift.endTime}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                         
