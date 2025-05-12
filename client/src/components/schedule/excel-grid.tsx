@@ -243,7 +243,8 @@ export function ExcelGrid({
               for (let i = startIndex; i < endIndex; i++) {
                 newGridData[day][userId].cells[i] = { 
                   type: shift.type, 
-                  shiftId: shift.id 
+                  shiftId: shift.id,
+                  isTimeOff: false // Per default, i turni normali non sono richieste di ferie/permessi
                 };
               }
               
@@ -352,7 +353,7 @@ export function ExcelGrid({
       // FASE 5: LOG DI COMPLETAMENTO
       console.log(`✅ Inizializzazione completa della griglia turni per schedule ID ${scheduleId}`);
     }
-  }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid, gridData]);
+  }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid]);
   
   // GESTIONE CLIC MIGLIORATA
   // Gestisce in modo più robusto il clic su una cella della griglia
@@ -462,7 +463,7 @@ export function ExcelGrid({
         userDayData.cells[timeIndex] = { 
           type: newType, 
           shiftId: currentCell.shiftId,
-          isTimeOff: false // Non è un permesso automatico
+          isTimeOff: false // Imposta esplicitamente a false quando viene modificato manualmente
         };
       }
     } 
