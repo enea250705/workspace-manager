@@ -879,6 +879,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
+      // Crea automaticamente i turni per il periodo di assenza
+      const timeOffType = request.type;
+      // Mapping del tipo di assenza al codice visualizzato nel turno
+      let shiftType = "work"; // Default
+      if (timeOffType === "vacation") {
+        shiftType = "vacation"; // F per ferie
+      } else if (timeOffType === "personal") {
+        shiftType = "leave"; // P per permesso
+      } else if (timeOffType === "sick") {
+        shiftType = "sick"; // M per malattia
+      }
+      
+      // Trova tutti gli schedules attivi che coprono il periodo della richiesta
+      const allSchedules = await storage.getAllSchedules();
+      const overlappingSchedules = allSchedules.filter(schedule => {
+        const scheduleStart = new Date(schedule.startDate);
+        const scheduleEnd = new Date(schedule.endDate);
+        const requestStart = new Date(request.startDate);
+        const requestEnd = new Date(request.endDate);
+        
+        return (
+          (requestStart >= scheduleStart && requestStart <= scheduleEnd) ||
+          (requestEnd >= scheduleStart && requestEnd <= scheduleEnd) ||
+          (requestStart <= scheduleStart && requestEnd >= scheduleEnd)
+        );
+      });
+      
+      console.log(`Trovati ${overlappingSchedules.length} schedules che si sovrappongono alla richiesta di assenza`);
+      
+      // Crea turni in tutti gli schedule sovrapposti
+      for (const schedule of overlappingSchedules) {
+        const scheduleStart = new Date(schedule.startDate);
+        const scheduleEnd = new Date(schedule.endDate);
+        const requestStart = new Date(request.startDate);
+        const requestEnd = new Date(request.endDate);
+        
+        // Calcola il periodo effettivo da coprire in questo schedule
+        const effectiveStart = requestStart < scheduleStart ? scheduleStart : requestStart;
+        const effectiveEnd = requestEnd > scheduleEnd ? scheduleEnd : requestEnd;
+        
+        // Crea turni per ogni giorno nel periodo
+        const days = ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"];
+        const currentDay = new Date(effectiveStart);
+        
+        while (currentDay <= effectiveEnd) {
+          const dayIndex = currentDay.getDay(); // 0 = domenica, 1 = lunedì, ...
+          const dayName = days[dayIndex === 0 ? 6 : dayIndex - 1]; // Adatta all'indice italiano (0 = lunedì)
+          
+          // Verifica se esistono già turni per questo utente e giorno
+          const existingShifts = await storage.getShifts(schedule.id);
+          const userDayShifts = existingShifts.filter(
+            s => s.userId === request.userId && s.day === dayName
+          );
+          
+          // Se l'utente ha già turni in questo giorno, aggiorna il tipo invece di creare nuovi
+          if (userDayShifts.length > 0) {
+            for (const shift of userDayShifts) {
+              await storage.updateShift(shift.id, { 
+                type: shiftType,
+                notes: `Assenza automatica: ${request.type}` 
+              });
+              console.log(`Aggiornato turno esistente ID ${shift.id} per l'utente ${request.userId} in ${dayName} come ${shiftType}`);
+            }
+          } else {
+            // Crea nuovi turni di assenza per l'intera giornata
+            const shiftData = {
+              scheduleId: schedule.id,
+              userId: request.userId,
+              day: dayName,
+              startTime: "09:00",
+              endTime: "18:00",
+              type: shiftType,
+              notes: `Assenza automatica: ${request.type}`,
+              area: "Assenza"
+            };
+            
+            await storage.createShift(shiftData);
+            console.log(`Creato nuovo turno di assenza per l'utente ${request.userId} in ${dayName} come ${shiftType}`);
+          }
+          
+          // Passa al giorno successivo
+          currentDay.setDate(currentDay.getDate() + 1);
+        }
+      }
+      
       // Send real-time notification
       sendNotification(request.userId, {
         type: "request_approved",
@@ -888,6 +973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(request);
     } catch (err) {
+      console.error("Errore durante l'approvazione della richiesta:", err);
       res.status(500).json({ message: "Failed to approve request" });
     }
   });

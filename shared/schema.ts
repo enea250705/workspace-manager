@@ -48,7 +48,7 @@ export const shifts = pgTable("shifts", {
   endTime: text("end_time").notNull(),
   notes: text("notes"),
   area: text("area"),
-  type: text("type").notNull().default("work"), // work, vacation, leave
+  type: text("type").notNull().default("work"), // work, vacation, leave, sick
 });
 
 export const insertShiftSchema = createInsertSchema(shifts).omit({
