@@ -447,8 +447,14 @@ export default function Schedule() {
           const data = await response.json();
           console.log("✅ CREAZIONE SCHEDULE COMPLETATA:", data);
           
+          // Imposta esplicitamente l'ID della pianificazione corrente
+          setCurrentScheduleId(data.id);
+          
           // Forza il reset completo della griglia
           setForceResetGrid(true);
+          
+          // Pre-carica lo schedule nella cache di React Query
+          queryClient.setQueryData(["/api/schedules", { id: data.id }], data);
           
           // Notifica all'utente
           toast({
@@ -459,8 +465,9 @@ export default function Schedule() {
           // FASE 3: AGGIORNAMENTO INTERFACCIA
           // Usa un timeout per garantire che la UI sia aggiornata correttamente
           setTimeout(() => {
-            // Pulisci completamente la cache
-            queryClient.clear();
+            // Invalida le query per caricare dati freschi
+            queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/schedules", { id: data.id }] });
             
             console.log("🧹 Pulizia e ricaricamento tabella vuota per ID:", data.id);
             
@@ -469,7 +476,7 @@ export default function Schedule() {
             
             // FASE 4: REDIRECT CON PARAMETRI MIGLIORATI
             // Usa parametri URL più espliciti e aggiungi currentScheduleId in modo esplicito
-            window.location.href = `/schedule?reset=true&scheduleId=${data.id}&currentScheduleId=${data.id}&newSchedule=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&forceEmpty=true&refreshed=true&ts=${timestamp}`;
+            window.location.href = `/schedule?reset=true&id=${data.id}&scheduleId=${data.id}&currentScheduleId=${data.id}&newSchedule=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&forceEmpty=true&refreshed=true&ts=${timestamp}`;
           }, 1000);
         } catch (err) {
           console.error("❌ Errore nella gestione dello schedule:", err);
