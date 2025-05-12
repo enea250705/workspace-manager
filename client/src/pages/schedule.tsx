@@ -20,8 +20,6 @@ import { ExportToPdfDialog } from "@/components/schedule/export-to-pdf";
 import { format, startOfWeek, addDays, isBefore, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { calculateWorkHours, formatHours } from "@/lib/utils";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 
 export default function Schedule() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -278,8 +276,6 @@ export default function Schedule() {
   const [forceResetGrid, setForceResetGrid] = useState(false);
   // Flag per stabilire se stiamo caricando uno schedule nuovo o esistente
   const [isLoadingNewSchedule, setIsLoadingNewSchedule] = useState(false);
-  
-
   
   // State for creating a new schedule
   const [creatingNewSchedule, setCreatingNewSchedule] = useState(false);
