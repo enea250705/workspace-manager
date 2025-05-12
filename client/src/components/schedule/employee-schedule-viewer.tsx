@@ -90,10 +90,10 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
       </CardHeader>
       
       {/* Dettagli pianificazione */}
-      <div className="px-6 pb-2 pt-0">
-        <p className="text-sm text-gray-500 mb-4">
+      <div className="px-4 sm:px-6 pb-2 pt-0">
+        <p className="text-xs sm:text-sm text-gray-500 mb-4 text-center sm:text-left">
           <span className="material-icons text-xs align-middle mr-1">calendar_today</span>
-          {format(startDate, "d MMMM", { locale: it })} - {format(endDate, "d MMMM yyyy", { locale: it })}
+          {format(startDate, "d MMM", { locale: it })} - {format(endDate, "d MMM yyyy", { locale: it })}
         </p>
       </div>
       
@@ -107,10 +107,10 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                   {weekDays.map(day => (
                     <th 
                       key={day.formattedDate}
-                      className="border px-3 py-2 text-center font-medium"
+                      className="border px-1 sm:px-3 py-1 sm:py-2 text-center font-medium"
                     >
-                      <div className="whitespace-nowrap">{day.shortName}</div>
-                      <div className="text-xs font-normal text-gray-500">{day.formattedDate}</div>
+                      <div className="whitespace-nowrap text-xs sm:text-sm">{day.shortName}</div>
+                      <div className="text-[10px] sm:text-xs font-normal text-gray-500">{day.formattedDate}</div>
                     </th>
                   ))}
                 </tr>
@@ -124,9 +124,9 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                     dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
                     
                     return (
-                      <td key={day.formattedDate} className="border p-3 align-top h-28">
+                      <td key={day.formattedDate} className="border p-1 sm:p-3 align-top h-20 sm:h-28">
                         {dayShifts.length === 0 ? (
-                          <div className="text-center py-2 text-gray-400 text-sm">
+                          <div className="text-center py-1 sm:py-2 text-gray-400 text-xs sm:text-sm">
                             Non in servizio
                           </div>
                         ) : (
@@ -222,26 +222,26 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                 <>
                                   {/* Mostra totale ore se ci sono turni di lavoro */}
                                   {workShifts.length > 0 && (
-                                    <div className="font-medium text-sm mb-2">
-                                      Ore di lavoro: {totalHours.toFixed(1)}h
+                                    <div className="font-medium text-xs sm:text-sm mb-1 sm:mb-2">
+                                      Ore: {totalHours.toFixed(1)}h
                                     </div>
                                   )}
                                   
                                   {/* Mostra gli slot di lavoro in modo destacato */}
                                   {consolidatedWorkShifts.length > 0 && (
-                                    <div className="bg-white shadow-md rounded-md p-3 mb-2 border-l-4 border-blue-500">
-                                      <div className="font-medium text-blue-700 flex items-center mb-3">
-                                        <span className="material-icons text-sm mr-1">schedule</span>
+                                    <div className="bg-white shadow-md rounded-md p-2 sm:p-3 mb-1 sm:mb-2 border-l-4 border-blue-500">
+                                      <div className="font-medium text-blue-700 flex items-center mb-1 sm:mb-3 text-xs sm:text-sm">
+                                        <span className="material-icons text-xs sm:text-sm mr-1">schedule</span>
                                         Orario di lavoro
                                       </div>
-                                      <div className="grid grid-cols-1 gap-2">
+                                      <div className="grid grid-cols-1 gap-1 sm:gap-2">
                                         {consolidatedWorkShifts.map((shift, idx) => (
-                                          <div key={idx} className="flex items-center justify-between bg-blue-50 rounded-md p-3 mb-1">
+                                          <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-blue-50 rounded-md p-2 sm:p-3 mb-1">
                                             <div className="flex items-center">
-                                              <span className="material-icons text-blue-600 mr-2">access_time</span>
-                                              <div className="font-medium text-lg">{shift.startTime} - {shift.endTime}</div>
+                                              <span className="material-icons text-blue-600 mr-1 sm:mr-2 text-xs sm:text-sm">access_time</span>
+                                              <div className="font-medium text-sm sm:text-base">{shift.startTime} - {shift.endTime}</div>
                                             </div>
-                                            {shift.notes && <div className="ml-3 text-sm text-gray-600 italic">{shift.notes}</div>}
+                                            {shift.notes && <div className="ml-0 sm:ml-3 text-xs sm:text-sm text-gray-600 italic mt-1 sm:mt-0">{shift.notes}</div>}
                                           </div>
                                         ))}
                                       </div>
@@ -250,9 +250,9 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                   
                                   {/* Mostra ferie */}
                                   {vacationShifts.length > 0 && (
-                                    <div className="bg-red-100 rounded-md p-3 mb-2">
-                                      <div className="font-medium flex items-center">
-                                        <span className="material-icons text-sm mr-1">beach_access</span>
+                                    <div className="bg-red-100 rounded-md p-2 sm:p-3 mb-1 sm:mb-2">
+                                      <div className="font-medium flex items-center text-xs sm:text-sm">
+                                        <span className="material-icons text-xs sm:text-sm mr-1">beach_access</span>
                                         Ferie (F)
                                       </div>
                                     </div>
@@ -260,9 +260,9 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                   
                                   {/* Mostra permessi */}
                                   {leaveShifts.length > 0 && (
-                                    <div className="bg-yellow-100 rounded-md p-3 mb-2">
-                                      <div className="font-medium flex items-center">
-                                        <span className="material-icons text-sm mr-1">event_busy</span>
+                                    <div className="bg-yellow-100 rounded-md p-2 sm:p-3 mb-1 sm:mb-2">
+                                      <div className="font-medium flex items-center text-xs sm:text-sm">
+                                        <span className="material-icons text-xs sm:text-sm mr-1">event_busy</span>
                                         Permesso (P)
                                       </div>
                                     </div>
@@ -270,9 +270,9 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                   
                                   {/* Mostra malattia */}
                                   {sickShifts.length > 0 && (
-                                    <div className="bg-purple-100 rounded-md p-3 mb-2">
-                                      <div className="font-medium flex items-center">
-                                        <span className="material-icons text-sm mr-1">healing</span>
+                                    <div className="bg-purple-100 rounded-md p-2 sm:p-3 mb-1 sm:mb-2">
+                                      <div className="font-medium flex items-center text-xs sm:text-sm">
+                                        <span className="material-icons text-xs sm:text-sm mr-1">healing</span>
                                         Malattia (M)
                                       </div>
                                     </div>
