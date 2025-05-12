@@ -217,11 +217,31 @@ export default function Schedule() {
   // State for week selector dialog
   const [showWeekSelector, setShowWeekSelector] = useState(false);
   
-  // State for available schedules
-  const { data: allSchedules = [] } = useQuery<any[]>({
-    queryKey: ["/api/schedules/all"],
+  // VERSIONE MIGLIORATA: Queries separate per schedule pubblicati e non pubblicati 
+  // 1. Solo turni non pubblicati (in pianificazione)
+  const { data: unpublishedSchedules = [] } = useQuery<any[]>({
+    queryKey: ["/api/schedules/all", { unpublished: true }],
+    queryFn: async () => {
+      const response = await fetch('/api/schedules/all?unpublished=true');
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
+    },
     enabled: user?.role === "admin",
   });
+  
+  // 2. Solo turni pubblicati
+  const { data: publishedSchedules = [] } = useQuery<any[]>({
+    queryKey: ["/api/schedules/all", { published: true }],
+    queryFn: async () => {
+      const response = await fetch('/api/schedules/all?published=true');
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
+    },
+    enabled: user?.role === "admin",
+  });
+  
+  // Combinazione di tutti gli schedule per compatibilità con codice esistente
+  const allSchedules = [...unpublishedSchedules, ...publishedSchedules];
   
   // Handler per aprire il selettore settimane
   const handleChangeWeek = () => {

@@ -448,14 +448,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Schedule management routes
   // Ottieni tutte le programmazioni
+  // API MIGLIORATA: Ottieni tutti gli schedule con possibilità di filtrare pubblicati/non pubblicati
   app.get("/api/schedules/all", isAuthenticated, async (req, res) => {
     try {
       const schedules = await storage.getAllSchedules();
       console.log("Retrieved all schedules:", schedules);
       
+      // Verifica se è stata richiesta una vista filtrata
+      const publishedOnly = req.query.published === 'true';
+      const unpublishedOnly = req.query.unpublished === 'true';
+      
+      // Filtra in base ai parametri (se forniti)
+      let filteredSchedules = [...schedules]; // Crea una copia per non modificare l'originale
+      if (publishedOnly) {
+        filteredSchedules = filteredSchedules.filter(s => s.isPublished === true);
+        console.log(`🔍 Filtro applicato: solo schedule pubblicati (${filteredSchedules.length})`);
+      } else if (unpublishedOnly) {
+        filteredSchedules = filteredSchedules.filter(s => s.isPublished === false);
+        console.log(`🔍 Filtro applicato: solo schedule non pubblicati (${filteredSchedules.length})`);
+      }
+      
       // SOLUZIONE DRASTICA: Ordina gli schedule per data e per ID (decrescente)
       // Gli schedule più recenti (ID più alto) appariranno per primi
-      const sortedSchedules = [...schedules].sort((a, b) => {
+      const sortedSchedules = filteredSchedules.sort((a, b) => {
         // Prima ordina per data di inizio (più recente prima)
         const dateComparison = new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
         if (dateComparison !== 0) return dateComparison;
