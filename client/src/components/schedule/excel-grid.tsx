@@ -742,17 +742,15 @@ export function ExcelGrid({
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="flex items-center justify-between p-4 border-b">
         <h3 className="text-base font-semibold">
-          Pianificazione {format(startDate, "d MMMM", { locale: it })} - {format(endDate, "d MMMM yyyy", { locale: it })}
+          {format(startDate, "d MMMM", { locale: it })} - {format(endDate, "d MMMM yyyy", { locale: it })}
         </h3>
         <div className="flex items-center gap-2">
           {isPublished ? (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              <span className="material-icons text-sm mr-1">check_circle</span>
               Pubblicato
             </span>
           ) : (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-              <span className="material-icons text-sm mr-1">pending</span>
               Bozza
             </span>
           )}

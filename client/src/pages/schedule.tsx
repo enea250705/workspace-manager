@@ -456,7 +456,7 @@ export default function Schedule() {
           
           // Notifica all'utente
           toast({
-            title: "Pianificazione creata con successo",
+            title: "Turno creato con successo",
             description: "Caricamento della tabella completamente vuota...",
           });
           
@@ -673,7 +673,7 @@ export default function Schedule() {
           <div>
             <div className="flex justify-center items-center mb-4">
               <h3 className="text-lg font-medium">
-                Pianificazione {dateRangeText}
+                {dateRangeText}
               </h3>
             </div>
             <ExcelGrid
@@ -691,10 +691,6 @@ export default function Schedule() {
           <div>
             <div className="flex justify-center items-center mb-4">
               <h3 className="text-base sm:text-lg font-medium text-center">
-                {existingSchedule.isPublished && 
-                  <span className="material-icons text-green-500 text-sm align-middle mr-1">check_circle</span>
-                }
-                <span className="block sm:inline">Pianificazione</span>{" "}
                 <span className="block sm:inline text-sm sm:text-base">{dateRangeText}</span>
               </h3>
             </div>
