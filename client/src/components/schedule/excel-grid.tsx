@@ -71,52 +71,88 @@ export function ExcelGrid({
     total: number;
   }>>>({});
   
-  // Mutazione per creare o aggiornare un turno
+  // MUTATION MIGLIORATA per il salvataggio dei turni
   const updateShiftMutation = useMutation({
-    mutationFn: (data: any) => {
+    mutationFn: async (data: any) => {
+      let response;
+      
       if (data.id) {
         // Aggiorna un turno esistente
-        return apiRequest("PATCH", `/api/shifts/${data.id}`, data);
+        response = await apiRequest("PATCH", `/api/shifts/${data.id}`, data);
       } else {
         // Crea un nuovo turno
-        return apiRequest("POST", `/api/shifts`, { 
+        response = await apiRequest("POST", `/api/shifts`, { 
           ...data, 
           scheduleId 
         });
       }
+      
+      // Converti la risposta in un oggetto JSON e restituiscilo
+      // In questo modo non avremo problemi di tipo con onSuccess
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalida la query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: [`/api/schedules/${scheduleId}/shifts`] });
+      
+      // Notifica l'utente
       toast({
         title: "Turno aggiornato",
         description: "Il turno è stato aggiornato con successo.",
+        duration: 2000 // Toast più breve per non disturbare
       });
+      
+      // Log di debug
+      console.log('✅ Turno aggiornato con successo:', data);
     },
-    onError: () => {
+    onError: (error: any) => {
+      // Notifica l'errore
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante l'aggiornamento del turno.",
+        description: `Si è verificato un errore: ${error.message || 'Errore sconosciuto'}`,
         variant: "destructive",
       });
+      
+      // Log dettagliato dell'errore
+      console.error('❌ Errore durante l\'aggiornamento del turno:', error);
     }
   });
   
-  // Eliminazione di un turno
+  // MUTATION MIGLIORATA per l'eliminazione dei turni
   const deleteShiftMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/shifts/${id}`, {}),
+    mutationFn: async (id: number) => {
+      // Chiamata API migliorata con gestione errori
+      const response = await apiRequest("DELETE", `/api/shifts/${id}`, {});
+      
+      // Per compatibilità con le altre funzioni
+      try {
+        return await response.json();
+      } catch (e) {
+        // DELETE potrebbe non restituire JSON, in tal caso restituiamo un oggetto vuoto
+        return { success: true };
+      }
+    },
     onSuccess: () => {
+      // Invalida la query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: [`/api/schedules/${scheduleId}/shifts`] });
+      
+      // Notifica molto breve per non essere intrusiva durante l'eliminazione
       toast({
         title: "Turno eliminato",
         description: "Il turno è stato eliminato con successo.",
+        duration: 1500, // Toast più breve
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      // Notifica l'errore
       toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'eliminazione del turno.",
+        title: "Errore eliminazione",
+        description: `Si è verificato un errore: ${error.message || 'Errore sconosciuto'}`,
         variant: "destructive",
       });
+      
+      // Log dettagliato dell'errore
+      console.error('❌ Errore durante l\'eliminazione del turno:', error);
     }
   });
   
@@ -331,129 +367,234 @@ export function ExcelGrid({
     }
   }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid, gridData]);
   
-  // Gestione del click su una cella
+  // GESTIONE CLIC MIGLIORATA
+  // Gestisce in modo più robusto il clic su una cella della griglia
   const handleCellClick = (userId: number, timeIndex: number, day: string) => {
-    if (!scheduleId || isPublished) return;
+    // VALIDAZIONE PRELIMINARE
+    // Non procedere se non c'è uno schedule valido o se è già pubblicato
+    if (!scheduleId || isPublished) {
+      if (isPublished) {
+        toast({
+          title: "Turno pubblicato",
+          description: "Non puoi modificare un turno già pubblicato.",
+          variant: "destructive"
+        });
+      }
+      return;
+    }
     
-    const newGridData = { ...gridData };
+    // PREPARAZIONE STATO
+    // Creiamo una copia profonda dei dati per evitare modifiche accidentali dello stato
+    const newGridData = structuredClone(gridData);
+    // Verifica che i dati utente/giorno esistano
+    if (!newGridData[day] || !newGridData[day][userId]) {
+      console.error(`Dati mancanti per utente ${userId} nel giorno ${day}`);
+      return;
+    }
+    
     const userDayData = newGridData[day][userId];
     const currentCell = userDayData.cells[timeIndex];
     
-    // Se la cella ha già un turno associato, aggiorna il tipo di turno o cancellalo
+    // CICLO DELLE TIPOLOGIE
+    // Determina il nuovo tipo di turno secondo la rotazione stabilita
+    let newType = "work"; // Default: se la cella è vuota, diventa lavoro
+    
     if (currentCell.type) {
-      // Rotazione del tipo di turno: work -> vacation -> leave -> (vuoto) -> ...
-      let newType = "";
-      
+      // Rotazione: work -> vacation -> leave -> (vuoto) -> work...
       if (currentCell.type === "work") {
-        newType = "vacation";
+        newType = "vacation";  // Lavoro -> Ferie
       } else if (currentCell.type === "vacation") {
-        newType = "leave";
+        newType = "leave";     // Ferie -> Permesso 
       } else if (currentCell.type === "leave") {
-        newType = "";
+        newType = "";          // Permesso -> Vuoto
       }
-      
-      // Se la cella ha un ID di turno esistente
-      if (currentCell.shiftId) {
-        if (newType === "") {
-          // Elimina il turno
-          deleteShiftMutation.mutate(currentCell.shiftId);
-          
-          // Rimuovi le ore dal conteggio totale
-          if (currentCell.type === "work") {
-            const slotDuration = 0.5; // 30 minuti
-            userDayData.total -= slotDuration;
-          }
-        } else {
-          // Aggiorna il tipo di turno
-          updateShiftMutation.mutate({
-            id: currentCell.shiftId,
-            scheduleId,
-            userId,
-            day,
-            startTime: timeSlots[timeIndex],
-            endTime: timeSlots[timeIndex + 1],
-            type: newType,
-            notes: userDayData.notes
-          });
-          
-          // Aggiorna le ore
-          if (currentCell.type === "work" && newType !== "work") {
-            const slotDuration = 0.5; // 30 minuti
-            userDayData.total -= slotDuration;
-          } else if (currentCell.type !== "work" && newType === "work") {
-            const slotDuration = 0.5; // 30 minuti
-            userDayData.total += slotDuration;
-          }
+    }
+    
+    console.log(`🔄 Cambio tipo cella: ${currentCell.type || 'vuota'} -> ${newType || 'vuota'}`);
+    
+    // GESTIONE API PER TIPO DI AZIONE
+    // 1. SE LA CELLA HA UN ID ESISTENTE
+    if (currentCell.shiftId) {
+      if (newType === "") {
+        // CASO 1: ELIMINAZIONE
+        // Elimina il turno dal database
+        deleteShiftMutation.mutate(currentCell.shiftId);
+        
+        // Aggiorna il conteggio delle ore (solo se era un turno di lavoro)
+        if (currentCell.type === "work") {
+          const slotDuration = 0.5; // 30 minuti
+          userDayData.total = Math.max(0, userDayData.total - slotDuration);
         }
-      } else if (newType) {
-        // Crea un nuovo turno se non c'è un ID di turno
-        updateShiftMutation.mutate({
+        
+        // Aggiorna la cella localmente
+        userDayData.cells[timeIndex] = { 
+          type: "", 
+          shiftId: null,
+          isTimeOff: false
+        };
+      } else {
+        // CASO 2: AGGIORNAMENTO
+        // Prepara i dati per l'aggiornamento
+        const updateData = {
+          id: currentCell.shiftId,
           scheduleId,
           userId,
           day,
           startTime: timeSlots[timeIndex],
           endTime: timeSlots[timeIndex + 1],
           type: newType,
-          notes: userDayData.notes
-        });
+          notes: userDayData.notes || ""
+        };
         
-        // Aggiorna le ore
-        if (newType === "work") {
-          const slotDuration = 0.5; // 30 minuti
+        // Invia l'aggiornamento al server
+        updateShiftMutation.mutate(updateData);
+        
+        // Aggiorna il conteggio delle ore
+        if (currentCell.type === "work" && newType !== "work") {
+          // Se passiamo da lavoro a non-lavoro, sottraiamo ore
+          const slotDuration = 0.5;
+          userDayData.total = Math.max(0, userDayData.total - slotDuration);
+        } else if (currentCell.type !== "work" && newType === "work") {
+          // Se passiamo da non-lavoro a lavoro, aggiungiamo ore
+          const slotDuration = 0.5;
           userDayData.total += slotDuration;
         }
+        
+        // Aggiorna lo stato della cella
+        userDayData.cells[timeIndex] = { 
+          type: newType, 
+          shiftId: currentCell.shiftId,
+          isTimeOff: false // Non è un permesso automatico
+        };
       }
-      
-      // Aggiorna lo stato della cella
-      userDayData.cells[timeIndex] = { 
-        type: newType, 
-        shiftId: newType ? currentCell.shiftId : null
-      };
-    } else {
-      // Crea un nuovo turno di tipo "work"
-      updateShiftMutation.mutate({
+    } 
+    // 2. CELLA SENZA ID O VUOTA CHE DIVENTA NON-VUOTA
+    else if (newType !== "") {
+      // CASO 3: CREAZIONE
+      // Prepara i dati per la creazione
+      const createData = {
         scheduleId,
         userId,
         day,
         startTime: timeSlots[timeIndex],
         endTime: timeSlots[timeIndex + 1],
-        type: "work",
-        notes: userDayData.notes
+        type: newType,
+        notes: userDayData.notes || "",
+        area: null // Area opzionale
+      };
+      
+      // Crea un nuovo turno nel database
+      updateShiftMutation.mutate(createData, {
+        onSuccess: async (response) => {
+          try {
+            // Estrai i dati dal response
+            const responseData = await response.json();
+            
+            // Se la risposta contiene un ID, aggiorniamo la cella con l'ID corretto
+            if (responseData && responseData.id) {
+              const updatedGridData = structuredClone(gridData);
+              if (updatedGridData[day] && updatedGridData[day][userId]) {
+                updatedGridData[day][userId].cells[timeIndex].shiftId = responseData.id;
+                setGridData(updatedGridData);
+                console.log(`✅ Cella aggiornata con nuovo ID turno: ${responseData.id}`);
+              }
+            }
+          } catch (error) {
+            console.error("Errore nell'elaborazione della risposta:", error);
+          }
+        }
       });
+      
+      // Aggiorna il conteggio delle ore (solo per tipo "work")
+      if (newType === "work") {
+        const slotDuration = 0.5;
+        userDayData.total += slotDuration;
+      }
       
       // Aggiorna lo stato della cella
       userDayData.cells[timeIndex] = { 
-        type: "work", 
-        shiftId: null // Verrà aggiornato alla risposta della mutazione
+        type: newType, 
+        shiftId: null, // Verrà aggiornato nella callback di successo
+        isTimeOff: false
       };
-      
-      // Aggiorna le ore
-      const slotDuration = 0.5; // 30 minuti
-      userDayData.total += slotDuration;
     }
     
-    // Aggiorna lo stato
+    // AGGIORNAMENTO STATO FINALE
     setGridData(newGridData);
   };
   
-  // Gestione dell'aggiornamento delle note
+  // GESTIONE NOTE MIGLIORATA
+  // Aggiorna in modo più robusto le note per un utente in un giorno specifico
   const handleNotesChange = (userId: number, day: string, value: string) => {
-    const newGridData = { ...gridData };
+    // PREPARAZIONE STATO
+    // Usa una copia profonda per evitare modifiche accidentali
+    const newGridData = structuredClone(gridData);
+    
+    // Validazione: verifica che i dati per utente/giorno siano disponibili
+    if (!newGridData[day] || !newGridData[day][userId]) {
+      console.error(`Dati mancanti per utente ${userId} nel giorno ${day}`);
+      return;
+    }
+    
+    // Imposta il nuovo valore per le note
     newGridData[day][userId].notes = value;
+    
+    // AGGIORNAMENTO STATO LOCALE
+    // Applica immediatamente il cambiamento all'interfaccia
     setGridData(newGridData);
     
-    // Trova tutti i turni del giorno per l'utente
+    // AGGIORNAMENTO DATABASE
+    // Trova tutti i turni associati all'utente per questo giorno
     const userDayShifts = shifts.filter(
-      (s: any) => s.userId === userId && s.day === day
+      (shift: any) => shift.userId === userId && 
+                      shift.day === day && 
+                      shift.id !== undefined
     );
     
-    // Aggiorna le note per ogni turno
-    userDayShifts.forEach((shift: any) => {
-      updateShiftMutation.mutate({
-        id: shift.id,
-        notes: value
+    // Log per debug
+    console.log(`📝 Aggiornamento note per ${userDayShifts.length} turni di ${day}:`, value);
+    
+    // Se non ci sono turni ma c'è una nota, crea un turno "note-only" come promemoria
+    if (userDayShifts.length === 0 && value.trim() !== '') {
+      // Cerca la prima cella vuota nel giorno
+      const firstEmptySlotIndex = newGridData[day][userId].cells.findIndex(cell => 
+        !cell.type && !cell.shiftId
+      );
+      
+      // Se troviamo una cella vuota, creiamo un turno placeholder
+      if (firstEmptySlotIndex >= 0) {
+        console.log(`🆕 Creazione turno placeholder per le note del giorno ${day}`);
+        
+        updateShiftMutation.mutate({
+          scheduleId,
+          userId,
+          day,
+          startTime: timeSlots[firstEmptySlotIndex],
+          endTime: timeSlots[firstEmptySlotIndex + 1],
+          type: "note", // Tipo speciale per turni che sono solo note
+          notes: value,
+          area: "note" // Area speciale per indicare che è solo una nota
+        });
+      }
+    } 
+    // Altrimenti, aggiorna le note per tutti i turni esistenti
+    else {
+      userDayShifts.forEach((shift: any) => {
+        updateShiftMutation.mutate({
+          id: shift.id,
+          notes: value
+        });
       });
-    });
+    }
+    
+    // Conferma l'aggiornamento all'utente solo per note significative
+    if (value.trim().length > 5) {
+      toast({
+        title: "Note salvate",
+        description: "Le note sono state aggiornate per tutti i turni di questa giornata",
+        duration: 2000 // Toast più breve per non disturbare
+      });
+    }
   };
   
   // Gestione della stampa dello schedule
