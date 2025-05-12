@@ -74,10 +74,10 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
       "bg-white shadow-md w-full md:w-64 md:min-h-screen transition-all flex flex-col",
       mobileMenuOpen ? "h-screen fixed z-50 inset-0" : "h-auto"
     )}>
-      <div className="p-4 border-b flex items-center justify-between">
+      <div className="p-3 sm:p-4 border-b flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <span className="material-icons text-primary">schedule</span>
-          <h1 className="font-condensed text-xl font-bold text-primary">StaffSync</h1>
+          <span className="material-icons text-primary text-lg sm:text-xl">schedule</span>
+          <h1 className="font-condensed text-lg sm:text-xl font-bold text-primary">StaffSync</h1>
         </div>
         <button 
           id="mobile-menu-toggle" 
@@ -89,37 +89,37 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
         </button>
       </div>
       
-      <div id="user-profile" className="p-4 border-b flex items-center space-x-3">
-        <div className="bg-gray-200 rounded-full w-10 h-10 flex items-center justify-center">
-          <span className="material-icons text-gray-600">person</span>
+      <div id="user-profile" className="p-3 sm:p-4 border-b flex items-center space-x-2 sm:space-x-3">
+        <div className="bg-gray-200 rounded-full w-8 sm:w-10 h-8 sm:h-10 flex items-center justify-center">
+          <span className="material-icons text-gray-600 text-sm sm:text-base">person</span>
         </div>
         <div>
-          <p className="font-medium text-sm">{user.name}</p>
-          <p className="text-xs text-gray-600">{user.role === "admin" ? "Amministratore" : "Dipendente"}</p>
+          <p className="font-medium text-xs sm:text-sm">{user.name}</p>
+          <p className="text-[10px] sm:text-xs text-gray-600">{user.role === "admin" ? "Amministratore" : "Dipendente"}</p>
         </div>
       </div>
       
       <nav className={cn(
-        "flex-1 overflow-y-auto py-4",
+        "flex-1 overflow-y-auto py-2 sm:py-4",
         mobileMenuOpen ? "block" : "hidden md:block"
       )}>
         {user.role === "admin" && (
           <div id="admin-menu" data-role="admin">
-            <p className="px-4 text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Amministrazione</p>
+            <p className="px-3 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 sm:mb-2">Amministrazione</p>
             {adminItems.map((item) => (
               <Link 
                 key={item.href}
                 href={item.href} 
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
-                  "sidebar-item flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100",
+                  "sidebar-item flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100",
                   location === item.href && "active"
                 )}
               >
-                <span className="material-icons text-gray-500">{item.icon}</span>
+                <span className="material-icons text-gray-500 text-base sm:text-lg">{item.icon}</span>
                 <span>{item.label}</span>
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="ml-auto bg-primary text-white text-xs rounded-full px-2 py-1">{item.badge}</span>
+                  <span className="ml-auto bg-primary text-white text-[10px] sm:text-xs rounded-full px-1.5 sm:px-2 py-0.5 sm:py-1">{item.badge}</span>
                 )}
               </Link>
             ))}
@@ -128,31 +128,34 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
         
         {user.role === "employee" && (
           <div id="employee-menu" data-role="employee">
-            <p className="px-4 text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Il Mio Account</p>
+            <p className="px-3 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 sm:mb-2">Il Mio Account</p>
             {employeeItems.map((item) => (
               <Link 
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
-                  "sidebar-item flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100",
+                  "sidebar-item flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100",
                   location === item.href && "active"
                 )}
               >
-                <span className="material-icons text-gray-500">{item.icon}</span>
+                <span className="material-icons text-gray-500 text-base sm:text-lg">{item.icon}</span>
                 <span>{item.label}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="ml-auto bg-primary text-white text-[10px] sm:text-xs rounded-full px-1.5 sm:px-2 py-0.5 sm:py-1">{item.badge}</span>
+                )}
               </Link>
             ))}
           </div>
         )}
       </nav>
       
-      <div className="p-4 border-t">
+      <div className="p-3 sm:p-4 border-t">
         <button 
           onClick={logout}
-          className="flex items-center space-x-2 text-gray-700 hover:text-primary"
+          className="flex items-center space-x-2 text-xs sm:text-sm text-gray-700 hover:text-primary"
         >
-          <span className="material-icons">logout</span>
+          <span className="material-icons text-base sm:text-lg">logout</span>
           <span>Logout</span>
         </button>
       </div>
