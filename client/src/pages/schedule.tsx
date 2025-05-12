@@ -128,11 +128,8 @@ export default function Schedule() {
         .catch(error => {
           console.error("❌ Errore caricando lo schedule:", error);
           setIsLoadingNewSchedule(false);
-          toast({
-            title: "Errore",
-            description: "Impossibile caricare il nuovo turno",
-            variant: "destructive"
-          });
+          // Rimuoviamo la notifica di errore che appare quando si crea un nuovo turno
+          // per una gestione più pulita dell'interfaccia
         });
       
       // Rimuovi i parametri dall'URL per evitare ricaricamenti continui
