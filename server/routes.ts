@@ -573,6 +573,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const scheduleId = parseInt(req.params.scheduleId);
       
+      // Check if this is a new schedule request (forceEmpty=true)
+      if (req.query.forceEmpty === 'true') {
+        console.log("FORZATURA: Restituendo esplicitamente un array vuoto di turni per lo schedule:", scheduleId);
+        return res.json([]);  // Restituisce un array vuoto di turni
+      }
+
+      // Check if this is a brand new schedule (manually created with a specific date)
+      if (req.query.isNew === 'true') {
+        console.log("NUOVO SCHEDULE: Restituendo array vuoto di turni per nuovo schedule:", scheduleId);
+        return res.json([]);  // Restituisce un array vuoto di turni
+      }
+      
       if ((req.user as any).role === "admin") {
         // Admins can see all shifts
         const shifts = await storage.getShifts(scheduleId);

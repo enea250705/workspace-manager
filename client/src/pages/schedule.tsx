@@ -381,8 +381,8 @@ export default function Schedule() {
               const cleanSchedule = await cleanScheduleResponse.json();
               console.log("Schedule pulito ottenuto:", cleanSchedule);
               
-              // Forza un refresh completo per essere sicuri
-              window.location.href = `/schedule?date=${format(customStartDate!, "yyyy-MM-dd")}`;
+              // Forza un refresh completo della pagina con parametri speciali
+              window.location.href = `/schedule?scheduleId=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&isNew=true&forceEmpty=true`;
             } catch (error) {
               console.error("Errore nel reset dello schedule:", error);
               toast({

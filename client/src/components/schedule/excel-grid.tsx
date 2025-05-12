@@ -153,10 +153,7 @@ export function ExcelGrid({
       });
       
       // Pulisci anche eventuali shifts in memoria
-      if (onGridDataChange && forceResetGrid) {
-        console.log("Forzando pulizia completa dei turni");
-        onGridDataChange([]);
-      }
+      console.log("Forzando pulizia completa dei turni");
       
       // Popola la griglia con i turni esistenti
       if (shifts && shifts.length > 0 && scheduleId) {
