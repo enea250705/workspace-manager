@@ -154,6 +154,55 @@ export default function Schedule() {
   // Manteniamo una scheduleId corrente per garantire il caricamento corretto
   const [currentScheduleId, setCurrentScheduleId] = useState<number | null>(null);
   
+  // Calculate end of week (Sunday) - use custom dates if selected
+  const startDateToUse = customStartDate || selectedWeek;
+  const endOfWeek = customEndDate || addDays(selectedWeek, 6);
+  
+  // Format date range for display
+  const dateRangeText = `${format(startDateToUse, "d MMMM", { locale: it })} - ${format(
+    endOfWeek,
+    "d MMMM yyyy",
+    { locale: it }
+  )}`;
+  
+  // QUERY COMPLETAMENTE RISCRITTA: Fetch existing schedule data
+  const { data: existingSchedule = {}, isLoading: isScheduleLoading } = useQuery<any>({
+    queryKey: ["/api/schedules", { id: currentScheduleId }],
+    queryFn: async ({ queryKey }) => {
+      // Estrai l'ID dallo query key
+      const params = queryKey[1] as { id?: number };
+      
+      // Costruisci l'URL con i parametri corretti
+      let url = "/api/schedules";
+      
+      // Aggiungi i parametri alla querystring
+      const queryParams = new URLSearchParams();
+      
+      if (params.id) {
+        // Se c'è un ID specifico, usalo
+        console.log(`🔄 Caricamento schedule specifico con ID: ${params.id}`);
+        queryParams.append("id", params.id.toString());
+      } else {
+        // Altrimenti usa la data
+        console.log(`🔄 Caricamento schedule per data: ${format(selectedWeek, "yyyy-MM-dd")}`);
+        queryParams.append("startDate", format(selectedWeek, "yyyy-MM-dd"));
+      }
+      
+      // Aggiungi i parametri all'URL
+      url = `${url}?${queryParams.toString()}`;
+      
+      // Esegui la richiesta
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error("Errore nel caricamento dello schedule");
+      }
+      
+      const data = await response.json();
+      console.log("🗓️ Schedule caricato:", data);
+      return data;
+    },
+  });
 
   // Fetch users for populating the schedule
   const { data: users = [], isLoading: isUsersLoading } = useQuery<any[]>({
