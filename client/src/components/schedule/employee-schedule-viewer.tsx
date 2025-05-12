@@ -132,11 +132,50 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                           <div>
                             {/* Prima raggruppiamo i turni per tipo */}
                             {(() => {
-                              // Raggruppa i turni per tipo
-                              const workShifts = dayShifts.filter(s => s.type === "work");
-                              const vacationShifts = dayShifts.filter(s => s.type === "vacation");
-                              const leaveShifts = dayShifts.filter(s => s.type === "leave");
-                              const sickShifts = dayShifts.filter(s => s.type === "sick");
+                              // Dobbiamo rimuovere i duplicati e dare priorità ai tipi di assenza
+                              // Prima organizziamo i turni per slot orario
+                              const timeSlotMap = new Map();
+                              
+                              // Ordine di priorità: sick > leave > vacation > work
+                              // Aggiungiamo ogni turno, rimpiazzando quelli a priorità inferiore
+                              dayShifts.forEach(shift => {
+                                const timeKey = `${shift.startTime}-${shift.endTime}`;
+                                
+                                if (!timeSlotMap.has(timeKey)) {
+                                  // Se non esiste ancora questo slot, aggiungiamo
+                                  timeSlotMap.set(timeKey, shift);
+                                } else {
+                                  // Se esiste già, controlliamo la priorità
+                                  const existingShift = timeSlotMap.get(timeKey);
+                                  const existingPriority = getPriorityValue(existingShift.type);
+                                  const newPriority = getPriorityValue(shift.type);
+                                  
+                                  // Sostituisci solo se la nuova priorità è maggiore
+                                  if (newPriority > existingPriority) {
+                                    timeSlotMap.set(timeKey, shift);
+                                  }
+                                }
+                              });
+                              
+                              // Prendi i turni senza duplicati dal Map
+                              const uniqueShifts = Array.from(timeSlotMap.values());
+                              
+                              // Ora filtra per tipo
+                              const workShifts = uniqueShifts.filter(s => s.type === "work");
+                              const vacationShifts = uniqueShifts.filter(s => s.type === "vacation");
+                              const leaveShifts = uniqueShifts.filter(s => s.type === "leave");
+                              const sickShifts = uniqueShifts.filter(s => s.type === "sick");
+                              
+                              // Funzione helper per determinare la priorità del tipo di turno
+                              function getPriorityValue(type: string): number {
+                                switch (type) {
+                                  case "sick": return 4;
+                                  case "leave": return 3;
+                                  case "vacation": return 2;
+                                  case "work": return 1;
+                                  default: return 0;
+                                }
+                              }
                               
                               // Calcola il totale delle ore di lavoro
                               const totalHours = workShifts.reduce((total, shift) => {
