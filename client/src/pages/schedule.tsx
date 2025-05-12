@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { WeekSelectorDialog } from "@/components/schedule/week-selector-dialog";
 import { ScheduleAutoGenerator } from "@/components/schedule/auto-generator/auto-generator";
 import { ExcelGrid } from "@/components/schedule/excel-grid";
+import { ExportToPdfDialog } from "@/components/schedule/export-to-pdf";
 
 // Date utilities
 import { format, startOfWeek, addDays, isBefore, parseISO } from "date-fns";
@@ -146,6 +147,7 @@ export default function Schedule() {
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showExportPdfDialog, setShowExportPdfDialog] = useState(false);
   
   // QUERY MIGLIORATA: Fetch existing schedule data for the selected week
   // Manteniamo una scheduleId corrente per garantire il caricamento corretto
