@@ -59,19 +59,75 @@ export function AdminDashboard() {
     },
   });
 
+  // Calcola le date della settimana corrente
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Lunedì
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(today.getDate() - today.getDay() + 7); // Domenica
+  
   // Current stats
   const activeEmployees = users.filter((user: any) => user.isActive).length;
-  const employeesOnVacation = timeOffRequests.filter(
-    (req: any) => req.status === "approved" && req.type === "vacation" && 
-    new Date(req.endDate) >= new Date()
-  ).length;
+  
+  // Conta i dipendenti in ferie nella settimana corrente
+  const employeesOnVacation = timeOffRequests.filter((req: any) => {
+    // Verifica che sia approvata e sia di tipo vacanza
+    if (req.status !== "approved" || req.type !== "vacation") return false;
+    
+    const startDate = new Date(req.startDate);
+    const endDate = new Date(req.endDate);
+    
+    // Verifica se la richiesta di ferie si sovrappone alla settimana corrente
+    return (
+      (startDate <= endOfWeek && endDate >= startOfWeek) || 
+      (endDate >= startOfWeek && startDate <= endOfWeek)
+    );
+  }).reduce((acc: Set<number>, req: any) => {
+    // Usa un Set per evitare di contare più volte lo stesso dipendente
+    acc.add(req.userId);
+    return acc;
+  }, new Set()).size;
 
-  // Weekly hours data for chart
-  const shiftDistributionData = [
-    { name: "Mattina", hours: 54 },
-    { name: "Pomeriggio", hours: 48 },
-    { name: "Sera", hours: 36 },
-  ];
+  // Calcola le ore totali per fasce orarie
+  const shiftDistributionData = (() => {
+    if (!allShifts || !Array.isArray(allShifts) || allShifts.length === 0) {
+      return [
+        { name: "Mattina", hours: 0 },
+        { name: "Pomeriggio", hours: 0 },
+        { name: "Sera", hours: 0 },
+      ];
+    }
+    
+    // Conta le ore per fasce orarie
+    const morningHours = calculateTotalWorkHours(
+      allShifts.filter((shift: any) => 
+        shift.type === "work" && 
+        shift.startTime >= "04:00" && 
+        shift.startTime < "12:00"
+      )
+    );
+    
+    const afternoonHours = calculateTotalWorkHours(
+      allShifts.filter((shift: any) => 
+        shift.type === "work" && 
+        shift.startTime >= "12:00" && 
+        shift.startTime < "18:00"
+      )
+    );
+    
+    const eveningHours = calculateTotalWorkHours(
+      allShifts.filter((shift: any) => 
+        shift.type === "work" && 
+        shift.startTime >= "18:00"
+      )
+    );
+    
+    return [
+      { name: "Mattina", hours: Math.round(morningHours) },
+      { name: "Pomeriggio", hours: Math.round(afternoonHours) },
+      { name: "Sera", hours: Math.round(eveningHours) },
+    ];
+  })();
 
   // Funzioni di utilità rimosse perché ora gestite dal componente RecentActivities
 
