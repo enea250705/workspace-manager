@@ -65,6 +65,18 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
     setMobileMenuOpen(!mobileMenuOpen);
   };
   
+  // Ascolta l'evento custom per aggiornare lo stato del menu da altri componenti
+  useEffect(() => {
+    const handleToggleMobileMenu = () => {
+      setMobileMenuOpen(!mobileMenuOpen);
+    };
+    
+    window.addEventListener('toggle-mobile-menu', handleToggleMobileMenu);
+    return () => {
+      window.removeEventListener('toggle-mobile-menu', handleToggleMobileMenu);
+    };
+  }, [mobileMenuOpen]);
+  
   if (!user) {
     return null; // Don't show sidebar if not logged in
   }
@@ -194,14 +206,15 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
       <motion.div 
         id="sidebar" 
         className={cn(
-          "bg-white shadow-md w-full md:w-72 md:min-h-screen transition-all duration-300 flex flex-col",
+          "bg-white shadow-md w-full md:w-72 md:min-h-screen transition-all duration-300 flex flex-col overflow-hidden",
           mobileMenuOpen 
             ? "fixed h-screen z-50 inset-0" 
-            : "h-auto hidden md:flex",
+            : "h-auto md:flex hidden",
         )}
         variants={sidebarVariants}
         initial="hidden"
-        animate="visible"
+        animate={mobileMenuOpen ? "visible" : "hidden"}
+        key={mobileMenuOpen ? "open" : "closed"}
       >
         <div className="p-4 sm:p-5 border-b flex items-center justify-between">
           <motion.div 

@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useInView } from "react-intersection-observer";
+import { useAuth } from "@/hooks/use-auth";
 
 export function Layout({ children }: PropsWithChildren) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

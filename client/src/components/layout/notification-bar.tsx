@@ -13,6 +13,8 @@ import { formatDate, cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MobileNav } from "@/components/ui/mobile-nav";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Notification = {
   id: number;
@@ -26,9 +28,16 @@ type Notification = {
 
 export function NotificationBar() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  
+  const toggleMobileMenu = () => {
+    // Trova il componente Sidebar e aggiorna il suo stato
+    const event = new CustomEvent('toggle-mobile-menu');
+    window.dispatchEvent(event);
+  };
   
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -104,45 +113,80 @@ export function NotificationBar() {
   };
   
   return (
-    <div className="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
-      <h2 className="font-condensed text-xl">
-        {location === "/" || location === "/dashboard" 
-          ? "Dashboard" 
-          : location === "/users" 
-          ? "Gestione Utenti"
-          : location === "/schedule"
-          ? "Pianificazione Turni"
-          : location === "/requests"
-          ? "Approvazioni"
-          : location === "/documents"
-          ? "Documenti"
-          : location === "/my-schedule"
-          ? "I Miei Turni"
-          : location === "/time-off"
-          ? "Ferie e Permessi"
-          : location === "/my-documents"
-          ? "I Miei Documenti"
-          : "StaffSync"}
-      </h2>
-      <div className="flex items-center space-x-4">
+    <motion.div 
+      className="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10"
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="flex items-center">
+        <MobileNav isMobileMenuOpen={mobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
+        
+        <motion.h2 
+          className="font-condensed text-xl ml-2 md:ml-0"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+        >
+          {location === "/" || location === "/dashboard" 
+            ? "Dashboard" 
+            : location === "/users" 
+            ? "Gestione Utenti"
+            : location === "/schedule"
+            ? "Pianificazione Turni"
+            : location === "/requests"
+            ? "Approvazioni"
+            : location === "/documents"
+            ? "Documenti"
+            : location === "/my-schedule"
+            ? "I Miei Turni"
+            : location === "/time-off"
+            ? "Ferie e Permessi"
+            : location === "/my-documents"
+            ? "I Miei Documenti"
+            : "StaffSync"}
+        </motion.h2>
+      </div>
+      
+      <motion.div 
+        className="flex items-center space-x-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.3 }}
+      >
         <div className="relative">
-          <button 
-            className="p-1 rounded-full hover:bg-gray-100 relative"
+          <motion.button 
+            className="p-1.5 rounded-full hover:bg-gray-100 relative"
             onClick={() => setIsNotificationsOpen(true)}
             aria-label="Notifiche"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
           >
             <span className="material-icons">notifications</span>
-            {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 h-4 w-4 bg-primary text-white text-xs rounded-full flex items-center justify-center">
-                {unreadCount}
-              </span>
-            )}
-          </button>
+            <AnimatePresence>
+              {unreadCount > 0 && (
+                <motion.span 
+                  className="absolute top-0 right-0 h-5 w-5 bg-primary text-white text-xs rounded-full flex items-center justify-center"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                >
+                  {unreadCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </div>
-        <button className="p-1 rounded-full hover:bg-gray-100" aria-label="Aiuto">
+        <motion.button 
+          className="p-1.5 rounded-full hover:bg-gray-100" 
+          aria-label="Aiuto"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+        >
           <span className="material-icons">help_outline</span>
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
       
       <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
         <DialogContent className="max-w-md">
@@ -195,6 +239,6 @@ export function NotificationBar() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }
