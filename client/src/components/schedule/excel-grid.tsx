@@ -128,7 +128,7 @@ export function ExcelGrid({
     if (forceResetGrid || Object.keys(gridData).length === 0) {
       console.log("Inizializzando griglia vuota", forceResetGrid ? "(forzato)" : "");
       
-      // Crea una nuova griglia
+      // Crea una nuova griglia COMPLETAMENTE VUOTA
       const newGridData: Record<string, Record<number, {
         cells: Array<{ type: string; shiftId: number | null; isTimeOff?: boolean }>;
         notes: string;
@@ -143,6 +143,7 @@ export function ExcelGrid({
         const activeUsers = users.filter(u => u.role === "employee" && u.isActive);
         
         activeUsers.forEach(user => {
+          // Creiamo celle COMPLETAMENTE vuote
           newGridData[day.name][user.id] = {
             cells: timeSlots.map(() => ({ type: "", shiftId: null })),
             notes: "",
@@ -150,6 +151,12 @@ export function ExcelGrid({
           };
         });
       });
+      
+      // Pulisci anche eventuali shifts in memoria
+      if (onGridDataChange && forceResetGrid) {
+        console.log("Forzando pulizia completa dei turni");
+        onGridDataChange([]);
+      }
       
       // Popola la griglia con i turni esistenti
       if (shifts && shifts.length > 0 && scheduleId) {

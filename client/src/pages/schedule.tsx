@@ -363,17 +363,35 @@ export default function Schedule() {
             description: "Caricamento della nuova pianificazione in corso...",
           });
           
-          // Aspetta un breve momento per permettere alla risposta di essere registrata nel database
-          setTimeout(() => {
-            console.log("Caricamento dello schedule ID:", data.id);
-            
-            // Cancella prima tutti i dati di cache
-            queryClient.clear();
-            
-            // Simula un riavvio completo dell'applicazione con un hard refresh
-            // Passiamo il nuovo ID come parametro URL per assicurare che si carichi il nuovo schedule
-            window.location.href = `/schedule?newSchedule=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&clear=true`;
-          }, 700);
+          // Attendiamo la registrazione nel database e usiamo la nostra nuova API speciale
+          setTimeout(async () => {
+            try {
+              console.log("Caricamento del nuovo schedule pulito ID:", data.id);
+              
+              // Cancella prima tutti i dati di cache
+              queryClient.clear();
+              
+              // Utilizza la nuova API speciale per ottenere uno schedule completamente vuoto
+              const cleanScheduleResponse = await fetch(`/api/schedules/${data.id}/new`);
+              
+              if (!cleanScheduleResponse.ok) {
+                throw new Error('Errore nel caricamento del nuovo turno');
+              }
+              
+              const cleanSchedule = await cleanScheduleResponse.json();
+              console.log("Schedule pulito ottenuto:", cleanSchedule);
+              
+              // Forza un refresh completo per essere sicuri
+              window.location.href = `/schedule?date=${format(customStartDate!, "yyyy-MM-dd")}`;
+            } catch (error) {
+              console.error("Errore nel reset dello schedule:", error);
+              toast({
+                title: "Errore",
+                description: "Si è verificato un errore nel caricamento del nuovo turno.",
+                variant: "destructive"
+              });
+            }
+          }, 800);
         } catch (err) {
           console.error("Errore nella gestione dello schedule:", err);
         }

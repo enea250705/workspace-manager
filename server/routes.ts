@@ -482,6 +482,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // API speciale per ottenere un nuovo turno vuoto (senza turni)
+  app.get("/api/schedules/:id/new", isAdmin, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id);
+      const schedule = await storage.getSchedule(scheduleId);
+      
+      if (!schedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      // Reset shifts per questo schedule specifico
+      // Questo crea uno schedule completamente vuoto
+      console.log("Resetting shifts for schedule:", scheduleId);
+      
+      res.json({
+        ...schedule,
+        isNew: true,
+        shifts: [] // Inviamo esplicitamente un array vuoto di turni
+      });
+    } catch (err) {
+      console.error("Error getting clean schedule:", err);
+      res.status(500).json({ message: "Failed to reset schedule" });
+    }
+  });
+  
   app.post("/api/schedules", isAdmin, async (req, res) => {
     try {
       const scheduleData = insertScheduleSchema.parse({
