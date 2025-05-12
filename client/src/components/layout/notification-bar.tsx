@@ -24,11 +24,7 @@ type Notification = {
   createdAt: string;
 };
 
-type NotificationBarProps = {
-  setMobileMenuOpen: (open: boolean) => void;
-};
-
-export function NotificationBar({ setMobileMenuOpen }: NotificationBarProps) {
+export function NotificationBar() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
@@ -108,17 +104,8 @@ export function NotificationBar({ setMobileMenuOpen }: NotificationBarProps) {
   };
   
   return (
-    <div className="bg-white shadow-sm p-2 sm:p-4 flex justify-between items-center sticky top-0 z-10">
-      <div className="md:hidden">
-        <button 
-          className="p-1 rounded-md hover:bg-gray-100"
-          onClick={() => setMobileMenuOpen(true)}
-          aria-label="Menu"
-        >
-          <span className="material-icons">menu</span>
-        </button>
-      </div>
-      <h2 className="font-condensed text-lg sm:text-xl truncate">
+    <div className="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
+      <h2 className="font-condensed text-xl">
         {location === "/" || location === "/dashboard" 
           ? "Dashboard" 
           : location === "/users" 
@@ -137,23 +124,23 @@ export function NotificationBar({ setMobileMenuOpen }: NotificationBarProps) {
           ? "I Miei Documenti"
           : "StaffSync"}
       </h2>
-      <div className="flex items-center space-x-2 sm:space-x-4">
+      <div className="flex items-center space-x-4">
         <div className="relative">
           <button 
             className="p-1 rounded-full hover:bg-gray-100 relative"
             onClick={() => setIsNotificationsOpen(true)}
             aria-label="Notifiche"
           >
-            <span className="material-icons text-base sm:text-lg">notifications</span>
+            <span className="material-icons">notifications</span>
             {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 h-3 w-3 sm:h-4 sm:w-4 bg-primary text-white text-[8px] sm:text-xs rounded-full flex items-center justify-center">
+              <span className="absolute top-0 right-0 h-4 w-4 bg-primary text-white text-xs rounded-full flex items-center justify-center">
                 {unreadCount}
               </span>
             )}
           </button>
         </div>
         <button className="p-1 rounded-full hover:bg-gray-100" aria-label="Aiuto">
-          <span className="material-icons text-base sm:text-lg">help_outline</span>
+          <span className="material-icons">help_outline</span>
         </button>
       </div>
       
