@@ -1,9 +1,9 @@
 // Servizio di notifica email che utilizza Python come backend
 
-const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const log = require('../vite').log;
+import { spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import { log } from '../vite.js';
 
 /**
  * Verifica se le impostazioni email sono configurate
@@ -154,7 +154,7 @@ async function sendTimeOffStatusNotification(user, timeOff) {
   }
 }
 
-module.exports = {
+export {
   sendShiftPublicationNotification,
   sendDocumentNotification,
   sendTimeOffStatusNotification,
