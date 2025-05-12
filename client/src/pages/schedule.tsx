@@ -601,6 +601,167 @@ export default function Schedule() {
               <p className="mt-4 text-gray-600">Caricamento pianificazione...</p>
             </div>
           </div>
+        ) : !showScheduleBuilder && !showDatePicker && !creatingNewSchedule ? (
+          <div className="flex flex-col gap-8">
+            {/* SEZIONE 1: TURNI IN PIANIFICAZIONE */}
+            <div className="border rounded-lg p-6 bg-white shadow-sm">
+              <div className="flex flex-col md:flex-row items-start justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-indigo-700">
+                    Turni in pianificazione
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Pianificazioni in corso di elaborazione che non sono ancora visibili al personale
+                  </p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" onClick={handleNewWeeklySchedule}>
+                    <span className="material-icons mr-2">add</span>
+                    Nuova pianificazione
+                  </Button>
+                </div>
+              </div>
+              
+              {unpublishedSchedules.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                  {unpublishedSchedules.map((schedule) => (
+                    <div 
+                      key={schedule.id}
+                      className={`border p-4 rounded-md cursor-pointer transition-all hover:shadow-md ${
+                        existingSchedule?.id === schedule.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'
+                      }`}
+                      onClick={() => handleSelectSchedule(schedule.id)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">
+                          {format(parseISO(schedule.startDate), "d MMM", { locale: it })} - {format(parseISO(schedule.endDate), "d MMM yyyy", { locale: it })}
+                        </h3>
+                        <span className="flex items-center text-gray-500 text-sm">
+                          <span className="material-icons text-sm mr-1">edit</span>
+                          In lavorazione
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Creato il {format(new Date(schedule.updatedAt), "d MMMM yyyy", { locale: it })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <span className="material-icons text-4xl mb-2">calendar_today</span>
+                  <p>Nessuna pianificazione in corso</p>
+                  <Button variant="outline" className="mt-4" onClick={handleNewWeeklySchedule}>
+                    <span className="material-icons mr-2">add</span>
+                    Crea nuova pianificazione
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {/* SEZIONE 2: TURNI PUBBLICATI */}
+            <div className="border rounded-lg p-6 bg-white shadow-sm">
+              <div className="flex flex-col md:flex-row items-start justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-green-700">
+                    Turni pubblicati
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Pianificazioni confermate e visibili a tutti i dipendenti
+                  </p>
+                </div>
+              </div>
+              
+              {publishedSchedules.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                  {publishedSchedules.map((schedule) => (
+                    <div 
+                      key={schedule.id}
+                      className={`border p-4 rounded-md cursor-pointer transition-all hover:shadow-md ${
+                        existingSchedule?.id === schedule.id ? 'border-green-500 bg-green-50' : 'border-gray-200'
+                      }`}
+                      onClick={() => handleSelectSchedule(schedule.id)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">
+                          {format(parseISO(schedule.startDate), "d MMM", { locale: it })} - {format(parseISO(schedule.endDate), "d MMM yyyy", { locale: it })}
+                        </h3>
+                        <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Pubblicato</div>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Pubblicato il {schedule.publishedAt ? format(new Date(schedule.publishedAt), "d MMMM yyyy", { locale: it }) : 'N/A'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <span className="material-icons text-4xl mb-2">task_alt</span>
+                  <p>Nessun turno pubblicato</p>
+                </div>
+              )}
+            </div>
+            
+            {/* SEZIONE 3: VISUALIZZAZIONE DETTAGLIATA DELLO SCHEDULE CORRENTE */}
+            {existingSchedule && (
+              <div className="border rounded-lg p-6 bg-white shadow-sm">
+                <div className="flex flex-col md:flex-row items-start justify-between gap-4 mb-6">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-bold tracking-tight">
+                        {format(parseISO(existingSchedule.startDate), "d MMMM", { locale: it })} - {format(parseISO(existingSchedule.endDate), "d MMMM yyyy", { locale: it })}
+                      </h2>
+                      <div className={`px-3 py-1 rounded-full text-xs ${existingSchedule.isPublished ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                        {existingSchedule.isPublished ? "Pubblicato" : "Non pubblicato"}
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground">
+                      Visualizzazione dettagliata della pianificazione selezionata
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" onClick={handleChangeWeek}>
+                      <span className="material-icons mr-2">date_range</span>
+                      Cambia settimana
+                    </Button>
+                    
+                    {!existingSchedule.isPublished && (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          onClick={handleAutoGenerate}
+                        >
+                          <span className="material-icons mr-2">auto_awesome</span>
+                          Turni automatici
+                        </Button>
+                        
+                        <Button 
+                          variant="default" 
+                          onClick={handlePublish}
+                        >
+                          <span className="material-icons mr-2">publish</span>
+                          Pubblica
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <ExcelGrid
+                  key={existingSchedule.id}
+                  scheduleId={existingSchedule.id}
+                  users={users || []}
+                  shifts={shifts || []}
+                  startDate={parseISO(existingSchedule.startDate)}
+                  endDate={parseISO(existingSchedule.endDate)}
+                  isPublished={existingSchedule.isPublished}
+                  timeOffRequests={timeOffRequests || []}
+                />
+              </div>
+            )}
+          </div>
         ) : showScheduleBuilder && !existingSchedule ? (
           <div>
             <div className="flex justify-between items-center mb-4">
