@@ -8,7 +8,6 @@ import { z } from "zod";
 import MemoryStore from "memorystore";
 import { WebSocketServer, WebSocket } from "ws";
 import { addDays, parseISO, format } from "date-fns";
-import { log } from "./vite";
 import {
   insertUserSchema,
   insertScheduleSchema,
@@ -17,63 +16,9 @@ import {
   insertDocumentSchema,
   insertNotificationSchema
 } from "@shared/schema";
-// Notifiche email tramite Python - Usato direttamente nel codice
-// Per il corretto funzionamento, configura le variabili d'ambiente:
-// SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_SENDER, EMAIL_ENABLED=true
-import { spawn } from 'child_process';
-import * as pathModule from 'path';
 
 // Initialize session store
 const MemorySessionStore = MemoryStore(session);
-
-// Funzione helper per inviare email via Python script
-async function sendEmailViaScript(notificationType: string, data: any): Promise<boolean> {
-  try {
-    // Verifica se le notifiche email sono abilitate
-    const emailEnabled = process.env.EMAIL_ENABLED === 'true';
-    if (!emailEnabled) {
-      log(`Email disabilitate. Notifica simulata: ${notificationType}`);
-      return false;
-    }
-    
-    const pythonScriptPath = pathModule.join(__dirname, 'email_service.py');
-    const jsonData = JSON.stringify(data);
-    
-    return new Promise((resolve, reject) => {
-      const pythonProcess = spawn('python3', [pythonScriptPath, notificationType, jsonData]);
-      
-      let outputData = '';
-      let errorData = '';
-      
-      pythonProcess.stdout.on('data', (data) => {
-        outputData += data.toString();
-      });
-      
-      pythonProcess.stderr.on('data', (data) => {
-        errorData += data.toString();
-        log(`Errore Python: ${data}`);
-      });
-      
-      pythonProcess.on('close', (code) => {
-        if (code !== 0) {
-          log(`Processo Python terminato con codice ${code}`);
-          return resolve(false);
-        }
-        
-        log(`Email inviata con successo: ${outputData.trim()}`);
-        resolve(true);
-      });
-      
-      pythonProcess.on('error', (error) => {
-        log(`Errore nell'avvio del processo Python: ${error.message}`);
-        reject(error);
-      });
-    });
-  } catch (error) {
-    log(`Errore invio email: ${(error as Error).message}`);
-    return false;
-  }
-}
 
 // Funzione per la generazione automatica dei turni
 async function generateAutomaticSchedule(
@@ -773,13 +718,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all users
       const users = await storage.getAllUsers();
       
-      // Ottieni tutti i turni per questo schedule
-      const allShifts = await storage.getShifts(scheduleId);
-      
-      // Elabora notifiche per tutti gli utenti attivi
+      // Create notifications for all users
       for (const user of users) {
         if (user.isActive) {
-          // Crea notifica in-app
           const notification = await storage.createNotification({
             userId: user.id,
             type: "schedule_update",
@@ -792,64 +733,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
           
-          // Invia notifica real-time
+          // Send real-time notification
           sendNotification(user.id, {
             type: "schedule_update",
             message: "Nuova pianificazione turni pubblicata",
             data: notification
           });
-          
-          // Per i dipendenti, invia anche email con i loro turni specifici
-          if (user.role === "employee") {
-            // Filtra i turni solo per questo utente
-            const userShifts = allShifts.filter(shift => shift.userId === user.id);
-            
-            // Formatta i turni per l'email
-            const formattedShifts = userShifts.map(shift => {
-              // Determina il giorno della settimana
-              const shiftDate = new Date(shift.date);
-              const dayNames = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
-              const dayName = dayNames[shiftDate.getDay()];
-              const formattedDate = `${dayName} ${shiftDate.getDate()}/${shiftDate.getMonth() + 1}`;
-              
-              return {
-                day: formattedDate,
-                startTime: shift.startTime,
-                endTime: shift.endTime,
-                type: shift.type || "work",
-                notes: shift.notes || ""
-              };
-            });
-            
-            // NOTIFICA EMAIL: Invia notifica via email ai dipendenti con i loro turni
-            try {
-              log(`Invio notifica email turni a ${user.email || user.username}`);
-              
-              // Invio della notifica email usando lo script Python
-              await sendEmailViaScript('shift', {
-                user: {
-                  id: user.id,
-                  name: user.name || user.username,
-                  email: user.email || 'test@example.com' // Fallback solo per test
-                },
-                schedule: {
-                  id: schedule.id,
-                  startDate: schedule.startDate,
-                  endDate: schedule.endDate
-                },
-                shifts: formattedShifts
-              }).catch((error: Error) => {
-                // Log degli errori ma non bloccare l'esecuzione
-                log(`Errore nell'invio della notifica turni via email: ${error.message}`);
-              });
-              
-              log(`Notifica turni inviata con successo a ${user.email || user.username}`);
-            } catch (emailError) {
-              // Log degli errori ma non bloccare l'esecuzione
-              const error = emailError as Error;
-              log(`Errore nel processo di notifica email turni: ${error.message}`);
-            }
-          }
         }
       }
       
@@ -1404,7 +1293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const document = await storage.createDocument(documentData);
       
-      // Notify the user about the new document (internal notification)
+      // Notify the user about the new document
       const notification = await storage.createNotification({
         userId: document.userId,
         type: "document_upload",
@@ -1423,38 +1312,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `New ${document.type === "payslip" ? "payslip" : "tax document"} available`,
         data: notification
       });
-      
-      // Invia notifica email
-      try {
-        // Ottieni i dati completi dell'utente a cui è stato assegnato il documento
-        const user = await storage.getUser(document.userId);
-        
-        if (user) {
-          // Log dell'invio della notifica email
-          log(`Inviando notifica email per nuovo documento a ${user.username}`);
-          
-          // Invio della notifica email usando il nostro script Python
-          sendEmailViaScript('document', {
-            user: {
-              id: user.id,
-              name: user.name || user.username,
-              email: user.email || 'test@example.com' // Fallback solo per test
-            },
-            document: {
-              id: document.id,
-              type: document.type,
-              period: document.period
-            }
-          }).catch((error: Error) => {
-            // Log degli errori ma non bloccare la risposta API
-            log(`Errore nell'invio della notifica email: ${error.message}`);
-          });
-        }
-      } catch (error) {
-        // Log degli errori ma non bloccare la risposta API
-        const emailError = error as Error;
-        log(`Errore nel processo di notifica email: ${emailError.message}`);
-      }
       
       res.status(201).json(document);
     } catch (err) {

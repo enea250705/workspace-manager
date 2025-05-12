@@ -17,6 +17,7 @@ const adminItems: SidebarItem[] = [
   { href: "/schedule", label: "Pianificazione Turni", icon: "event_note", role: "admin" },
   { href: "/requests", label: "Approvazioni", icon: "approval", badge: 0, role: "admin" },
   { href: "/documents", label: "Documenti", icon: "description", role: "admin" },
+  { href: "/messages", label: "Messaggi", icon: "email", badge: 0, role: "admin" },
 ];
 
 const employeeItems: SidebarItem[] = [
@@ -24,6 +25,7 @@ const employeeItems: SidebarItem[] = [
   { href: "/my-schedule", label: "I Miei Turni", icon: "calendar_today", role: "employee" },
   { href: "/time-off", label: "Ferie e Permessi", icon: "beach_access", role: "employee" },
   { href: "/my-documents", label: "Documenti", icon: "description", role: "employee" },
+  { href: "/messages", label: "Messaggi", icon: "email", badge: 0, role: "employee" },
 ];
 
 export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
