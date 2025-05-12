@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatHours, calculateTotalWorkHours } from "@/lib/utils";
+import { downloadPdf, generatePayslipFilename, generateTaxDocFilename } from "@/lib/pdf-utils";
 import { Link } from "wouter";
 
 export function EmployeeDashboard() {
