@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { format, parseISO, addDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { formatHours, calculateTotalWorkHours, calculateWorkHours } from "@/lib/utils";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 /**
  * Corregge l'orario di fine turno per la visualizzazione
@@ -54,6 +56,72 @@ type EmployeeScheduleViewerProps = {
  */
 export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: EmployeeScheduleViewerProps) {
   const [view, setView] = useState<"week" | "list">("week");
+  const [isExporting, setIsExporting] = useState(false);
+  
+  // Funzione per esportare il programma in PDF
+  const handleExportPDF = async () => {
+    if (!schedule) return;
+    
+    try {
+      setIsExporting(true);
+      
+      // Seleziona l'elemento HTML da convertire in PDF
+      const element = document.getElementById('scheduleContent');
+      if (!element) {
+        console.error('Elemento scheduleContent non trovato');
+        setIsExporting(false);
+        return;
+      }
+      
+      // Crea una copia dello stile per l'esportazione
+      const originalTransform = element.style.transform;
+      const originalZIndex = element.style.zIndex;
+      const originalPosition = element.style.position;
+      
+      // Modifica temporaneamente lo stile per l'esportazione
+      element.style.transform = 'none';
+      element.style.zIndex = '9999';
+      element.style.position = 'relative';
+      
+      // Usa html2canvas per catturare lo schermo
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+      
+      // Ripristina lo stile originale
+      element.style.transform = originalTransform;
+      element.style.zIndex = originalZIndex;
+      element.style.position = originalPosition;
+      
+      // Crea un nuovo documento PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: 'a4'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = pdf.internal.pageSize.getWidth();
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Aggiungi l'immagine al PDF
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      // Genera il nome del file con il periodo
+      const fromDate = format(new Date(schedule.startDate), 'dd-MM-yyyy', { locale: it });
+      const toDate = format(new Date(schedule.endDate), 'dd-MM-yyyy', { locale: it });
+      const fileName = `turni-${fromDate}-${toDate}.pdf`;
+      
+      // Scarica il PDF
+      pdf.save(fileName);
+    } catch (error) {
+      console.error('Errore durante l\'esportazione PDF:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
   
   if (!schedule) {
     return (
@@ -103,26 +171,38 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
     <Card className="bg-white shadow-sm">
       <CardHeader className="flex flex-col sm:flex-row items-center justify-between gap-2 pb-2 pt-4 sm:pt-6">
         <CardTitle className="text-base sm:text-lg font-medium">I Miei Turni</CardTitle>
-        <div className="flex bg-gray-100 rounded-md p-0.5">
+        <div className="flex flex-col xs:flex-row gap-2">
           <Button
-            variant={view === "week" ? "default" : "ghost"}
+            variant="outline"
             size="sm"
-            onClick={() => setView("week")}
+            onClick={handleExportPDF}
+            disabled={isExporting || !schedule}
             className="text-xs"
           >
-            <span className="material-icons text-xs sm:text-sm mr-1">view_week</span>
-            <span className="hidden xs:inline">Settimana</span>
-            <span className="xs:hidden">Sett.</span>
+            <span className="material-icons text-xs sm:text-sm mr-1">download</span>
+            {isExporting ? "Esportazione..." : "Scarica PDF"}
           </Button>
-          <Button
-            variant={view === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setView("list")}
-            className="text-xs"
-          >
-            <span className="material-icons text-xs sm:text-sm mr-1">list</span>
-            Lista
-          </Button>
+          <div className="flex bg-gray-100 rounded-md p-0.5">
+            <Button
+              variant={view === "week" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("week")}
+              className="text-xs"
+            >
+              <span className="material-icons text-xs sm:text-sm mr-1">view_week</span>
+              <span className="hidden xs:inline">Settimana</span>
+              <span className="xs:hidden">Sett.</span>
+            </Button>
+            <Button
+              variant={view === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("list")}
+              className="text-xs"
+            >
+              <span className="material-icons text-xs sm:text-sm mr-1">list</span>
+              Lista
+            </Button>
+          </div>
         </div>
       </CardHeader>
       
@@ -134,7 +214,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
         </p>
       </div>
       
-      <CardContent className="pb-6 pt-0">
+      <CardContent className="pb-6 pt-0" id="scheduleContent">
         {/* Visualizzazione a settimana */}
         {view === "week" && (
           <>
