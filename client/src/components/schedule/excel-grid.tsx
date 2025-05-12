@@ -842,15 +842,16 @@ export function ExcelGrid({
                         Dipendente
                       </th>
                       {timeSlots.map((slot, idx) => (
-                        <th key={idx} className="p-1 text-xs font-medium text-muted-foreground w-12 text-center">
-                          {slot}
+                        <th key={idx} className="p-1 text-xs font-medium text-muted-foreground w-8 sm:w-12 text-center">
+                          <span className="hidden sm:inline">{slot}</span>
+                          <span className="sm:hidden">{slot.replace(":00", "").replace(":30", "½")}</span>
                         </th>
                       ))}
-                      <th className="p-2 text-sm font-semibold text-muted-foreground text-left min-w-[200px]">
+                      <th className="p-2 text-sm font-semibold text-muted-foreground text-left min-w-[120px] sm:min-w-[200px]">
                         Note
                       </th>
-                      <th className="p-2 text-sm font-semibold text-muted-foreground text-center w-20">
-                        Tot. Ore
+                      <th className="p-2 text-xs sm:text-sm font-semibold text-muted-foreground text-center w-12 sm:w-20">
+                        Ore
                       </th>
                     </tr>
                   </thead>
@@ -859,7 +860,7 @@ export function ExcelGrid({
                       .filter(user => user.role === "employee" && user.isActive)
                       .map(user => (
                         <tr key={user.id} className="border-b">
-                          <td className="p-2 text-sm font-medium sticky left-0 bg-white z-10">
+                          <td className="p-2 text-xs sm:text-sm font-medium sticky left-0 bg-white z-10">
                             {user.name}
                           </td>
                           
@@ -893,7 +894,7 @@ export function ExcelGrid({
                                 className={`p-0 text-center ${cellStyle}`}
                                 onClick={() => handleCellClick(user.id, idx, day.name)}
                               >
-                                <div className="w-full h-full p-1">
+                                <div className="w-full h-full p-0 sm:p-1 text-xs sm:text-sm">
                                   {cellContent}
                                 </div>
                               </td>
@@ -902,16 +903,16 @@ export function ExcelGrid({
                           
                           <td className="p-1">
                             <Input
-                              size={35}
+                              size={20}
                               placeholder="Note..."
                               value={gridData[day.name]?.[user.id]?.notes || ""}
                               onChange={(e) => handleNotesChange(user.id, day.name, e.target.value)}
                               disabled={isPublished}
-                              className="text-sm"
+                              className="text-xs sm:text-sm w-full"
                             />
                           </td>
                           
-                          <td className="p-2 text-center font-semibold text-sm">
+                          <td className="p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm">
                             {gridData[day.name]?.[user.id]?.total.toFixed(1) || "0.0"}
                           </td>
                         </tr>
