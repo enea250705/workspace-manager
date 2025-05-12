@@ -287,6 +287,7 @@ export function TimeOffRequestForm() {
                         </PopoverContent>
                       </Popover>
                       {field.value && form.getValues("startDate") && 
+                      form.getValues("startDate") && field.value &&
                       isSameDay(field.value, form.getValues("startDate")) && (
                         <div className="text-xs text-muted-foreground mt-1 ml-1">
                           Singolo giorno
@@ -311,15 +312,15 @@ export function TimeOffRequestForm() {
                 const isPersonalLeave = requestType === "personal";
                 
                 // Se non è permesso personale o è su più giorni, forza a "full_day"
-                if (!isPersonalLeave || (isPersonalLeave && !isSameDay)) {
+                if (!isPersonalLeave || (isPersonalLeave && !datesAreOnSameDay)) {
                   if (field.value !== "full_day") {
                     setTimeout(() => form.setValue("duration", "full_day"), 0);
                   }
                 }
                 
                 // Non mostrare questa sezione se non è possibile selezionare opzioni diverse
-                if (!isPersonalLeave || (isPersonalLeave && !isSameDay)) {
-                  return null;
+                if (!isPersonalLeave || (isPersonalLeave && !datesAreOnSameDay)) {
+                  return <></>;
                 }
                 
                 return (
