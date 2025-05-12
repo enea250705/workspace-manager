@@ -152,6 +152,43 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 /**
  * Invia una notifica di pubblicazione di un nuovo turno con i dettagli specifici per l'utente
  */
+/**
+ * Corregge l'orario di fine turno per la visualizzazione nelle email
+ * Rimuove 30 minuti dall'orario di fine per compensare l'offset introdotto dal sistema di celle
+ */
+function adjustEndTime(endTime: string): string {
+  try {
+    const [hours, minutes] = endTime.split(':').map(Number);
+    
+    // Se il formato non è corretto, restituisci l'orario originale
+    if (isNaN(hours) || isNaN(minutes)) {
+      return endTime;
+    }
+    
+    // Sottraiamo 30 minuti
+    let newMinutes = minutes - 30;
+    let newHours = hours;
+    
+    // Gestione del riporto negativo
+    if (newMinutes < 0) {
+      newMinutes += 60;
+      newHours -= 1;
+    }
+    
+    // Gestione passaggio dalla mezzanotte
+    if (newHours < 0) {
+      newHours += 24;
+    }
+    
+    // Formattazione con zero padding
+    return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+  } catch (e) {
+    // In caso di errore, restituisci l'orario originale
+    console.error('Errore nella correzione orario:', e);
+    return endTime;
+  }
+}
+
 export async function sendScheduleNotification(user: User, scheduleStartDate: string, scheduleEndDate: string, shifts: any[] = []): Promise<boolean> {
   // Formatta le date per la visualizzazione (dd/mm/yyyy)
   const formattedStartDate = new Date(scheduleStartDate).toLocaleDateString('it-IT');
@@ -271,11 +308,14 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
                           firstShift.type === 'leave' ? '#10b981' : 
                           firstShift.type === 'sick' ? '#ef4444' : '#6b7280';
         
-        // Aggiungi riga alla tabella
+        // Correggi l'orario di fine turno sottraendo 30 minuti per compensare l'aggiunta del sistema a celle
+        const correctedEndTime = adjustEndTime(lastShift.endTime);
+        
+        // Aggiungi riga alla tabella con l'orario corretto
         shiftsTable += `
           <tr>
             <td style="padding: 10px; border: 1px solid #e0e0e0;">${weekdayTranslation[day]}</td>
-            <td style="padding: 10px; border: 1px solid #e0e0e0;">${firstShift.startTime.substring(0, 5)} - ${lastShift.endTime.substring(0, 5)}</td>
+            <td style="padding: 10px; border: 1px solid #e0e0e0;">${firstShift.startTime.substring(0, 5)} - ${correctedEndTime.substring(0, 5)}</td>
             <td style="padding: 10px; border: 1px solid #e0e0e0; color: ${typeColor}; font-weight: bold;">${shiftType}</td>
           </tr>
         `;
