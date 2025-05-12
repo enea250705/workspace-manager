@@ -602,6 +602,7 @@ export default function Schedule() {
               timeOffRequests={timeOffRequests || []}
               isPublished={existingSchedule?.isPublished || false}
               onPublish={handlePublish}
+              forceResetGrid={forceResetGrid || isLoadingNewSchedule}
             />
           </div>
         ) : (

@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { format, addDays } from "date-fns";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { generateTimeSlots, formatHours } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { generateTimeSlots } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * La griglia Excel-like per la gestione dei turni
@@ -39,7 +42,8 @@ export function ExcelGrid({
   shifts,
   timeOffRequests,
   isPublished,
-  onPublish
+  onPublish,
+  forceResetGrid = false
 }: ScheduleGridProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -50,7 +54,8 @@ export function ExcelGrid({
   
   // Inizializza giorni della settimana
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(startDate, i);
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + i);
     return {
       date,
       name: format(date, "EEEE", { locale: it }),
@@ -59,36 +64,27 @@ export function ExcelGrid({
     };
   });
   
-  // Stato della griglia
+  // State per la griglia dei dati
   const [gridData, setGridData] = useState<Record<string, Record<number, {
     cells: Array<{ type: string; shiftId: number | null; isTimeOff?: boolean }>;
     notes: string;
     total: number;
   }>>>({});
   
-  // Creazione di un nuovo turno
-  const createShiftMutation = useMutation({
-    mutationFn: (shiftData: any) => apiRequest("POST", "/api/shifts", shiftData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/schedules/${scheduleId}/shifts`] });
-      toast({
-        title: "Turno aggiunto",
-        description: "Il turno è stato aggiunto con successo.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'aggiunta del turno.",
-        variant: "destructive",
-      });
-    }
-  });
-  
-  // Aggiornamento di un turno esistente
+  // Mutazione per creare o aggiornare un turno
   const updateShiftMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest("PATCH", `/api/shifts/${id}`, data),
+    mutationFn: (data: any) => {
+      if (data.id) {
+        // Aggiorna un turno esistente
+        return apiRequest("PATCH", `/api/shifts/${data.id}`, data);
+      } else {
+        // Crea un nuovo turno
+        return apiRequest("POST", `/api/shifts`, { 
+          ...data, 
+          scheduleId 
+        });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/schedules/${scheduleId}/shifts`] });
       toast({
@@ -126,138 +122,140 @@ export function ExcelGrid({
   
   // Inizializzazione della griglia
   useEffect(() => {
-    if (!scheduleId || !users.length) return;
+    if (!users.length) return;
     
-    // Se la griglia è già inizializzata, non fare nulla
-    if (Object.keys(gridData).length > 0) return;
-    
-    // Crea una nuova griglia
-    const newGridData: Record<string, Record<number, {
-      cells: Array<{ type: string; shiftId: number | null; isTimeOff?: boolean }>;
-      notes: string;
-      total: number;
-    }>> = {};
-    
-    // Inizializza la griglia vuota per tutti i giorni e utenti
-    weekDays.forEach(day => {
-      newGridData[day.name] = {};
+    // Forza il reset completo della griglia se richiesto
+    if (forceResetGrid || Object.keys(gridData).length === 0) {
+      console.log("Inizializzando griglia vuota", forceResetGrid ? "(forzato)" : "");
       
-      // Filtra solo i dipendenti attivi
-      const activeUsers = users.filter(u => u.role === "employee" && u.isActive);
-      
-      activeUsers.forEach(user => {
-        newGridData[day.name][user.id] = {
-          cells: timeSlots.map(() => ({ type: "", shiftId: null })),
-          notes: "",
-          total: 0
-        };
-      });
-    });
+      // Crea una nuova griglia
+      const newGridData: Record<string, Record<number, {
+        cells: Array<{ type: string; shiftId: number | null; isTimeOff?: boolean }>;
+        notes: string;
+        total: number;
+      }>> = {};
     
-    // Popola la griglia con i turni esistenti
-    if (shifts && shifts.length > 0) {
-      shifts.forEach(shift => {
-        const userId = shift.userId;
-        const day = shift.day;
+      // Inizializza la griglia vuota per tutti i giorni e utenti
+      weekDays.forEach(day => {
+        newGridData[day.name] = {};
         
-        if (newGridData[day] && newGridData[day][userId]) {
-          // Trova gli indici corrispondenti all'intervallo di tempo del turno
-          const startIndex = timeSlots.indexOf(shift.startTime);
-          const endIndex = timeSlots.indexOf(shift.endTime);
+        // Filtra solo i dipendenti attivi
+        const activeUsers = users.filter(u => u.role === "employee" && u.isActive);
+        
+        activeUsers.forEach(user => {
+          newGridData[day.name][user.id] = {
+            cells: timeSlots.map(() => ({ type: "", shiftId: null })),
+            notes: "",
+            total: 0
+          };
+        });
+      });
+      
+      // Popola la griglia con i turni esistenti
+      if (shifts && shifts.length > 0 && scheduleId) {
+        shifts.forEach(shift => {
+          const userId = shift.userId;
+          const day = shift.day;
           
-          if (startIndex >= 0 && endIndex >= 0) {
-            // Imposta tutte le celle nell'intervallo
-            for (let i = startIndex; i < endIndex; i++) {
-              newGridData[day][userId].cells[i] = { 
-                type: shift.type, 
-                shiftId: shift.id 
-              };
-            }
+          if (newGridData[day] && newGridData[day][userId]) {
+            // Trova gli indici corrispondenti all'intervallo di tempo del turno
+            const startIndex = timeSlots.indexOf(shift.startTime);
+            const endIndex = timeSlots.indexOf(shift.endTime);
             
-            // Aggiorna le note
-            newGridData[day][userId].notes = shift.notes || "";
-            
-            // Calcola le ore totali
-            if (shift.type === 'work') {
-              const startHour = parseInt(shift.startTime.split(':')[0]);
-              const startMin = parseInt(shift.startTime.split(':')[1]);
-              const endHour = parseInt(shift.endTime.split(':')[0]);
-              const endMin = parseInt(shift.endTime.split(':')[1]);
-              
-              let hours = endHour - startHour;
-              let minutes = endMin - startMin;
-              
-              if (minutes < 0) {
-                hours -= 1;
-                minutes += 60;
+            if (startIndex >= 0 && endIndex >= 0) {
+              // Imposta tutte le celle nell'intervallo
+              for (let i = startIndex; i < endIndex; i++) {
+                newGridData[day][userId].cells[i] = { 
+                  type: shift.type, 
+                  shiftId: shift.id 
+                };
               }
               
-              // Aggiungi al totale
-              newGridData[day][userId].total += hours + (minutes / 60);
-            }
-          }
-        }
-      });
-    }
-    
-    // Aggiungi le richieste di ferie/permessi approvate
-    if (timeOffRequests && timeOffRequests.length > 0) {
-      const approvedRequests = timeOffRequests.filter(req => req.status === "approved");
-      
-      approvedRequests.forEach(request => {
-        const userId = request.userId;
-        const startDate = new Date(request.startDate);
-        const endDate = new Date(request.endDate);
-        
-        // Verifica ogni giorno della settimana
-        weekDays.forEach(day => {
-          const dayDate = new Date(day.formattedDate);
-          
-          // Se il giorno è nell'intervallo della richiesta
-          if (dayDate >= startDate && dayDate <= endDate) {
-            if (newGridData[day.name] && newGridData[day.name][userId]) {
-              // Marca tutte le celle per questo giorno
-              const type = request.type === "vacation" ? "vacation" : "leave";
+              // Aggiorna le note
+              newGridData[day][userId].notes = shift.notes || "";
               
-              if (request.duration === "full_day") {
-                // Giorno intero
-                newGridData[day.name][userId].cells = newGridData[day.name][userId].cells.map(() => ({
-                  type,
-                  shiftId: null,
-                  isTimeOff: true
-                }));
-                newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} approvato`;
-              } else if (request.duration === "morning") {
-                // Solo mattina (prima metà)
-                const halfDay = Math.floor(timeSlots.length / 2);
-                for (let i = 0; i < halfDay; i++) {
-                  newGridData[day.name][userId].cells[i] = {
-                    type,
-                    shiftId: null,
-                    isTimeOff: true
-                  };
+              // Calcola le ore totali
+              if (shift.type === 'work') {
+                const startHour = parseInt(shift.startTime.split(':')[0]);
+                const startMin = parseInt(shift.startTime.split(':')[1]);
+                const endHour = parseInt(shift.endTime.split(':')[0]);
+                const endMin = parseInt(shift.endTime.split(':')[1]);
+                
+                let hours = endHour - startHour;
+                let minutes = endMin - startMin;
+                
+                if (minutes < 0) {
+                  hours -= 1;
+                  minutes += 60;
                 }
-                newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} mattina`;
-              } else if (request.duration === "afternoon") {
-                // Solo pomeriggio (seconda metà)
-                const halfDay = Math.floor(timeSlots.length / 2);
-                for (let i = halfDay; i < timeSlots.length; i++) {
-                  newGridData[day.name][userId].cells[i] = {
-                    type,
-                    shiftId: null,
-                    isTimeOff: true
-                  };
-                }
-                newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} pomeriggio`;
+                
+                // Aggiungi al totale
+                newGridData[day][userId].total += hours + (minutes / 60);
               }
             }
           }
         });
-      });
+      }
+      
+      // Aggiungi le richieste di ferie/permessi approvate
+      if (timeOffRequests && timeOffRequests.length > 0) {
+        const approvedRequests = timeOffRequests.filter(req => req.status === "approved");
+        
+        approvedRequests.forEach(request => {
+          const userId = request.userId;
+          const startDate = new Date(request.startDate);
+          const endDate = new Date(request.endDate);
+          
+          // Verifica ogni giorno della settimana
+          weekDays.forEach(day => {
+            const dayDate = new Date(day.formattedDate);
+            
+            // Se il giorno è compreso nel periodo della richiesta
+            if (dayDate >= startDate && dayDate <= endDate) {
+              if (newGridData[day.name] && newGridData[day.name][userId]) {
+                // Determina tipo di permesso
+                const requestType = request.type === "vacation" ? "vacation" : "leave";
+                
+                // Per i permessi di mezza giornata
+                if (request.halfDay) {
+                  // Mattina (fino alle 13:00)
+                  if (request.halfDayPeriod === "morning") {
+                    for (let i = 0; i < timeSlots.length; i++) {
+                      const hour = parseInt(timeSlots[i].split(':')[0]);
+                      if (hour < 13) {
+                        newGridData[day.name][userId].cells[i] = {
+                          type: requestType,
+                          shiftId: null,
+                          isTimeOff: true
+                        };
+                      }
+                    }
+                    newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} mattina`;
+                  }
+                  // Pomeriggio (dalle 13:00)
+                  else {
+                    for (let i = 0; i < timeSlots.length; i++) {
+                      const hour = parseInt(timeSlots[i].split(':')[0]);
+                      if (hour >= 13) {
+                        newGridData[day.name][userId].cells[i] = {
+                          type: requestType,
+                          shiftId: null,
+                          isTimeOff: true
+                        };
+                      }
+                    }
+                    newGridData[day.name][userId].notes = `${request.type === "vacation" ? "Ferie" : "Permesso"} pomeriggio`;
+                  }
+                }
+              }
+            }
+          });
+        });
+      }
+      
+      setGridData(newGridData);
     }
-    
-    setGridData(newGridData);
-  }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots]);
+  }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid, gridData]);
   
   // Gestione del click su una cella
   const handleCellClick = (userId: number, timeIndex: number, day: string) => {
@@ -267,422 +265,438 @@ export function ExcelGrid({
     const userDayData = newGridData[day][userId];
     const currentCell = userDayData.cells[timeIndex];
     
-    // Non modificare se è una cella di ferie/permessi approvati
-    if (currentCell.isTimeOff) {
-      toast({
-        title: "Cella bloccata",
-        description: "Non puoi modificare questa cella perché è una richiesta di ferie/permessi approvata.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Ciclo: vuoto -> lavoro -> ferie -> permesso -> malattia -> vuoto
-    let newType = "";
-    
-    // Implementa il ciclo rotativo: vuoto → X (work) → F (vacation) → P (leave) → vuoto
-    if (currentCell.type === "") {
-      newType = "work"; // X (in servizio)
-    } else if (currentCell.type === "work") {
-      newType = "vacation"; // F (ferie)
-    } else if (currentCell.type === "vacation") {
-      newType = "leave"; // P (permesso)
-    } else if (currentCell.type === "leave") {
-      newType = ""; // Torna vuoto (ciclo completo)
-    } else if (currentCell.type === "sick") {
-      newType = ""; // Malattia torna a vuoto
-    }
-    
-    // Trova le celle consecutive dello stesso tipo
-    let startIndex = timeIndex;
-    let endIndex = timeIndex;
-    
-    if (currentCell.shiftId) {
-      // Se è un turno esistente, trova i suoi confini
-      const shiftId = currentCell.shiftId;
+    // Se la cella ha già un turno associato, aggiorna il tipo di turno o cancellalo
+    if (currentCell.type) {
+      // Rotazione del tipo di turno: work -> vacation -> leave -> (vuoto) -> ...
+      let newType = "";
       
-      // Trova l'indice iniziale
-      for (let i = timeIndex; i >= 0; i--) {
-        if (userDayData.cells[i].shiftId === shiftId) {
-          startIndex = i;
+      if (currentCell.type === "work") {
+        newType = "vacation";
+      } else if (currentCell.type === "vacation") {
+        newType = "leave";
+      } else if (currentCell.type === "leave") {
+        newType = "";
+      }
+      
+      // Se la cella ha un ID di turno esistente
+      if (currentCell.shiftId) {
+        if (newType === "") {
+          // Elimina il turno
+          deleteShiftMutation.mutate(currentCell.shiftId);
+          
+          // Rimuovi le ore dal conteggio totale
+          if (currentCell.type === "work") {
+            const slotDuration = 0.5; // 30 minuti
+            userDayData.total -= slotDuration;
+          }
         } else {
-          break;
+          // Aggiorna il tipo di turno
+          updateShiftMutation.mutate({
+            id: currentCell.shiftId,
+            scheduleId,
+            userId,
+            day,
+            startTime: timeSlots[timeIndex],
+            endTime: timeSlots[timeIndex + 1],
+            type: newType,
+            notes: userDayData.notes
+          });
+          
+          // Aggiorna le ore
+          if (currentCell.type === "work" && newType !== "work") {
+            const slotDuration = 0.5; // 30 minuti
+            userDayData.total -= slotDuration;
+          } else if (currentCell.type !== "work" && newType === "work") {
+            const slotDuration = 0.5; // 30 minuti
+            userDayData.total += slotDuration;
+          }
+        }
+      } else if (newType) {
+        // Crea un nuovo turno se non c'è un ID di turno
+        updateShiftMutation.mutate({
+          scheduleId,
+          userId,
+          day,
+          startTime: timeSlots[timeIndex],
+          endTime: timeSlots[timeIndex + 1],
+          type: newType,
+          notes: userDayData.notes
+        });
+        
+        // Aggiorna le ore
+        if (newType === "work") {
+          const slotDuration = 0.5; // 30 minuti
+          userDayData.total += slotDuration;
         }
       }
       
-      // Trova l'indice finale
-      for (let i = timeIndex; i < userDayData.cells.length; i++) {
-        if (userDayData.cells[i].shiftId === shiftId) {
-          endIndex = i;
-        } else {
-          break;
-        }
-      }
-      
-      // Cancella tutte le celle nel range
-      for (let i = startIndex; i <= endIndex; i++) {
-        userDayData.cells[i] = { type: "", shiftId: null };
-      }
-      
-      // Elimina il turno dal server
-      deleteShiftMutation.mutate(shiftId);
-      
-      // Ricalcola il totale delle ore
-      calculateTotal(userId, day, newGridData);
-    } else if (newType !== "") {
-      // Selezione estesa: permetti all'utente di trascinare per selezionare più celle
-      // Per semplicità, creiamo solo uno slot di 30 minuti quando l'utente clicca
-      const newShiftData = {
+      // Aggiorna lo stato della cella
+      userDayData.cells[timeIndex] = { 
+        type: newType, 
+        shiftId: newType ? currentCell.shiftId : null
+      };
+    } else {
+      // Crea un nuovo turno di tipo "work"
+      updateShiftMutation.mutate({
         scheduleId,
         userId,
         day,
         startTime: timeSlots[timeIndex],
-        endTime: timeSlots[timeIndex + 1], // +1 per creare uno slot di 30 minuti
-        type: newType,
-        notes: userDayData.notes,
-        hours: 0.5 // 30 minuti = 0.5 ore
-      };
+        endTime: timeSlots[timeIndex + 1],
+        type: "work",
+        notes: userDayData.notes
+      });
       
-      createShiftMutation.mutate(newShiftData);
-      
-      // Aggiorna la cella nella UI
+      // Aggiorna lo stato della cella
       userDayData.cells[timeIndex] = { 
-        type: newType, 
-        shiftId: null // sarà aggiornato nel prossimo caricamento
+        type: "work", 
+        shiftId: null // Verrà aggiornato alla risposta della mutazione
       };
       
-      // Ricalcola il totale delle ore
-      // Solo i turni di tipo "work" contano per il totale delle ore
-      if (newType === 'work') {
-        userDayData.total += 0.5; // 30 minuti = 0.5 ore
-      }
+      // Aggiorna le ore
+      const slotDuration = 0.5; // 30 minuti
+      userDayData.total += slotDuration;
     }
     
+    // Aggiorna lo stato
     setGridData(newGridData);
   };
   
-  // Calcola il totale delle ore per un dipendente in un giorno
-  const calculateTotal = (userId: number, day: string, data: any) => {
-    let total = 0;
-    let continuousWork = false;
-    let startTime = "";
-    
-    // Cerca blocchi continui di celle "work"
-    data[day][userId].cells.forEach((cell: any, index: number) => {
-      if (cell.type === "work") {
-        if (!continuousWork) {
-          continuousWork = true;
-          startTime = timeSlots[index];
-        }
-      } else if (continuousWork) {
-        // Fine di un blocco di lavoro
-        continuousWork = false;
-        const endTime = timeSlots[index];
-        
-        // Calcola le ore
-        const startHour = parseInt(startTime.split(':')[0]);
-        const startMin = parseInt(startTime.split(':')[1]);
-        const endHour = parseInt(endTime.split(':')[0]);
-        const endMin = parseInt(endTime.split(':')[1]);
-        
-        let hours = endHour - startHour;
-        let minutes = endMin - startMin;
-        
-        if (minutes < 0) {
-          hours -= 1;
-          minutes += 60;
-        }
-        
-        total += hours + (minutes / 60);
-      }
-    });
-    
-    // Controlla se l'ultimo blocco arriva fino alla fine
-    if (continuousWork) {
-      const endTime = timeSlots[timeSlots.length - 1];
-      
-      // Calcola le ore
-      const startHour = parseInt(startTime.split(':')[0]);
-      const startMin = parseInt(startTime.split(':')[1]);
-      const endHour = parseInt(endTime.split(':')[0]);
-      const endMin = parseInt(endTime.split(':')[1]);
-      
-      let hours = endHour - startHour;
-      let minutes = endMin - startMin;
-      
-      if (minutes < 0) {
-        hours -= 1;
-        minutes += 60;
-      }
-      
-      total += hours + (minutes / 60);
-    }
-    
-    data[day][userId].total = total;
-  };
-  
-  // Gestione del cambio note
-  const handleNotesChange = (userId: number, day: string, notes: string) => {
-    if (!scheduleId || isPublished) return;
-    
+  // Gestione dell'aggiornamento delle note
+  const handleNotesChange = (userId: number, day: string, value: string) => {
     const newGridData = { ...gridData };
-    newGridData[day][userId].notes = notes;
+    newGridData[day][userId].notes = value;
+    setGridData(newGridData);
     
-    // Trova tutti i turni per questo utente e giorno
-    const userShifts = shifts.filter(s => s.userId === userId && s.day === day);
+    // Trova tutti i turni del giorno per l'utente
+    const userDayShifts = shifts.filter(
+      (s: any) => s.userId === userId && s.day === day
+    );
     
-    // Aggiorna le note per tutti i turni
-    userShifts.forEach(shift => {
+    // Aggiorna le note per ogni turno
+    userDayShifts.forEach((shift: any) => {
       updateShiftMutation.mutate({
         id: shift.id,
-        data: { notes }
+        notes: value
       });
-    });
-    
-    setGridData(newGridData);
-  };
-  
-  // Funzione per copiare un giorno al successivo
-  const handleCopyDay = () => {
-    if (!scheduleId || isPublished) return;
-    
-    const currentDay = weekDays[selectedDay].name;
-    const nextDay = weekDays[(selectedDay + 1) % 7].name;
-    
-    toast({
-      title: "Copiando il giorno",
-      description: `Copiando gli orari da ${currentDay} a ${nextDay}...`,
-    });
-    
-    // Copia tutti i turni dal giorno corrente al successivo
-    Object.entries(gridData[currentDay]).forEach(([userId, userData]: [string, any]) => {
-      const userIdNum = parseInt(userId);
-      
-      // Trova blocchi continui di celle dello stesso tipo
-      let currentBlock: { 
-        start: number; 
-        end: number; 
-        type: string;
-        notes: string;
-      } | null = null;
-      
-      userData.cells.forEach((cell: any, index: number) => {
-        if (cell.type !== "") {
-          if (!currentBlock || currentBlock.type !== cell.type) {
-            // Se avevamo un blocco precedente, salvalo
-            if (currentBlock) {
-              createShiftMutation.mutate({
-                scheduleId,
-                userId: userIdNum,
-                day: nextDay,
-                startTime: timeSlots[currentBlock.start],
-                endTime: timeSlots[currentBlock.end + 1],
-                type: currentBlock.type,
-                notes: userData.notes,
-              });
-            }
-            // Inizia un nuovo blocco
-            currentBlock = { 
-              start: index, 
-              end: index, 
-              type: cell.type,
-              notes: userData.notes
-            };
-          } else {
-            // Estendi il blocco corrente
-            currentBlock.end = index;
-          }
-        } else if (currentBlock) {
-          // Fine di un blocco
-          createShiftMutation.mutate({
-            scheduleId,
-            userId: userIdNum,
-            day: nextDay,
-            startTime: timeSlots[currentBlock.start],
-            endTime: timeSlots[currentBlock.end + 1],
-            type: currentBlock.type,
-            notes: userData.notes,
-          });
-          currentBlock = null;
-        }
-      });
-      
-      // Non dimenticare l'ultimo blocco se arriva fino alla fine
-      if (currentBlock) {
-        createShiftMutation.mutate({
-          scheduleId,
-          userId: userIdNum,
-          day: nextDay,
-          startTime: timeSlots[currentBlock.start],
-          endTime: timeSlots[currentBlock.end + 1],
-          type: currentBlock.type,
-          notes: userData.notes,
-        });
-      }
-    });
-    
-    toast({
-      title: "Giorno copiato",
-      description: `Gli orari di ${currentDay} sono stati copiati in ${nextDay}.`,
     });
   };
   
-  // Filtro per mostrare solo gli impiegati attivi
-  const activeEmployees = users.filter(user => user.role === "employee" && user.isActive);
-  
-  return (
-    <div className="bg-white border rounded-lg p-4 pt-0">
-      {/* Pannello di controllo */}
-      <div className="flex justify-between items-center py-4 border-b">
-        <div className="flex space-x-4">
-          <div className="text-xl font-semibold">
-            Pianificazione Turni
+  // Gestione della stampa dello schedule
+  const handlePrint = () => {
+    if (!scheduleId) return;
+    
+    // Genera HTML per la stampa
+    let pdfContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Pianificazione Turni</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { font-size: 24px; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          .working { background-color: #e1f5fe; }
+          .vacation { background-color: #ffebee; }
+          .leave { background-color: #fff9c4; }
+          .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+          .legend { display: flex; gap: 20px; margin-bottom: 30px; }
+          .legend-item { display: flex; align-items: center; }
+          .legend-color { display: inline-block; width: 16px; height: 16px; margin-right: 5px; border: 1px solid #ccc; }
+          .name-cell { width: 150px; }
+          .total-cell { width: 80px; }
+        </style>
+      </head>
+      <body>
+        <h1>Pianificazione Turni: ${format(new Date(startDate), "d MMMM", { locale: it })} - ${format(new Date(endDate), "d MMMM yyyy", { locale: it })}</h1>
+        
+        <div class="header">
+          <div>
+            <p>Data: ${format(new Date(), "dd/MM/yyyy")}</p>
+            <p>Stato: ${isPublished ? 'Pubblicato' : 'Bozza'}</p>
           </div>
-          <div className="text-sm text-gray-500 mt-1">
-            {format(startDate, "d MMMM", { locale: it })} - {format(endDate, "d MMMM yyyy", { locale: it })}
-          </div>
         </div>
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopyDay}
-            disabled={isPublished}
-          >
-            <span className="material-icons text-sm mr-1">content_copy</span>
-            Copia Giorno
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-success hover:bg-success/90"
-            onClick={onPublish}
-            disabled={isPublished}
-          >
-            <span className="material-icons text-sm mr-1">publish</span>
-            Pubblica
-          </Button>
+        
+        <div class="legend">
+          <div class="legend-item"><span class="legend-color working"></span> In servizio (X)</div>
+          <div class="legend-item"><span class="legend-color vacation"></span> Ferie (F)</div>
+          <div class="legend-item"><span class="legend-color leave"></span> Permesso (P)</div>
         </div>
-      </div>
-      
-      {/* Legenda colori */}
-      <div className="flex flex-wrap gap-4 py-3 border-b">
-        <div className="flex items-center">
-          <div className="w-4 h-4 bg-blue-100 mr-2 border border-blue-300"></div>
-          <span className="text-sm">In servizio (X)</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-4 h-4 bg-red-100 mr-2 border border-red-300"></div>
-          <span className="text-sm">Ferie (F)</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-4 h-4 bg-yellow-100 mr-2 border border-yellow-300"></div>
-          <span className="text-sm">Permesso (P)</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-4 h-4 bg-white mr-2 border border-gray-300"></div>
-          <span className="text-sm">Non in servizio</span>
-        </div>
-      </div>
-      
-      {/* Tabs giorni settimana */}
-      <div className="flex border-b">
-        {weekDays.map((day, index) => (
-          <button
-            key={day.name}
-            className={`py-2 px-4 text-sm font-medium ${
-              index === selectedDay
-                ? "border-b-2 border-primary text-primary"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-            onClick={() => setSelectedDay(index)}
-          >
-            {day.shortName} {format(day.date, "d/M")}
-          </button>
-        ))}
-      </div>
-      
-      {/* Tabella in stile Excel */}
-      <div className="overflow-x-auto mt-2">
-        <table className="w-full border-collapse">
+        
+        <table>
           <thead>
-            <tr className="bg-gray-50">
-              <th className="border py-2 px-3 text-left w-[180px]">Dipendente</th>
-              {timeSlots.map((slot, index) => (
-                <th key={index} className="border py-1 px-1 text-center text-xs" style={{ minWidth: '40px' }}>
-                  {slot}
-                </th>
-              ))}
-              <th className="border py-2 px-3 text-left w-[150px]">Note</th>
-              <th className="border py-2 px-3 text-center w-[80px]">Totale</th>
+            <tr>
+              <th class="name-cell">Dipendente</th>
+              <th>Lunedì</th>
+              <th>Martedì</th>
+              <th>Mercoledì</th>
+              <th>Giovedì</th>
+              <th>Venerdì</th>
+              <th>Sabato</th>
+              <th>Domenica</th>
+              <th class="total-cell">Totale Ore</th>
             </tr>
           </thead>
           <tbody>
-            {activeEmployees.map(employee => {
-              const currentDay = weekDays[selectedDay].name;
-              const userDayData = gridData[currentDay]?.[employee.id];
+    `;
+    
+    // Add employee rows with shift summary
+    users
+      .filter((user: any) => user.role === "employee" && user.isActive)
+      .forEach((user: any) => {
+        let userTotalHours = 0;
+        
+        pdfContent += `
+          <tr>
+            <td class="name-cell">${user.name}</td>
+        `;
+        
+        // Add days of week
+        ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'].forEach(day => {
+          const userShifts = shifts.filter((s: any) => s.userId === user.id && s.day === day);
+          let daySummary = '-';
+          let cellClass = '';
+          
+          if (userShifts.length > 0) {
+            // Sort shifts by start time
+            userShifts.sort((a: any, b: any) => {
+              return a.startTime.localeCompare(b.startTime);
+            });
+            
+            // Get first and last shift
+            const firstShift = userShifts[0];
+            const lastShift = userShifts[userShifts.length - 1];
+            
+            // Determine shift type for cell color
+            if (firstShift.type === 'work') {
+              cellClass = 'working';
+              daySummary = `${firstShift.startTime} - ${lastShift.endTime}`;
               
-              return (
-                <tr key={employee.id}>
-                  <td className="border py-2 px-3">{employee.name}</td>
-                  
-                  {userDayData?.cells.map((cell, index) => (
-                    <td
-                      key={index}
-                      className={`border text-center cursor-pointer ${
-                        cell.type === "work"
-                          ? "bg-blue-100 hover:bg-blue-200"
-                          : cell.type === "vacation"
-                            ? "bg-red-100 hover:bg-red-200"
-                            : cell.type === "leave"
-                              ? "bg-yellow-100 hover:bg-yellow-200"
-                              : "hover:bg-gray-100"
-                      }`}
-                      onClick={() => handleCellClick(employee.id, index, currentDay)}
-                      style={{ cursor: isPublished ? "default" : "pointer" }}
-                      title={
-                        cell.isTimeOff
-                          ? "Richiesta approvata (non modificabile)"
-                          : isPublished 
-                            ? "Pianificazione pubblicata (non modificabile)"
-                            : "Clicca per cambiare stato"
-                      }
-                    >
-                      {cell.type === "work" && "X"}
-                      {cell.type === "vacation" && "F"}
-                      {cell.type === "leave" && "P"}
-                    </td>
-                  ))}
-                  
-                  <td className="border p-0">
-                    <input
-                      type="text"
-                      className="w-full h-full border-none py-2 px-3"
-                      value={userDayData?.notes || ""}
-                      onChange={(e) => handleNotesChange(employee.id, currentDay, e.target.value)}
-                      disabled={isPublished}
-                      placeholder="Note..."
-                    />
-                  </td>
-                  
-                  <td className="border py-2 px-3 text-center font-medium">
-                    {userDayData ? formatHours(userDayData.total) : "0h"}
-                  </td>
-                </tr>
-              );
-            })}
+              // Calculate hours for this day
+              let dayHours = 0;
+              userShifts.forEach(shift => {
+                const [startHour, startMin] = shift.startTime.split(":").map(Number);
+                const [endHour, endMin] = shift.endTime.split(":").map(Number);
+                
+                let hours = endHour - startHour;
+                let minutes = endMin - startMin;
+                
+                if (minutes < 0) {
+                  hours -= 1;
+                  minutes += 60;
+                }
+                
+                dayHours += hours + (minutes / 60);
+              });
+              
+              // Add to total
+              userTotalHours += dayHours;
+            } else if (firstShift.type === 'vacation') {
+              cellClass = 'vacation';
+              daySummary = 'Ferie';
+            } else if (firstShift.type === 'leave') {
+              cellClass = 'leave';
+              daySummary = 'Permesso';
+            }
+          }
+          
+          pdfContent += `<td class="${cellClass}">${daySummary}</td>`;
+        });
+        
+        // Add total hours
+        pdfContent += `<td class="total-cell">${userTotalHours.toFixed(1)}</td></tr>`;
+      });
+    
+    pdfContent += `
           </tbody>
         </table>
+      </body>
+      </html>
+    `;
+    
+    // Create a blob and download
+    const blob = new Blob([pdfContent], { type: 'text/html' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `pianificazione_${format(new Date(startDate), "yyyy-MM-dd")}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div className="flex items-center justify-between p-4 border-b">
+        <h3 className="text-base font-semibold">
+          Pianificazione {format(startDate, "d MMMM", { locale: it })} - {format(endDate, "d MMMM yyyy", { locale: it })}
+        </h3>
+        <div className="flex items-center gap-2">
+          {isPublished ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <span className="material-icons text-sm mr-1">check_circle</span>
+              Pubblicato
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+              <span className="material-icons text-sm mr-1">pending</span>
+              Bozza
+            </span>
+          )}
+          <Button variant="outline" size="sm" onClick={handlePrint} className="flex items-center gap-1">
+            <span className="material-icons text-sm">print</span>
+            Stampa
+          </Button>
+          {!isPublished && (
+            <Button size="sm" onClick={onPublish} className="flex items-center gap-1">
+              <span className="material-icons text-sm">publish</span>
+              Pubblica
+            </Button>
+          )}
+        </div>
       </div>
       
-      {/* Messaggio se pubblicato */}
-      {isPublished && (
-        <div className="mt-4 bg-blue-50 p-3 rounded border border-blue-200 text-blue-700 text-sm">
-          <span className="material-icons text-sm align-middle mr-1">info</span>
-          Questa pianificazione è stata pubblicata. I dipendenti possono visualizzarla nel loro account.
-          Puoi ancora apportare modifiche e ripubblicare per aggiornare i turni.
-        </div>
-      )}
+      <div className="p-4">
+        <Tabs defaultValue={weekDays[selectedDay].name} onValueChange={(value) => {
+          const dayIndex = weekDays.findIndex(d => d.name === value);
+          if (dayIndex !== -1) {
+            setSelectedDay(dayIndex);
+          }
+        }}>
+          <TabsList className="mb-4 w-full">
+            {weekDays.map((day, idx) => (
+              <TabsTrigger key={day.name} value={day.name} className="flex-1">
+                <span className="hidden sm:inline">{day.name}</span>
+                <span className="sm:hidden">{day.shortName}</span>
+                <span className="ml-1 text-xs text-muted-foreground hidden sm:inline">
+                  {format(day.date, "d/M")}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          
+          {weekDays.map((day) => (
+            <TabsContent key={day.name} value={day.name} className="relative">
+              <div className="overflow-auto border rounded-md">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="p-2 text-sm font-semibold text-muted-foreground text-left sticky left-0 bg-muted/50 z-10">
+                        Dipendente
+                      </th>
+                      {timeSlots.map((slot, idx) => (
+                        <th key={idx} className="p-1 text-xs font-medium text-muted-foreground w-12 text-center">
+                          {slot}
+                        </th>
+                      ))}
+                      <th className="p-2 text-sm font-semibold text-muted-foreground text-left min-w-[200px]">
+                        Note
+                      </th>
+                      <th className="p-2 text-sm font-semibold text-muted-foreground text-center w-20">
+                        Tot. Ore
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users
+                      .filter(user => user.role === "employee" && user.isActive)
+                      .map(user => (
+                        <tr key={user.id} className="border-b">
+                          <td className="p-2 text-sm font-medium sticky left-0 bg-white z-10">
+                            {user.name}
+                          </td>
+                          
+                          {timeSlots.map((slot, idx) => {
+                            // Get cell data
+                            const cellData = gridData[day.name]?.[user.id]?.cells[idx] || { type: "", shiftId: null };
+                            const cellType = cellData.type;
+                            
+                            // Style based on cell type
+                            let cellStyle = "cursor-pointer hover:bg-gray-50 transition-colors";
+                            let cellContent = "";
+                            
+                            if (cellType === "work") {
+                              cellStyle += " bg-blue-50 text-blue-700";
+                              cellContent = "X";
+                            } else if (cellType === "vacation") {
+                              cellStyle += " bg-red-50 text-red-700";
+                              cellContent = "F";
+                            } else if (cellType === "leave") {
+                              cellStyle += " bg-yellow-50 text-yellow-700";
+                              cellContent = "P";
+                            }
+                            
+                            if (isPublished) {
+                              cellStyle = cellStyle.replace("cursor-pointer", "");
+                            }
+                            
+                            return (
+                              <td 
+                                key={idx}
+                                className={`p-0 text-center ${cellStyle}`}
+                                onClick={() => handleCellClick(user.id, idx, day.name)}
+                              >
+                                <div className="w-full h-full p-1">
+                                  {cellContent}
+                                </div>
+                              </td>
+                            );
+                          })}
+                          
+                          <td className="p-1">
+                            <Input
+                              size={35}
+                              placeholder="Note..."
+                              value={gridData[day.name]?.[user.id]?.notes || ""}
+                              onChange={(e) => handleNotesChange(user.id, day.name, e.target.value)}
+                              disabled={isPublished}
+                              className="text-sm"
+                            />
+                          </td>
+                          
+                          <td className="p-2 text-center font-semibold text-sm">
+                            {gridData[day.name]?.[user.id]?.total.toFixed(1) || "0.0"}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="mt-3 text-sm text-muted-foreground">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 cursor-help">
+                        <span className="material-icons text-sm">help_outline</span>
+                        <span>Legenda</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="p-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-4 h-4 rounded bg-blue-50 text-blue-700 text-xs flex items-center justify-center">X</span>
+                          <span>In servizio</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-4 h-4 rounded bg-red-50 text-red-700 text-xs flex items-center justify-center">F</span>
+                          <span>Ferie</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-4 h-4 rounded bg-yellow-50 text-yellow-700 text-xs flex items-center justify-center">P</span>
+                          <span>Permesso</span>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
     </div>
   );
 }
