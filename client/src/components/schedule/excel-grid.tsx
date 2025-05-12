@@ -515,6 +515,16 @@ export function ExcelGrid({
   // GESTIONE NOTE MIGLIORATA
   // Aggiorna in modo più robusto le note per un utente in un giorno specifico
   const handleNotesChange = (userId: number, day: string, value: string) => {
+    // Controlla se il turno è pubblicato e l'utente non è admin
+    if (isPublished && !isAdmin) {
+      toast({
+        title: "Turno pubblicato",
+        description: "Solo gli amministratori possono modificare le note di un turno già pubblicato.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // PREPARAZIONE STATO
     // Usa una copia profonda per evitare modifiche accidentali
     const newGridData = structuredClone(gridData);
