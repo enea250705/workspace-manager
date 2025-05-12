@@ -478,11 +478,18 @@ export default function Schedule() {
               <h3 className="text-lg font-medium">
                 Pianificazione Turni: {dateRangeText}
               </h3>
-              <div>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleChangeWeek}
+                >
+                  <span className="material-icons text-sm mr-1">history</span>
+                  Cronologia turni
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mr-2"
                   onClick={handleNewWeeklySchedule}
                 >
                   <span className="material-icons text-sm mr-1">add</span>
