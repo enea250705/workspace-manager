@@ -197,20 +197,21 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                     </div>
                                   )}
                                   
-                                  {/* Mostra gli slot di lavoro in modo compatto */}
+                                  {/* Mostra gli slot di lavoro in modo destacato */}
                                   {workShifts.length > 0 && (
-                                    <div className="bg-blue-100 rounded-md p-3 mb-2">
-                                      <div className="font-medium flex items-center mb-2">
+                                    <div className="bg-white shadow-md rounded-md p-3 mb-2 border-l-4 border-blue-500">
+                                      <div className="font-medium text-blue-700 flex items-center mb-3">
                                         <span className="material-icons text-sm mr-1">schedule</span>
-                                        In servizio
+                                        Orario di lavoro
                                       </div>
-                                      <div className="grid grid-cols-1 gap-1">
+                                      <div className="grid grid-cols-1 gap-2">
                                         {workShifts.map((shift, idx) => (
-                                          <div key={idx} className="text-sm">
+                                          <div key={idx} className="flex items-center justify-between bg-blue-50 rounded-md p-3 mb-1">
                                             <div className="flex items-center">
-                                              <div className="w-24">{shift.startTime} - {shift.endTime}</div>
-                                              {shift.notes && <div className="ml-2 text-xs text-gray-600">{shift.notes}</div>}
+                                              <span className="material-icons text-blue-600 mr-2">access_time</span>
+                                              <div className="font-medium text-lg">{shift.startTime} - {shift.endTime}</div>
                                             </div>
+                                            {shift.notes && <div className="ml-3 text-sm text-gray-600 italic">{shift.notes}</div>}
                                           </div>
                                         ))}
                                       </div>
@@ -311,9 +312,9 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                 
                                 {shift.type === "work" && (
                                   <>
-                                    <div className="text-sm">{shift.startTime} - {shift.endTime}</div>
+                                    <div className="text-base font-medium">{shift.startTime} - {shift.endTime}</div>
                                     {shift.notes && (
-                                      <div className="text-xs mt-1 text-gray-600">{shift.notes}</div>
+                                      <div className="text-sm mt-1 text-gray-600 italic">{shift.notes}</div>
                                     )}
                                   </>
                                 )}
