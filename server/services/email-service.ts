@@ -1,6 +1,9 @@
 import { MailService } from '@sendgrid/mail';
 import { User } from '@shared/schema';
 
+// Modalità di sviluppo (non invia email effettivamente ma le mostra in console)
+const DEV_MODE = true;
+
 if (!process.env.SENDGRID_API_KEY) {
   console.warn("ATTENZIONE: SENDGRID_API_KEY non è configurata nell'ambiente. Le email non verranno inviate.");
 }
@@ -34,8 +37,29 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     return false;
   }
 
+  // In modalità sviluppo, simula l'invio dell'email e mostra i dettagli in console
+  if (DEV_MODE) {
+    console.log("\n");
+    console.log("================================");
+    console.log("📧 SIMULAZIONE INVIO EMAIL 📧");
+    console.log("================================");
+    console.log("📧 A:", params.to);
+    console.log("📧 Da:", SENDER_EMAIL);
+    console.log("📧 Oggetto:", params.subject);
+    console.log("--------------------------------");
+    console.log("📧 Contenuto HTML:");
+    console.log(params.html);
+    console.log("================================");
+    console.log("✅ Email simulata con successo (non inviata realmente in modalità DEV)");
+    console.log("\n");
+    
+    // Ritorna true come se l'invio fosse riuscito
+    return true;
+  }
+
+  // In modalità produzione, invia effettivamente l'email
   try {
-    console.log("📧 Configurazione invio email...");
+    console.log("📧 Invio email reale...");
     console.log("📧 Destinatario:", params.to);
     console.log("📧 Mittente:", SENDER_EMAIL);
     console.log("📧 Oggetto:", params.subject);
