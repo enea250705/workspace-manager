@@ -48,6 +48,8 @@ export function ExcelGrid({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDay, setSelectedDay] = useState(0);
+  // Aggiungiamo una flag per tenere traccia del reset già eseguito
+  const [resetPerformed, setResetPerformed] = useState(false);
   
   // Generazione degli slot di tempo (30 minuti) dalle 4:00 alle 24:00
   const timeSlots = generateTimeSlots(4, 24);
@@ -168,15 +170,15 @@ export function ExcelGrid({
     const resetFromUrl = urlParams.get('reset') === 'true';
     const newScheduleParam = urlParams.get('newSchedule');
     
-    // Condizioni per il reset completo della griglia (VERSIONE MIGLIORATA)
-    // Inclusi più casi per garantire sempre un reset quando necessario
-    const shouldReset = 
+    // Nuova logica ridotta per il reset della griglia
+    const shouldReset = !resetPerformed && (
       forceResetGrid || 
       forceEmptyFromUrl || 
       resetFromUrl || 
       Object.keys(gridData).length === 0 ||
       (scheduleIdFromUrl && scheduleId?.toString() === scheduleIdFromUrl) ||
-      (newScheduleParam && scheduleId?.toString() === newScheduleParam);
+      (newScheduleParam && scheduleId?.toString() === newScheduleParam)
+    );
     
     if (shouldReset) {
       // Log dettagliato delle condizioni di reset
@@ -362,10 +364,13 @@ export function ExcelGrid({
       // FASE 4: AGGIORNAMENTO STATO CON LA NUOVA GRIGLIA
       setGridData(newGridData);
       
+      // Imposta il flag per evitare reset multipli
+      setResetPerformed(true);
+      
       // FASE 5: LOG DI COMPLETAMENTO
       console.log(`✅ Inizializzazione completa della griglia turni per schedule ID ${scheduleId}`);
     }
-  }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid, gridData]);
+  }, [scheduleId, users, shifts, timeOffRequests, weekDays, timeSlots, forceResetGrid, gridData, resetPerformed]);
   
   // GESTIONE CLIC MIGLIORATA
   // Gestisce in modo più robusto il clic su una cella della griglia

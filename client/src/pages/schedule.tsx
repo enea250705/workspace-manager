@@ -446,9 +446,12 @@ export default function Schedule() {
     // Usa il nuovo endpoint che garantisce la pulizia completa e l'unicità
     createScheduleMutation.mutate(newScheduleData, {
       onSuccess: async (response) => {
+        let scheduleData = null;
+        
         try {
           // Converti la risposta in JSON
           const data = await response.json();
+          scheduleData = data; // Salva i dati in una variabile accessibile nell'intero blocco
           console.log("✅ CREAZIONE SCHEDULE COMPLETATA:", data);
           
           // Forza il reset completo della griglia
@@ -491,7 +494,7 @@ export default function Schedule() {
           console.error("❌ Errore nella gestione dello schedule:", err);
           
           // Se lo schedule è stato creato ma c'è un errore nel reindirizzamento
-          if (data && data.id) {
+          if (scheduleData && scheduleData.id) {
             toast({
               title: "Pianificazione creata",
               description: "La pianificazione è stata creata, ma si è verificato un errore nel caricamento. Ricarica la pagina.",
@@ -499,7 +502,7 @@ export default function Schedule() {
                 <Button 
                   variant="outline"
                   onClick={() => {
-                    window.location.href = `/schedule?id=${data.id}`;
+                    window.location.href = `/schedule?id=${scheduleData.id}`;
                   }}
                 >
                   Ricarica
