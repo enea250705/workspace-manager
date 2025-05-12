@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { useInView } from "react-intersection-observer";
 
 type SidebarItem = {
   href: string;
@@ -67,96 +69,238 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
     return null; // Don't show sidebar if not logged in
   }
   
+  // Animazioni sidebar
+  const sidebarVariants = {
+    hidden: { x: -300, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 260,
+        damping: 20,
+        duration: 0.3
+      }
+    }
+  };
+
+  // Animazioni per i menu items
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        when: "beforeChildren"
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { x: -20, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 24
+      }
+    }
+  };
+
+  // Animazione per overlay mobile
+  const mobileOverlayVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.2 } }
+  };
+
+  const createMenuItem = (item: SidebarItem, index: number) => {
+    // Utilizza l'hook InView per animare gli elementi quando diventano visibili
+    const [ref, inView] = useInView({
+      triggerOnce: true,
+      threshold: 0.1,
+    });
+
+    return (
+      <motion.div
+        ref={ref}
+        key={item.href}
+        variants={itemVariants}
+        initial="hidden"
+        animate={inView ? "visible" : "hidden"}
+        custom={index}
+        whileHover={{ scale: 1.03, backgroundColor: "rgba(243, 244, 246, 1)" }}
+        whileTap={{ scale: 0.98 }}
+        className={cn(
+          "sidebar-item rounded-md mb-1",
+          location === item.href && "bg-blue-50"
+        )}
+      >
+        <Link 
+          href={item.href} 
+          onClick={() => setMobileMenuOpen(false)}
+          className={cn(
+            "flex items-center space-x-2 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700",
+            location === item.href && "text-primary font-medium"
+          )}
+        >
+          <span className={cn(
+            "material-icons text-base sm:text-lg",
+            location === item.href ? "text-primary" : "text-gray-500"
+          )}>
+            {item.icon}
+          </span>
+          <span>{item.label}</span>
+          {item.badge !== undefined && item.badge > 0 && (
+            <motion.span 
+              className="ml-auto bg-primary text-white text-[10px] sm:text-xs rounded-full px-1.5 sm:px-2 py-0.5 sm:py-1"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 500, 
+                damping: 15,
+                repeat: 3,
+                repeatType: "reverse",
+                repeatDelay: 8
+              }}
+            >
+              {item.badge}
+            </motion.span>
+          )}
+        </Link>
+      </motion.div>
+    );
+  };
+
   return (
-    <div id="sidebar" className={cn(
-      "bg-white shadow-md w-full md:w-64 md:min-h-screen transition-all flex flex-col",
-      mobileMenuOpen ? "h-screen fixed z-50 inset-0" : "h-auto"
-    )}>
-      <div className="p-3 sm:p-4 border-b flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <span className="material-icons text-primary text-lg sm:text-xl">schedule</span>
-          <h1 className="font-condensed text-lg sm:text-xl font-bold text-primary">StaffSync</h1>
-        </div>
-        <button 
-          id="mobile-menu-toggle" 
-          onClick={toggleMobileMenu}
-          className="md:hidden"
-          aria-label={mobileMenuOpen ? "Chiudi menu" : "Apri menu"}
-        >
-          <span className="material-icons">{mobileMenuOpen ? "close" : "menu"}</span>
-        </button>
-      </div>
-      
-      <div id="user-profile" className="p-3 sm:p-4 border-b flex items-center space-x-2 sm:space-x-3">
-        <div className="bg-gray-200 rounded-full w-8 sm:w-10 h-8 sm:h-10 flex items-center justify-center">
-          <span className="material-icons text-gray-600 text-sm sm:text-base">person</span>
-        </div>
-        <div>
-          <p className="font-medium text-xs sm:text-sm">{user.name}</p>
-          <p className="text-[10px] sm:text-xs text-gray-600">{user.role === "admin" ? "Amministratore" : "Dipendente"}</p>
-        </div>
-      </div>
-      
-      <nav className={cn(
-        "flex-1 overflow-y-auto py-2 sm:py-4",
-        mobileMenuOpen ? "block" : "hidden md:block"
-      )}>
-        {user.role === "admin" && (
-          <div id="admin-menu" data-role="admin">
-            <p className="px-3 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 sm:mb-2">Amministrazione</p>
-            {adminItems.map((item) => (
-              <Link 
-                key={item.href}
-                href={item.href} 
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "sidebar-item flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100",
-                  location === item.href && "active"
-                )}
-              >
-                <span className="material-icons text-gray-500 text-base sm:text-lg">{item.icon}</span>
-                <span>{item.label}</span>
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className="ml-auto bg-primary text-white text-[10px] sm:text-xs rounded-full px-1.5 sm:px-2 py-0.5 sm:py-1">{item.badge}</span>
-                )}
-              </Link>
-            ))}
-          </div>
+    <>
+      {/* Overlay scuro su mobile quando il menu è aperto */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={mobileOverlayVariants}
+            onClick={() => setMobileMenuOpen(false)}
+          />
         )}
+      </AnimatePresence>
+      
+      {/* Sidebar */}
+      <motion.div 
+        id="sidebar" 
+        className={cn(
+          "bg-white shadow-md w-full md:w-72 md:min-h-screen transition-all duration-300 flex flex-col",
+          mobileMenuOpen 
+            ? "fixed h-screen z-50 inset-0" 
+            : "h-auto hidden md:flex",
+        )}
+        variants={sidebarVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="p-4 sm:p-5 border-b flex items-center justify-between">
+          <motion.div 
+            className="flex items-center space-x-2"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+          >
+            <span className="material-icons text-primary text-xl sm:text-2xl">schedule</span>
+            <h1 className="font-condensed text-xl sm:text-2xl font-bold text-primary">StaffSync</h1>
+          </motion.div>
+          <motion.button 
+            id="mobile-menu-toggle" 
+            onClick={toggleMobileMenu}
+            className="md:hidden p-1.5 rounded-full hover:bg-gray-100"
+            aria-label={mobileMenuOpen ? "Chiudi menu" : "Apri menu"}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <span className="material-icons">{mobileMenuOpen ? "close" : "menu"}</span>
+          </motion.button>
+        </div>
         
-        {user.role === "employee" && (
-          <div id="employee-menu" data-role="employee">
-            <p className="px-3 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 sm:mb-2">Il Mio Account</p>
-            {employeeItems.map((item) => (
-              <Link 
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "sidebar-item flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100",
-                  location === item.href && "active"
-                )}
-              >
-                <span className="material-icons text-gray-500 text-base sm:text-lg">{item.icon}</span>
-                <span>{item.label}</span>
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className="ml-auto bg-primary text-white text-[10px] sm:text-xs rounded-full px-1.5 sm:px-2 py-0.5 sm:py-1">{item.badge}</span>
-                )}
-              </Link>
-            ))}
-          </div>
-        )}
-      </nav>
-      
-      <div className="p-3 sm:p-4 border-t">
-        <button 
-          onClick={logout}
-          className="flex items-center space-x-2 text-xs sm:text-sm text-gray-700 hover:text-primary"
+        <motion.div 
+          id="user-profile" 
+          className="p-4 sm:p-5 border-b flex items-center space-x-3 sm:space-x-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
         >
-          <span className="material-icons text-base sm:text-lg">logout</span>
-          <span>Logout</span>
-        </button>
-      </div>
-    </div>
+          <motion.div 
+            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full w-10 sm:w-12 h-10 sm:h-12 flex items-center justify-center shadow-md"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="material-icons text-white text-base sm:text-lg">person</span>
+          </motion.div>
+          <div>
+            <p className="font-medium text-sm sm:text-base">{user.name}</p>
+            <p className="text-xs sm:text-sm text-gray-600">{user.role === "admin" ? "Amministratore" : "Dipendente"}</p>
+          </div>
+        </motion.div>
+        
+        <motion.nav 
+          className="flex-1 overflow-y-auto py-4 sm:py-5 px-2"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {user.role === "admin" && (
+            <motion.div 
+              id="admin-menu" 
+              data-role="admin"
+              variants={containerVariants}
+            >
+              <motion.p 
+                className="px-3 sm:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 sm:mb-3"
+                variants={itemVariants}
+              >
+                Amministrazione
+              </motion.p>
+              {adminItems.map((item, index) => createMenuItem(item, index))}
+            </motion.div>
+          )}
+          
+          {user.role === "employee" && (
+            <motion.div 
+              id="employee-menu" 
+              data-role="employee"
+              variants={containerVariants}
+            >
+              <motion.p 
+                className="px-3 sm:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 sm:mb-3"
+                variants={itemVariants}
+              >
+                Il Mio Account
+              </motion.p>
+              {employeeItems.map((item, index) => createMenuItem(item, index))}
+            </motion.div>
+          )}
+        </motion.nav>
+        
+        <motion.div 
+          className="p-4 sm:p-5 border-t"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <motion.button 
+            onClick={logout}
+            className="flex items-center space-x-2 text-sm sm:text-base text-gray-700 hover:text-primary transition-colors w-full rounded-md py-2 px-3 hover:bg-gray-100"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <span className="material-icons text-base sm:text-lg">logout</span>
+            <span>Logout</span>
+          </motion.button>
+        </motion.div>
+      </motion.div>
+    </>
   );
 }
