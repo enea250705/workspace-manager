@@ -44,7 +44,7 @@ export function WeekSelectorDialog({
             Seleziona la settimana di turni da visualizzare
           </p>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh] sm:max-h-[400px] mt-2 sm:mt-4">
+        <div className="max-h-[60vh] sm:max-h-[400px] mt-2 sm:mt-4 overflow-y-auto pr-1">
           <div className="space-y-2">
             {sortedSchedules.length > 0 ? (
               sortedSchedules.map((schedule) => (
@@ -75,7 +75,7 @@ export function WeekSelectorDialog({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
