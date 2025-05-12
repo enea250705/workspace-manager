@@ -718,9 +718,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all users
       const users = await storage.getAllUsers();
       
-      // Create notifications for all users
+      // Import email service
+      const { sendScheduleNotification } = await import('./services/email-service');
+      
+      // Create notifications and send emails to all users
       for (const user of users) {
-        if (user.isActive) {
+        if (user.isActive && user.role !== 'admin') { // Invia solo ai dipendenti, non agli admin
+          // Crea notifica nell'app
           const notification = await storage.createNotification({
             userId: user.id,
             type: "schedule_update",
@@ -733,12 +737,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
           
-          // Send real-time notification
+          // Invia notifica real-time
           sendNotification(user.id, {
             type: "schedule_update",
             message: "Nuova pianificazione turni pubblicata",
             data: notification
           });
+          
+          // Invia email di notifica
+          try {
+            await sendScheduleNotification(user, schedule.startDate, schedule.endDate);
+            console.log(`📧 Email di notifica turno inviata a ${user.name} (${user.email})`);
+          } catch (emailError) {
+            console.error(`❌ Errore nell'invio email a ${user.email}:`, emailError);
+          }
         }
       }
       
