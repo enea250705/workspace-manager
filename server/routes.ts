@@ -1108,11 +1108,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Request not found" });
       }
       
+      // Obtiene l'utente richiedente per inviare l'email
+      const user = await storage.getUser(request.userId);
+      
       // Notify the user about the approval
       const notification = await storage.createNotification({
         userId: request.userId,
         type: "request_approved",
-        message: "Your time-off request has been approved",
+        message: "La tua richiesta è stata approvata",
         isRead: false,
         data: {
           requestId: request.id,
@@ -1121,6 +1124,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: request.type
         }
       });
+      
+      // Invia email di notifica approvazione
+      if (user && user.email) {
+        try {
+          // Import del servizio email
+          const { sendTimeOffApprovalNotification } = await import('./services/email-service');
+          
+          // Invia email di notifica
+          await sendTimeOffApprovalNotification(user, request.type, request.startDate, request.endDate);
+          console.log(`📧 Email di notifica approvazione inviata a ${user.name} (${user.email})`);
+        } catch (emailError) {
+          console.error(`❌ Errore nell'invio email a ${user.email}:`, emailError);
+        }
+      }
       
       // Crea automaticamente i turni per il periodo di assenza
       const timeOffType = request.type;
@@ -1230,29 +1247,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Request not found" });
       }
       
+      // Ottiene l'utente richiedente per inviare l'email
+      const user = await storage.getUser(request.userId);
+      
       // Notify the user about the rejection
       const notification = await storage.createNotification({
         userId: request.userId,
         type: "request_rejected",
-        message: "Your time-off request has been rejected",
+        message: "La tua richiesta è stata respinta",
         isRead: false,
         data: {
           requestId: request.id,
           startDate: request.startDate,
           endDate: request.endDate,
-          type: request.type
+          type: request.type,
+          reason: req.body.reason // Motivo del rifiuto (opzionale)
         }
       });
+      
+      // Invia email di notifica rifiuto
+      if (user && user.email) {
+        try {
+          // Import del servizio email
+          const { sendTimeOffRejectionNotification } = await import('./services/email-service');
+          
+          // Invia email di notifica
+          await sendTimeOffRejectionNotification(user, request.type, request.startDate, request.endDate);
+          console.log(`📧 Email di notifica rifiuto inviata a ${user.name} (${user.email})`);
+        } catch (emailError) {
+          console.error(`❌ Errore nell'invio email a ${user.email}:`, emailError);
+        }
+      }
       
       // Send real-time notification
       sendNotification(request.userId, {
         type: "request_rejected",
-        message: "Your time-off request has been rejected",
+        message: "La tua richiesta è stata respinta",
         data: notification
       });
       
       res.json(request);
     } catch (err) {
+      console.error("Errore durante il rifiuto della richiesta:", err);
       res.status(500).json({ message: "Failed to reject request" });
     }
   });
