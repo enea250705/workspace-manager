@@ -603,23 +603,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Shift management routes
+  // NUOVA API per la gestione dei turni - completamente riprogettata
   app.get("/api/schedules/:scheduleId/shifts", isAuthenticated, async (req, res) => {
     try {
       const scheduleId = parseInt(req.params.scheduleId);
       
-      // Check if this is a new schedule request (forceEmpty=true)
-      if (req.query.forceEmpty === 'true') {
-        console.log("FORZATURA: Restituendo esplicitamente un array vuoto di turni per lo schedule:", scheduleId);
-        return res.json([]);  // Restituisce un array vuoto di turni
-      }
-
-      // Check if this is a brand new schedule (manually created with a specific date)
-      if (req.query.isNew === 'true') {
-        console.log("NUOVO SCHEDULE: Restituendo array vuoto di turni per nuovo schedule:", scheduleId);
-        return res.json([]);  // Restituisce un array vuoto di turni
+      // Verifica se è una richiesta speciale che richiede una tabella completamente vuota
+      // Questo controllo ha la massima priorità
+      if (req.query.forceEmpty === 'true' || req.query.isNew === 'true' || req.query.reset === 'true') {
+        console.log("🚨 FORZATURA TABELLA VUOTA 🚨 - Restituendo array vuoto di turni per lo schedule:", scheduleId);
+        console.log("Parametri di reset:", req.query);
+        return res.json([]);  // Invia SEMPRE un array vuoto
       }
       
+      // Ottieni una lista di tutti gli schedule
+      const allSchedules = await storage.getAllSchedules();
+      
+      // Verifica se lo schedule richiesto è uno dei più recenti
+      const isNewSchedule = allSchedules.some(s => 
+        s.id === scheduleId && 
+        new Date(s.createdAt || s.updatedAt) > new Date(Date.now() - 5 * 60 * 1000)  // creato negli ultimi 5 minuti
+      );
+      
+      // Se è un nuovo schedule (creato negli ultimi 5 minuti), restituisci una tabella vuota
+      if (isNewSchedule) {
+        console.log("🆕 NUOVO SCHEDULE RILEVATO 🆕 - Restituendo tabella vuota per:", scheduleId);
+        return res.json([]);
+      }
+      
+      // Per tutte le altre richieste normali, procedi come al solito
       if ((req.user as any).role === "admin") {
         // Admins can see all shifts
         const shifts = await storage.getShifts(scheduleId);
@@ -630,7 +642,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(shifts);
       }
     } catch (err) {
-      res.status(500).json({ message: "Failed to get shifts" });
+      console.error("Errore nel recupero dei turni:", err);
+      res.status(500).json({ message: "Errore nel recupero dei turni" });
     }
   });
   
