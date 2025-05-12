@@ -15,7 +15,7 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 // Indirizzo email del mittente (deve essere verificato su SendGrid)
-const SENDER_EMAIL = 'eneamuja87@gmail.com';
+const SENDER_EMAIL = 'admin@ilirionai.it';
 
 /**
  * Interfaccia per i parametri di invio email
