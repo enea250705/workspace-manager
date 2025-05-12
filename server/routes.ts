@@ -744,10 +744,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             data: notification
           });
           
-          // Invia email di notifica
+          // Recupera i turni specifici dell'utente per questo schedule
           try {
-            await sendScheduleNotification(user, schedule.startDate, schedule.endDate);
-            console.log(`📧 Email di notifica turno inviata a ${user.name} (${user.email})`);
+            // Ottieni i turni dell'utente per questo schedule
+            const userShifts = await storage.getUserShifts(user.id, schedule.id);
+            console.log(`🔍 Recuperati ${userShifts.length} turni per ${user.name}`);
+            
+            // Invia email con i dettagli dei turni inclusi
+            await sendScheduleNotification(user, schedule.startDate, schedule.endDate, userShifts);
+            console.log(`📧 Email di notifica turno inviata a ${user.name} (${user.email}) con ${userShifts.length} turni inclusi`);
           } catch (emailError) {
             console.error(`❌ Errore nell'invio email a ${user.email}:`, emailError);
           }

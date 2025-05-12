@@ -150,14 +150,94 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 }
 
 /**
- * Invia una notifica di pubblicazione di un nuovo turno
+ * Invia una notifica di pubblicazione di un nuovo turno con i dettagli specifici per l'utente
  */
-export async function sendScheduleNotification(user: User, scheduleStartDate: string, scheduleEndDate: string): Promise<boolean> {
+export async function sendScheduleNotification(user: User, scheduleStartDate: string, scheduleEndDate: string, shifts: any[] = []): Promise<boolean> {
   // Formatta le date per la visualizzazione (dd/mm/yyyy)
   const formattedStartDate = new Date(scheduleStartDate).toLocaleDateString('it-IT');
   const formattedEndDate = new Date(scheduleEndDate).toLocaleDateString('it-IT');
   
-  // Crea il contenuto HTML dell'email
+  // Crea tabella HTML con i turni dell'utente
+  let shiftsTable = '';
+  
+  if (shifts && shifts.length > 0) {
+    // Ordina i turni per giorno della settimana
+    const weekdayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const orderedShifts = [...shifts].sort((a, b) => {
+      return weekdayOrder.indexOf(a.day) - weekdayOrder.indexOf(b.day);
+    });
+    
+    // Traduci i giorni della settimana in italiano
+    const weekdayTranslation: Record<string, string> = {
+      "Monday": "Lunedì",
+      "Tuesday": "Martedì",
+      "Wednesday": "Mercoledì",
+      "Thursday": "Giovedì",
+      "Friday": "Venerdì",
+      "Saturday": "Sabato",
+      "Sunday": "Domenica"
+    };
+
+    // Traduci i tipi di turno
+    const typeTranslation: Record<string, string> = {
+      "work": "Lavoro",
+      "vacation": "Ferie",
+      "leave": "Permesso",
+      "sick": "Malattia"
+    };
+    
+    // Crea la tabella dei turni
+    shiftsTable = `
+      <div style="margin-top: 25px; margin-bottom: 25px;">
+        <h3 style="color: #4a6cf7; margin-bottom: 15px;">I tuoi turni:</h3>
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0;">
+          <thead>
+            <tr style="background-color: #f3f4f6;">
+              <th style="padding: 10px; border: 1px solid #e0e0e0; text-align: left;">Giorno</th>
+              <th style="padding: 10px; border: 1px solid #e0e0e0; text-align: left;">Orario</th>
+              <th style="padding: 10px; border: 1px solid #e0e0e0; text-align: left;">Tipo</th>
+              <th style="padding: 10px; border: 1px solid #e0e0e0; text-align: left;">Area</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    for (const shift of orderedShifts) {
+      // Converti il tipo di turno
+      const shiftType = typeTranslation[shift.type] || shift.type;
+      
+      // Assegna colore in base al tipo
+      const typeColor = shift.type === 'work' ? '#4a6cf7' : 
+                         shift.type === 'vacation' ? '#e8aa33' : 
+                         shift.type === 'leave' ? '#10b981' : 
+                         shift.type === 'sick' ? '#ef4444' : '#6b7280';
+      
+      // Aggiungi riga alla tabella
+      shiftsTable += `
+        <tr>
+          <td style="padding: 10px; border: 1px solid #e0e0e0;">${weekdayTranslation[shift.day] || shift.day}</td>
+          <td style="padding: 10px; border: 1px solid #e0e0e0;">${shift.startTime.substring(0, 5)} - ${shift.endTime.substring(0, 5)}</td>
+          <td style="padding: 10px; border: 1px solid #e0e0e0; color: ${typeColor}; font-weight: bold;">${shiftType}</td>
+          <td style="padding: 10px; border: 1px solid #e0e0e0;">${shift.area || '-'}</td>
+        </tr>
+      `;
+    }
+    
+    shiftsTable += `
+          </tbody>
+        </table>
+      </div>
+    `;
+  } else {
+    // Messaggio se non ci sono turni
+    shiftsTable = `
+      <div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; background-color: #f9fafb; border-radius: 5px; text-align: center;">
+        <p style="margin: 0; color: #6b7280;">Non hai turni assegnati per questo periodo.</p>
+      </div>
+    `;
+  }
+  
+  // Crea il contenuto HTML dell'email con la tabella dei turni
   const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
@@ -165,7 +245,10 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
         </div>
         <p>Gentile ${user.name},</p>
         <p>Ti informiamo che è stato pubblicato un nuovo turno per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong>.</p>
-        <p>Puoi visualizzare i tuoi turni accedendo alla piattaforma StaffSync.</p>
+        
+        ${shiftsTable}
+        
+        <p>Puoi visualizzare ulteriori dettagli dei tuoi turni accedendo alla piattaforma StaffSync.</p>
         <div style="text-align: center; margin-top: 30px;">
           <a href="https://staffsync.replit.app/my-schedule" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Turni</a>
         </div>
