@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { downloadPdf, generatePayslipFilename, generateTaxDocFilename } from "@/lib/pdf-utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -158,7 +158,7 @@ export function DocumentList() {
                 key={doc.id} 
                 className="p-4 border rounded-md"
               >
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 gap-2">
                   <div>
                     <div className="flex items-center">
                       <span className="material-icons text-primary mr-2">
@@ -180,16 +180,16 @@ export function DocumentList() {
                       Caricato il {format(parseISO(doc.uploadedAt), "d MMMM yyyy", { locale: it })}
                     </div>
                   </div>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 self-start sm:self-auto mt-2 sm:mt-0">
                     PDF
                   </Badge>
                 </div>
                 
-                <div className="flex gap-2 justify-end mt-3">
+                <div className="flex flex-wrap gap-2 mt-3 sm:justify-end">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                    className="text-blue-600 border-blue-300 hover:bg-blue-50 text-xs w-full sm:w-auto"
                     onClick={() => handlePreview(doc)}
                   >
                     <span className="material-icons text-sm mr-1">visibility</span>
@@ -198,7 +198,7 @@ export function DocumentList() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-green-600 border-green-300 hover:bg-green-50"
+                    className="text-green-600 border-green-300 hover:bg-green-50 text-xs w-full sm:w-auto"
                     onClick={() => handleDownload(doc)}
                   >
                     <span className="material-icons text-sm mr-1">download</span>
@@ -208,7 +208,7 @@ export function DocumentList() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-red-600 border-red-300 hover:bg-red-50"
+                      className="text-red-600 border-red-300 hover:bg-red-50 text-xs w-full sm:w-auto"
                       onClick={() => handleDelete(doc.id)}
                       disabled={deleteMutation.isPending}
                     >
@@ -224,7 +224,7 @@ export function DocumentList() {
       </Card>
       
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl h-[80vh]">
+        <DialogContent className="max-w-4xl h-[80vh] w-[92%] md:w-full" aria-describedby="pdf-preview">
           <DialogHeader>
             <DialogTitle>
               {selectedDocument && (
@@ -233,6 +233,9 @@ export function DocumentList() {
                 </>
               )}
             </DialogTitle>
+            <DialogDescription id="pdf-preview" className="sr-only">
+              Anteprima del documento PDF
+            </DialogDescription>
           </DialogHeader>
           
           {selectedDocument && (
