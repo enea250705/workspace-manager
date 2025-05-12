@@ -166,6 +166,35 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                               const leaveShifts = uniqueShifts.filter(s => s.type === "leave");
                               const sickShifts = uniqueShifts.filter(s => s.type === "sick");
                               
+                              // Consolida gli intervalli di lavoro consecutivi
+                              const consolidatedWorkShifts: any[] = [];
+                              let currentShift: any = null;
+                              
+                              // Ordina per orario di inizio
+                              workShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+                              
+                              workShifts.forEach((shift) => {
+                                if (!currentShift) {
+                                  // Primo turno da considerare
+                                  currentShift = { ...shift };
+                                } else {
+                                  // Controlla se questo turno è consecutivo all'ultimo
+                                  if (shift.startTime === currentShift.endTime) {
+                                    // Estendi il turno corrente
+                                    currentShift.endTime = shift.endTime;
+                                  } else {
+                                    // Questo turno non è consecutivo, salva quello corrente e inizia uno nuovo
+                                    consolidatedWorkShifts.push(currentShift);
+                                    currentShift = { ...shift };
+                                  }
+                                }
+                              });
+                              
+                              // Aggiungi l'ultimo turno se esiste
+                              if (currentShift) {
+                                consolidatedWorkShifts.push(currentShift);
+                              }
+                              
                               // Funzione helper per determinare la priorità del tipo di turno
                               function getPriorityValue(type: string): number {
                                 switch (type) {
@@ -178,7 +207,7 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                               }
                               
                               // Calcola il totale delle ore di lavoro
-                              const totalHours = workShifts.reduce((total, shift) => {
+                              const totalHours = consolidatedWorkShifts.reduce((total, shift) => {
                                 const startParts = shift.startTime.split(':').map(Number);
                                 const endParts = shift.endTime.split(':').map(Number);
                                 
@@ -198,14 +227,14 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
                                   )}
                                   
                                   {/* Mostra gli slot di lavoro in modo destacato */}
-                                  {workShifts.length > 0 && (
+                                  {consolidatedWorkShifts.length > 0 && (
                                     <div className="bg-white shadow-md rounded-md p-3 mb-2 border-l-4 border-blue-500">
                                       <div className="font-medium text-blue-700 flex items-center mb-3">
                                         <span className="material-icons text-sm mr-1">schedule</span>
                                         Orario di lavoro
                                       </div>
                                       <div className="grid grid-cols-1 gap-2">
-                                        {workShifts.map((shift, idx) => (
+                                        {consolidatedWorkShifts.map((shift, idx) => (
                                           <div key={idx} className="flex items-center justify-between bg-blue-50 rounded-md p-3 mb-1">
                                             <div className="flex items-center">
                                               <span className="material-icons text-blue-600 mr-2">access_time</span>
