@@ -1341,11 +1341,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const document = await storage.createDocument(documentData);
       
+      // Ottieni informazioni sull'utente per l'invio email
+      const user = await storage.getUser(document.userId);
+      
       // Notify the user about the new document
       const notification = await storage.createNotification({
         userId: document.userId,
         type: "document_upload",
-        message: `New ${document.type === "payslip" ? "payslip" : "tax document"} available`,
+        message: `Nuovo ${document.type === "payslip" ? "Busta Paga" : "Documento Fiscale"} disponibile`,
         isRead: false,
         data: {
           documentId: document.id,
@@ -1357,9 +1360,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send real-time notification
       sendNotification(document.userId, {
         type: "document_upload",
-        message: `New ${document.type === "payslip" ? "payslip" : "tax document"} available`,
+        message: `Nuovo ${document.type === "payslip" ? "Busta Paga" : "Documento Fiscale"} disponibile`,
         data: notification
       });
+      
+      // Invia email di notifica
+      if (user && user.email) {
+        try {
+          const { sendDocumentNotification } = await import('./services/email-service');
+          await sendDocumentNotification(user, document.type, document.period);
+          console.log(`📧 Email di notifica documento inviata a ${user.name} (${user.email})`);
+        } catch (emailError) {
+          console.error(`❌ Errore nell'invio email:`, emailError);
+        }
+      }
       
       res.status(201).json(document);
     } catch (err) {
