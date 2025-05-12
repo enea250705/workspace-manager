@@ -116,7 +116,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 mt-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="name"
@@ -146,7 +146,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
           />
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="username"
@@ -204,7 +204,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
           )}
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="role"
@@ -220,7 +220,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
                       <SelectValue placeholder="Seleziona ruolo" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     <SelectItem value="admin">Amministratore</SelectItem>
                     <SelectItem value="employee">Dipendente</SelectItem>
                   </SelectContent>
@@ -266,11 +266,12 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
           </div>
         )}
         
-        <div className="flex justify-end space-x-2 pt-4">
+        <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
+            className="w-full sm:w-auto"
           >
             Annulla
           </Button>
@@ -281,6 +282,7 @@ export function UserForm({ user, onSubmit, onCancel, isEdit = false }: UserFormP
               !form.formState.isValid ||
               (isEdit ? false : !form.getValues("password"))
             }
+            className="w-full sm:w-auto"
           >
             {isEdit ? "Aggiorna" : "Crea Utente"}
           </Button>

@@ -142,11 +142,11 @@ export function BulkUsersForm({ onSubmit, onCancel }: BulkUsersFormProps) {
               <FormControl>
                 <Textarea 
                   placeholder={csvExample}
-                  className="font-mono h-[200px]"
+                  className="font-mono h-[200px] w-full max-w-full"
                   {...field} 
                 />
               </FormControl>
-              <FormDescription>
+              <FormDescription className="text-xs sm:text-sm">
                 Inserisci un utente per riga nel formato: nome,email,username,password,posizione
                 <br />
                 La password è opzionale. Se non specificata, verrà usato lo username come password.
@@ -163,17 +163,19 @@ export function BulkUsersForm({ onSubmit, onCancel }: BulkUsersFormProps) {
           </div>
         )}
         
-        <div className="flex justify-end space-x-2 pt-4">
+        <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
+            className="w-full sm:w-auto"
           >
             Annulla
           </Button>
           <Button 
             type="submit"
             disabled={createUsersMutation.isPending}
+            className="w-full sm:w-auto"
           >
             {createUsersMutation.isPending ? (
               <>
