@@ -100,10 +100,15 @@ export default function Schedule() {
     mutationFn: (scheduleId: number) =>
       apiRequest("POST", `/api/schedules/${scheduleId}/publish`, {}),
     onSuccess: () => {
+      toast({
+        title: "Turni pubblicati",
+        description: "La pianificazione è stata pubblicata con successo.",
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules/1/shifts"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/schedules/${existingSchedule?.id}/shifts`] });
     },
-    onError: () => {
+    onError: (err) => {
+      console.error("Errore pubblicazione:", err);
       toast({
         title: "Errore di pubblicazione",
         description: "Si è verificato un errore durante la pubblicazione della pianificazione.",
