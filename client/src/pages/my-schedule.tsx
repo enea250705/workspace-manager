@@ -91,9 +91,10 @@ export default function MySchedule() {
           onSelectSchedule={handleSelectSchedule}
         />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Layout Desktop e Tablet */}
+        <div className="hidden sm:grid sm:grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {/* Colonna sinistra con calendario */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Calendario</CardTitle>
@@ -167,6 +168,48 @@ export default function MySchedule() {
               userShifts={userShifts}
             />
           </div>
+        </div>
+        
+        {/* Layout Mobile */}
+        <div className="sm:hidden space-y-4">
+          <Card>
+            <CardHeader className="p-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Riepilogo</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowWeekSelector(true)}
+              >
+                <span className="material-icons text-sm mr-1">history</span>
+                Altre settimane
+              </Button>
+            </CardHeader>
+            <CardContent className="pb-3 pt-0">
+              {currentSchedule ? (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium">Periodo:</div>
+                    <div>{format(new Date(currentSchedule.startDate), "d MMM", { locale: it })} - {format(new Date(currentSchedule.endDate), "d MMM", { locale: it })}</div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium">Ore settimanali:</div>
+                    <div className="font-semibold text-blue-700">{formatHours(calculateTotalWorkHours(userShifts.filter(shift => shift.type === "work")))}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">
+                  Nessun turno pubblicato disponibile.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <EmployeeScheduleViewer
+            schedule={currentSchedule}
+            shifts={allShifts}
+            userShifts={userShifts}
+          />
         </div>
       </div>
     </Layout>

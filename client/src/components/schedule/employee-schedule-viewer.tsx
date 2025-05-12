@@ -137,192 +137,347 @@ export function EmployeeScheduleViewer({ schedule, shifts, userShifts }: Employe
       <CardContent className="pb-6 pt-0">
         {/* Visualizzazione a settimana */}
         {view === "week" && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-50">
-                  {weekDays.map(day => (
-                    <th 
-                      key={day.formattedDate}
-                      className="border px-1 sm:px-3 py-1 sm:py-2 text-center font-medium"
-                    >
-                      <div className="whitespace-nowrap text-xs sm:text-sm">{day.shortName}</div>
-                      <div className="text-[10px] sm:text-xs font-normal text-gray-500">{day.formattedDate}</div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  {weekDays.map(day => {
-                    const dayShifts = shiftsByDay[day.name] || [];
-                    
-                    // Ordina i turni per orario di inizio
-                    dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
-                    
-                    return (
-                      <td key={day.formattedDate} className="border p-1 sm:p-3 align-top h-20 sm:h-28">
-                        {dayShifts.length === 0 ? (
-                          <div className="text-center py-1 sm:py-2 text-gray-400 text-xs sm:text-sm">
-                            Non in servizio
-                          </div>
-                        ) : (
-                          <div>
-                            {/* Prima raggruppiamo i turni per tipo */}
-                            {(() => {
-                              // Dobbiamo rimuovere i duplicati e dare priorità ai tipi di assenza
-                              // Prima organizziamo i turni per slot orario
-                              const timeSlotMap = new Map();
-                              
-                              // Ordine di priorità: sick > leave > vacation > work
-                              // Aggiungiamo ogni turno, rimpiazzando quelli a priorità inferiore
-                              dayShifts.forEach(shift => {
-                                const timeKey = `${shift.startTime}-${shift.endTime}`;
+          <>
+            {/* Visualizzazione Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    {weekDays.map(day => (
+                      <th 
+                        key={day.formattedDate}
+                        className="border px-3 py-2 text-center font-medium"
+                      >
+                        <div className="whitespace-nowrap text-sm">{day.shortName}</div>
+                        <div className="text-xs font-normal text-gray-500">{day.formattedDate}</div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {weekDays.map(day => {
+                      const dayShifts = shiftsByDay[day.name] || [];
+                      
+                      // Ordina i turni per orario di inizio
+                      dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+                      
+                      return (
+                        <td key={day.formattedDate} className="border p-3 align-top h-28">
+                          {dayShifts.length === 0 ? (
+                            <div className="text-center py-2 text-gray-400 text-sm">
+                              Non in servizio
+                            </div>
+                          ) : (
+                            <div>
+                              {/* Prima raggruppiamo i turni per tipo */}
+                              {(() => {
+                                // Dobbiamo rimuovere i duplicati e dare priorità ai tipi di assenza
+                                // Prima organizziamo i turni per slot orario
+                                const timeSlotMap = new Map();
                                 
-                                if (!timeSlotMap.has(timeKey)) {
-                                  // Se non esiste ancora questo slot, aggiungiamo
-                                  timeSlotMap.set(timeKey, shift);
-                                } else {
-                                  // Se esiste già, controlliamo la priorità
-                                  const existingShift = timeSlotMap.get(timeKey);
-                                  const existingPriority = getPriorityValue(existingShift.type);
-                                  const newPriority = getPriorityValue(shift.type);
+                                // Ordine di priorità: sick > leave > vacation > work
+                                // Aggiungiamo ogni turno, rimpiazzando quelli a priorità inferiore
+                                dayShifts.forEach(shift => {
+                                  const timeKey = `${shift.startTime}-${shift.endTime}`;
                                   
-                                  // Sostituisci solo se la nuova priorità è maggiore
-                                  if (newPriority > existingPriority) {
+                                  if (!timeSlotMap.has(timeKey)) {
+                                    // Se non esiste ancora questo slot, aggiungiamo
                                     timeSlotMap.set(timeKey, shift);
-                                  }
-                                }
-                              });
-                              
-                              // Prendi i turni senza duplicati dal Map
-                              const uniqueShifts = Array.from(timeSlotMap.values());
-                              
-                              // Ora filtra per tipo
-                              const workShifts = uniqueShifts.filter(s => s.type === "work");
-                              const vacationShifts = uniqueShifts.filter(s => s.type === "vacation");
-                              const leaveShifts = uniqueShifts.filter(s => s.type === "leave");
-                              const sickShifts = uniqueShifts.filter(s => s.type === "sick");
-                              
-                              // Consolida gli intervalli di lavoro consecutivi
-                              const consolidatedWorkShifts: any[] = [];
-                              let currentShift: any = null;
-                              
-                              // Ordina per orario di inizio
-                              workShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
-                              
-                              workShifts.forEach((shift) => {
-                                if (!currentShift) {
-                                  // Primo turno da considerare
-                                  currentShift = { ...shift };
-                                } else {
-                                  // Controlla se questo turno è consecutivo all'ultimo
-                                  if (shift.startTime === currentShift.endTime) {
-                                    // Estendi il turno corrente
-                                    currentShift.endTime = shift.endTime;
                                   } else {
-                                    // Questo turno non è consecutivo, salva quello corrente e inizia uno nuovo
-                                    consolidatedWorkShifts.push(currentShift);
+                                    // Se esiste già, controlliamo la priorità
+                                    const existingShift = timeSlotMap.get(timeKey);
+                                    const existingPriority = getPriorityValue(existingShift.type);
+                                    const newPriority = getPriorityValue(shift.type);
+                                    
+                                    // Sostituisci solo se la nuova priorità è maggiore
+                                    if (newPriority > existingPriority) {
+                                      timeSlotMap.set(timeKey, shift);
+                                    }
+                                  }
+                                });
+                                
+                                // Prendi i turni senza duplicati dal Map
+                                const uniqueShifts = Array.from(timeSlotMap.values());
+                                
+                                // Ora filtra per tipo
+                                const workShifts = uniqueShifts.filter(s => s.type === "work");
+                                const vacationShifts = uniqueShifts.filter(s => s.type === "vacation");
+                                const leaveShifts = uniqueShifts.filter(s => s.type === "leave");
+                                const sickShifts = uniqueShifts.filter(s => s.type === "sick");
+                                
+                                // Consolida gli intervalli di lavoro consecutivi
+                                const consolidatedWorkShifts: any[] = [];
+                                let currentShift: any = null;
+                                
+                                // Ordina per orario di inizio
+                                workShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+                                
+                                workShifts.forEach((shift) => {
+                                  if (!currentShift) {
+                                    // Primo turno da considerare
                                     currentShift = { ...shift };
+                                  } else {
+                                    // Controlla se questo turno è consecutivo all'ultimo
+                                    if (shift.startTime === currentShift.endTime) {
+                                      // Estendi il turno corrente
+                                      currentShift.endTime = shift.endTime;
+                                    } else {
+                                      // Questo turno non è consecutivo, salva quello corrente e inizia uno nuovo
+                                      consolidatedWorkShifts.push(currentShift);
+                                      currentShift = { ...shift };
+                                    }
+                                  }
+                                });
+                                
+                                // Aggiungi l'ultimo turno se esiste
+                                if (currentShift) {
+                                  consolidatedWorkShifts.push(currentShift);
+                                }
+                                
+                                // Funzione helper per determinare la priorità del tipo di turno
+                                function getPriorityValue(type: string): number {
+                                  switch (type) {
+                                    case "sick": return 4;
+                                    case "leave": return 3;
+                                    case "vacation": return 2;
+                                    case "work": return 1;
+                                    default: return 0;
                                   }
                                 }
-                              });
+                                
+                                // Calcola il totale delle ore di lavoro usando la funzione di utilità centralizzata
+                                const totalHours = calculateTotalWorkHours(consolidatedWorkShifts);
+                                
+                                return (
+                                  <>
+                                    {/* Mostra totale ore se ci sono turni di lavoro */}
+                                    {workShifts.length > 0 && (
+                                      <div className="font-medium text-sm mb-2">
+                                        Ore: {totalHours.toFixed(1)}h
+                                      </div>
+                                    )}
+                                    
+                                    {/* Mostra gli slot di lavoro in modo destacato */}
+                                    {consolidatedWorkShifts.length > 0 && (
+                                      <div className="bg-white shadow-md rounded-md p-3 mb-2 border-l-4 border-blue-500">
+                                        <div className="font-medium text-blue-700 flex items-center mb-3 text-sm">
+                                          <span className="material-icons text-sm mr-1">schedule</span>
+                                          Orario di lavoro
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2">
+                                          {consolidatedWorkShifts.map((shift, idx) => (
+                                            <div key={idx} className="flex flex-row items-center justify-between bg-blue-50 rounded-md p-3 mb-1">
+                                              <div className="flex items-center">
+                                                <span className="material-icons text-blue-600 mr-2 text-sm">access_time</span>
+                                                <div className="font-medium text-base">{shift.startTime} - {adjustEndTime(shift.endTime)}</div>
+                                              </div>
+                                              {shift.notes && <div className="ml-3 text-sm text-gray-600 italic">{shift.notes}</div>}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Mostra ferie */}
+                                    {vacationShifts.length > 0 && (
+                                      <div className="bg-red-100 rounded-md p-3 mb-2">
+                                        <div className="font-medium flex items-center text-sm">
+                                          <span className="material-icons text-sm mr-1">beach_access</span>
+                                          Ferie (F)
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Mostra permessi */}
+                                    {leaveShifts.length > 0 && (
+                                      <div className="bg-yellow-100 rounded-md p-3 mb-2">
+                                        <div className="font-medium flex items-center text-sm">
+                                          <span className="material-icons text-sm mr-1">event_busy</span>
+                                          Permesso (P)
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Mostra malattia */}
+                                    {sickShifts.length > 0 && (
+                                      <div className="bg-purple-100 rounded-md p-3 mb-2">
+                                        <div className="font-medium flex items-center text-sm">
+                                          <span className="material-icons text-sm mr-1">healing</span>
+                                          Malattia (M)
+                                        </div>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Visualizzazione Mobile: Layout a carte (card) */}
+            <div className="md:hidden space-y-4">
+              {weekDays.map(day => {
+                const dayShifts = shiftsByDay[day.name] || [];
+                dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+                
+                return (
+                  <div key={day.formattedDate} className="border rounded-md overflow-hidden">
+                    <div className="bg-gray-50 px-3 py-2 border-b">
+                      <div className="flex justify-between items-center">
+                        <div className="font-medium">{day.name}</div>
+                        <div className="text-xs text-gray-500">{day.formattedDate}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-3">
+                      {dayShifts.length === 0 ? (
+                        <div className="text-center py-3 text-gray-400">
+                          Non in servizio
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {(() => {
+                            // Stessa logica di raggruppamento e consolidamento della visualizzazione desktop
+                            const timeSlotMap = new Map();
+                            
+                            dayShifts.forEach(shift => {
+                              const timeKey = `${shift.startTime}-${shift.endTime}`;
                               
-                              // Aggiungi l'ultimo turno se esiste
-                              if (currentShift) {
-                                consolidatedWorkShifts.push(currentShift);
-                              }
-                              
-                              // Funzione helper per determinare la priorità del tipo di turno
-                              function getPriorityValue(type: string): number {
-                                switch (type) {
-                                  case "sick": return 4;
-                                  case "leave": return 3;
-                                  case "vacation": return 2;
-                                  case "work": return 1;
-                                  default: return 0;
+                              if (!timeSlotMap.has(timeKey)) {
+                                timeSlotMap.set(timeKey, shift);
+                              } else {
+                                const existingShift = timeSlotMap.get(timeKey);
+                                const existingPriority = getPriorityValue(existingShift.type);
+                                const newPriority = getPriorityValue(shift.type);
+                                
+                                if (newPriority > existingPriority) {
+                                  timeSlotMap.set(timeKey, shift);
                                 }
                               }
-                              
-                              // Calcola il totale delle ore di lavoro usando la funzione di utilità centralizzata
-                              const totalHours = calculateTotalWorkHours(consolidatedWorkShifts);
-                              
-                              return (
-                                <>
-                                  {/* Mostra totale ore se ci sono turni di lavoro */}
-                                  {workShifts.length > 0 && (
-                                    <div className="font-medium text-xs sm:text-sm mb-1 sm:mb-2">
-                                      Ore: {totalHours.toFixed(1)}h
+                            });
+                            
+                            const uniqueShifts = Array.from(timeSlotMap.values());
+                            
+                            const workShifts = uniqueShifts.filter(s => s.type === "work");
+                            const vacationShifts = uniqueShifts.filter(s => s.type === "vacation");
+                            const leaveShifts = uniqueShifts.filter(s => s.type === "leave");
+                            const sickShifts = uniqueShifts.filter(s => s.type === "sick");
+                            
+                            const consolidatedWorkShifts: any[] = [];
+                            let currentShift: any = null;
+                            
+                            workShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+                            
+                            workShifts.forEach((shift) => {
+                              if (!currentShift) {
+                                currentShift = { ...shift };
+                              } else {
+                                if (shift.startTime === currentShift.endTime) {
+                                  currentShift.endTime = shift.endTime;
+                                } else {
+                                  consolidatedWorkShifts.push(currentShift);
+                                  currentShift = { ...shift };
+                                }
+                              }
+                            });
+                            
+                            if (currentShift) {
+                              consolidatedWorkShifts.push(currentShift);
+                            }
+                            
+                            function getPriorityValue(type: string): number {
+                              switch (type) {
+                                case "sick": return 4;
+                                case "leave": return 3;
+                                case "vacation": return 2;
+                                case "work": return 1;
+                                default: return 0;
+                              }
+                            }
+                            
+                            const totalHours = calculateTotalWorkHours(consolidatedWorkShifts);
+                            
+                            return (
+                              <>
+                                {workShifts.length > 0 && (
+                                  <div className="font-medium text-sm mb-2">
+                                    Ore: {totalHours.toFixed(1)}h
+                                  </div>
+                                )}
+                                
+                                {consolidatedWorkShifts.length > 0 && (
+                                  <div className="rounded-md border-l-4 border-blue-500 overflow-hidden">
+                                    <div className="font-medium bg-blue-50 p-2 text-blue-700 flex items-center text-sm">
+                                      <span className="material-icons text-sm mr-2">schedule</span>
+                                      Orario di lavoro
                                     </div>
-                                  )}
-                                  
-                                  {/* Mostra gli slot di lavoro in modo destacato */}
-                                  {consolidatedWorkShifts.length > 0 && (
-                                    <div className="bg-white shadow-md rounded-md p-2 sm:p-3 mb-1 sm:mb-2 border-l-4 border-blue-500">
-                                      <div className="font-medium text-blue-700 flex items-center mb-1 sm:mb-3 text-xs sm:text-sm">
-                                        <span className="material-icons text-xs sm:text-sm mr-1">schedule</span>
-                                        Orario di lavoro
-                                      </div>
-                                      <div className="grid grid-cols-1 gap-1 sm:gap-2">
-                                        {consolidatedWorkShifts.map((shift, idx) => (
-                                          <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-blue-50 rounded-md p-2 sm:p-3 mb-1">
-                                            <div className="flex items-center">
-                                              <span className="material-icons text-blue-600 mr-1 sm:mr-2 text-xs sm:text-sm">access_time</span>
-                                              <div className="font-medium text-sm sm:text-base">{shift.startTime} - {adjustEndTime(shift.endTime)}</div>
-                                            </div>
-                                            {shift.notes && <div className="ml-0 sm:ml-3 text-xs sm:text-sm text-gray-600 italic mt-1 sm:mt-0">{shift.notes}</div>}
+                                    <div className="divide-y">
+                                      {consolidatedWorkShifts.map((shift, idx) => (
+                                        <div key={idx} className="p-3">
+                                          <div className="flex items-center font-medium">
+                                            <span className="material-icons text-blue-600 mr-2 text-sm">access_time</span>
+                                            {shift.startTime} - {adjustEndTime(shift.endTime)}
                                           </div>
-                                        ))}
-                                      </div>
+                                          {shift.notes && (
+                                            <div className="mt-1 text-sm text-gray-600 italic">
+                                              {shift.notes}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
                                     </div>
-                                  )}
-                                  
-                                  {/* Mostra ferie */}
-                                  {vacationShifts.length > 0 && (
-                                    <div className="bg-red-100 rounded-md p-2 sm:p-3 mb-1 sm:mb-2">
-                                      <div className="font-medium flex items-center text-xs sm:text-sm">
-                                        <span className="material-icons text-xs sm:text-sm mr-1">beach_access</span>
-                                        Ferie (F)
-                                      </div>
+                                  </div>
+                                )}
+                                
+                                {vacationShifts.length > 0 && (
+                                  <div className="bg-red-100 rounded-md p-3">
+                                    <div className="font-medium flex items-center text-sm">
+                                      <span className="material-icons text-sm mr-2">beach_access</span>
+                                      Ferie (F)
                                     </div>
-                                  )}
-                                  
-                                  {/* Mostra permessi */}
-                                  {leaveShifts.length > 0 && (
-                                    <div className="bg-yellow-100 rounded-md p-2 sm:p-3 mb-1 sm:mb-2">
-                                      <div className="font-medium flex items-center text-xs sm:text-sm">
-                                        <span className="material-icons text-xs sm:text-sm mr-1">event_busy</span>
-                                        Permesso (P)
-                                      </div>
+                                  </div>
+                                )}
+                                
+                                {leaveShifts.length > 0 && (
+                                  <div className="bg-yellow-100 rounded-md p-3">
+                                    <div className="font-medium flex items-center text-sm">
+                                      <span className="material-icons text-sm mr-2">event_busy</span>
+                                      Permesso (P)
                                     </div>
-                                  )}
-                                  
-                                  {/* Mostra malattia */}
-                                  {sickShifts.length > 0 && (
-                                    <div className="bg-purple-100 rounded-md p-2 sm:p-3 mb-1 sm:mb-2">
-                                      <div className="font-medium flex items-center text-xs sm:text-sm">
-                                        <span className="material-icons text-xs sm:text-sm mr-1">healing</span>
-                                        Malattia (M)
-                                      </div>
+                                  </div>
+                                )}
+                                
+                                {sickShifts.length > 0 && (
+                                  <div className="bg-purple-100 rounded-md p-3">
+                                    <div className="font-medium flex items-center text-sm">
+                                      <span className="material-icons text-sm mr-2">healing</span>
+                                      Malattia (M)
                                     </div>
-                                  )}
-                                </>
-                              );
-                            })()}
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
         
         {/* Visualizzazione a lista */}
         {view === "list" && (
-          <div className="space-y-2 sm:space-y-3">
+          <div className="space-y-3">
             {weekDays.map(day => {
               const dayShifts = shiftsByDay[day.name] || [];
               

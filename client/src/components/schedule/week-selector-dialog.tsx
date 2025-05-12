@@ -37,29 +37,34 @@ export function WeekSelectorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Seleziona Settimana</DialogTitle>
+      <DialogContent className="w-[95%] max-w-md p-4 sm:p-6">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-center sm:text-left">Seleziona Settimana</DialogTitle>
+          <p className="text-xs text-center sm:text-left text-muted-foreground pt-2">
+            Seleziona la settimana di turni da visualizzare
+          </p>
         </DialogHeader>
-        <ScrollArea className="max-h-[400px] mt-4">
+        <ScrollArea className="max-h-[60vh] sm:max-h-[400px] mt-2 sm:mt-4">
           <div className="space-y-2">
             {sortedSchedules.length > 0 ? (
               sortedSchedules.map((schedule) => (
                 <Button
                   key={schedule.id}
                   variant={schedule.isPublished ? "default" : "outline"}
-                  className="w-full justify-between px-4"
+                  className="w-full justify-between p-3 sm:px-4 h-auto min-h-[3rem]"
                   onClick={() => onSelectSchedule(schedule.id)}
                 >
                   <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium">
+                    <span className="text-xs sm:text-sm font-medium">
                       {formatDateRange(schedule.startDate, schedule.endDate)}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      {schedule.isPublished ? "Pubblicato" : "Non pubblicato"}
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">
+                      {schedule.isPublished 
+                        ? `Pubblicato ${format(new Date(schedule.publishedAt), "d/MM", { locale: it })}` 
+                        : "Non pubblicato"}
                     </span>
                   </div>
-                  <span className="material-icons text-lg">
+                  <span className="material-icons text-base sm:text-lg">
                     {schedule.isPublished ? "check_circle" : "pending"}
                   </span>
                 </Button>
