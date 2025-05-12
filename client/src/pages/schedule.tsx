@@ -38,10 +38,38 @@ export default function Schedule() {
       navigate("/my-schedule");
     }
 
-    // Controlla se c'è un parametro newSchedule nell'URL, indicando che è stato creato un nuovo schedule
+    // NUOVA GESTIONE PARAMETRI URL:
+    // Controlla tutti i parametri URL possibili per determinare quale schedule caricare
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // Lista completa di tutti i possibili parametri di schedule ID
     const newScheduleId = urlParams.get('newSchedule');
+    const currentScheduleParam = urlParams.get('currentScheduleId');
+    const scheduleIdParam = urlParams.get('scheduleId');
+    const idParam = urlParams.get('id');
     const refreshed = urlParams.get('refreshed');
+    
+    // Trova il primo ID definito in ordine di priorità
+    const explicitScheduleId = idParam || currentScheduleParam || scheduleIdParam || newScheduleId;
+    
+    console.log("🔍 PARAMETRI URL SCHEDULE:", { 
+      newScheduleId, 
+      currentScheduleParam, 
+      scheduleIdParam,
+      idParam,
+      explicitScheduleId
+    });
+    
+    // CARICAMENTO DIRETTO E PROATTIVO DELLO SCHEDULE DALL'URL
+    if (explicitScheduleId && Number(explicitScheduleId) > 0) {
+      console.log(`⚡ IMPOSTAZIONE PROATTIVA DELLO SCHEDULE ID ${explicitScheduleId} dai parametri URL`);
+      
+      // Imposta l'ID come numero
+      setCurrentScheduleId(Number(explicitScheduleId));
+      
+      // Forza il reset della griglia per il nuovo schedule
+      setForceResetGrid(true);
+    }
     
     // Se c'è un newScheduleId, forza l'app a caricare esplicitamente questo schedule
     if (newScheduleId) {
@@ -137,12 +165,45 @@ export default function Schedule() {
   // Manteniamo una scheduleId corrente per garantire il caricamento corretto
   const [currentScheduleId, setCurrentScheduleId] = useState<number | null>(null);
   
-  // Fetch existing schedule data for the selected week
+  // QUERY COMPLETAMENTE RISCRITTA: Fetch existing schedule data
   const { data: existingSchedule = {}, isLoading: isScheduleLoading } = useQuery<any>({
-    queryKey: ["/api/schedules", 
-      // Se c'è un ID specifico selezionato, lo usiamo - altrimenti usiamo la data
-      currentScheduleId ? { id: currentScheduleId } : { startDate: format(selectedWeek, "yyyy-MM-dd") }
-    ],
+    queryKey: ["/api/schedules", { id: currentScheduleId }],
+    queryFn: async ({ queryKey }) => {
+      // Estrai l'ID dallo query key
+      const params = queryKey[1] as { id?: number };
+      
+      // Costruisci l'URL con i parametri corretti
+      let url = "/api/schedules";
+      
+      // Aggiungi i parametri alla querystring
+      const queryParams = new URLSearchParams();
+      
+      if (params.id) {
+        // Se c'è un ID specifico, usalo
+        console.log(`🔄 Caricamento schedule specifico con ID: ${params.id}`);
+        queryParams.append("id", params.id.toString());
+      } else {
+        // Altrimenti usa la data
+        console.log(`🔄 Caricamento schedule per data: ${format(selectedWeek, "yyyy-MM-dd")}`);
+        queryParams.append("startDate", format(selectedWeek, "yyyy-MM-dd"));
+      }
+      
+      // Aggiungi i parametri all'URL
+      url = `${url}?${queryParams.toString()}`;
+      
+      // Esegui la richiesta
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error("Errore nel caricamento dello schedule");
+      }
+      
+      const data = await response.json();
+      console.log("🗓️ Schedule caricato:", data);
+      
+      return data;
+    },
+    enabled: true,
     staleTime: 0, // Disabilita la cache per questa query
     refetchOnWindowFocus: true, // Ricarica quando la finestra torna in focus
   });
@@ -239,42 +300,35 @@ export default function Schedule() {
     setShowWeekSelector(true);
   };
   
-  // VERSIONE MIGLIORATA: Handler per selezionare una settimana specifica
+  // VERSIONE RADICALMENTE MIGLIORATA: Handler per selezionare una settimana specifica
   const handleSelectSchedule = (scheduleId: number) => {
     setShowWeekSelector(false);
     
     // Ottieni i dettagli della programmazione selezionata
     const selectedSchedule = allSchedules.find((s: any) => s.id === scheduleId);
     if (selectedSchedule) {
-      console.log(`🗓️ Selezione schedule ID ${scheduleId} con date: ${selectedSchedule.startDate} - ${selectedSchedule.endDate}`);
+      console.log(`🗓️ SELEZIONE ESPLICITA SCHEDULE ID ${scheduleId} con date: ${selectedSchedule.startDate} - ${selectedSchedule.endDate}`);
       
-      // PASSO 1: Imposta l'ID dello schedule corrente
-      setCurrentScheduleId(scheduleId);
+      // *********** SOLUZIONE DRASTICA ***********
+      // Invece di manipolare la cache, forziamo un reload completo
+      // con i parametri necessari attraverso l'URL
       
-      // PASSO 2: Aggiorna anche la data selezionata per visualizzazione
-      setSelectedWeek(new Date(selectedSchedule.startDate));
+      // Crea un URL con i parametri per forzare il caricamento del nuovo schedule
+      const timestamp = Date.now(); // Evita la cache
+      const newUrl = `/schedule?reset=true&id=${scheduleId}&currentScheduleId=${scheduleId}&scheduleId=${scheduleId}&date=${selectedSchedule.startDate}&ts=${timestamp}`;
       
-      // PASSO 3: Notifica all'utente
+      // Notifica all'utente prima del reload
       toast({
-        title: "Schedule caricato",
-        description: `Caricato turno dal ${format(new Date(selectedSchedule.startDate), "dd/MM")} al ${format(new Date(selectedSchedule.endDate), "dd/MM")}`,
-        duration: 2000
+        title: "Caricamento turno in corso...",
+        description: `Caricamento del turno dal ${format(new Date(selectedSchedule.startDate), "dd/MM")} al ${format(new Date(selectedSchedule.endDate), "dd/MM")}`,
+        duration: 1500
       });
       
-      // PASSO 4: Forza ricaricamento dati con invalidazione cache
-      // Pulisci prima le query in corso
-      queryClient.removeQueries({ queryKey: ["/api/schedules"] });
-      queryClient.removeQueries({ queryKey: [`/api/schedules/${scheduleId}/shifts`] });
-      
-      // Poi ricarica i dati freschi
-      queryClient.prefetchQuery({ 
-        queryKey: ["/api/schedules", { id: scheduleId }],
-        staleTime: 0
-      });
-      queryClient.prefetchQuery({ 
-        queryKey: [`/api/schedules/${scheduleId}/shifts`],
-        staleTime: 0
-      });
+      // Piccola pausa prima del reload per dare il tempo al toast di apparire
+      setTimeout(() => {
+        // Redirect alla stessa pagina con nuovi parametri
+        window.location.href = newUrl;
+      }, 500);
     }
   };
   
