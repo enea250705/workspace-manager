@@ -766,6 +766,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint per annullare la pubblicazione di uno schedule (ritorno allo stato di bozza)
+  app.post("/api/schedules/:id/unpublish", isAdmin, async (req, res) => {
+    try {
+      console.log("Unpublishing schedule:", req.params.id);
+      const scheduleId = parseInt(req.params.id);
+      
+      // Verifica che la funzione unpublishSchedule sia disponibile nello storage
+      if (!storage.unpublishSchedule) {
+        console.error("Funzione unpublishSchedule non disponibile nello storage");
+        return res.status(500).json({ message: "Funzionalità non supportata" });
+      }
+      
+      const schedule = await storage.unpublishSchedule(scheduleId);
+      
+      if (!schedule) {
+        console.log("Schedule not found:", scheduleId);
+        return res.status(404).json({ message: "Turno non trovato" });
+      }
+      
+      console.log("Schedule unpublished successfully:", schedule);
+      
+      // Get all users
+      const users = await storage.getAllUsers();
+      
+      // Create notifications for all users
+      for (const user of users) {
+        if (user.isActive && user.role !== 'admin') { // Notifica solo ai dipendenti, non agli admin
+          // Crea notifica nell'app
+          const notification = await storage.createNotification({
+            userId: user.id,
+            type: "schedule_update",
+            message: "Attenzione: Pianificazione turni in revisione", 
+            isRead: false,
+            data: {
+              scheduleId: schedule.id,
+              startDate: schedule.startDate,
+              endDate: schedule.endDate
+            }
+          });
+          
+          // Invia notifica real-time
+          sendNotification(user.id, {
+            type: "schedule_update",
+            message: "Attenzione: Pianificazione turni in revisione",
+            data: notification
+          });
+        }
+      }
+      
+      res.json(schedule);
+    } catch (err) {
+      console.error("Failed to unpublish schedule:", err);
+      res.status(500).json({ message: "Impossibile annullare la pubblicazione del turno", error: String(err) });
+    }
+  });
+  
   // NUOVA API per la gestione dei turni - completamente riprogettata
   app.get("/api/schedules/:scheduleId/shifts", isAuthenticated, async (req, res) => {
     try {

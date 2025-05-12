@@ -672,6 +672,22 @@ export class DatabaseStorage implements IStorage {
     return schedule;
   }
   
+  async unpublishSchedule(id: number): Promise<Schedule | undefined> {
+    const now = new Date();
+    
+    const [schedule] = await db
+      .update(schedules)
+      .set({ 
+        isPublished: false,
+        // Manteniamo publishedAt per tracciare che è stato pubblicato in precedenza
+        updatedAt: now 
+      })
+      .where(eq(schedules.id, id))
+      .returning();
+    
+    return schedule;
+  }
+  
   async createShift(shiftData: InsertShift): Promise<Shift> {
     const [shift] = await db.insert(shifts).values(shiftData).returning();
     return shift;
