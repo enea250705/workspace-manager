@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatHours } from "@/lib/utils";
+import { formatDate, formatHours, calculateTotalWorkHours } from "@/lib/utils";
 import { Link } from "wouter";
 
 export function EmployeeDashboard() {
@@ -29,25 +29,10 @@ export function EmployeeDashboard() {
   const pendingRequests = myTimeOffRequests.filter((req: any) => req.status === "pending");
   const approvedRequests = myTimeOffRequests.filter((req: any) => req.status === "approved");
   
-  // Calculate work stats
-  const totalHoursThisWeek = myShifts.reduce((total: number, shift: any) => {
-    if (shift.type === "work") {
-      // Assuming startTime and endTime are in format "HH:MM"
-      const [startHour, startMin] = shift.startTime.split(":").map(Number);
-      const [endHour, endMin] = shift.endTime.split(":").map(Number);
-      
-      let hours = endHour - startHour;
-      let minutes = endMin - startMin;
-      
-      if (minutes < 0) {
-        hours -= 1;
-        minutes += 60;
-      }
-      
-      return total + hours + (minutes / 60);
-    }
-    return total;
-  }, 0);
+  // Calcolo delle ore totali della settimana corrente utilizzando la funzione centralizzata
+  const totalHoursThisWeek = calculateTotalWorkHours(
+    myShifts.filter((shift: any) => shift.type === "work")
+  );
   
   // Get day names for the week
   const getDayName = (date: string) => {
