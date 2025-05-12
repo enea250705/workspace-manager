@@ -322,7 +322,11 @@ export function EmployeeDashboard() {
                         </p>
                       </div>
                     </div>
-                    <Button size="sm" className="flex items-center gap-1">
+                    <Button 
+                      size="sm" 
+                      className="flex items-center gap-1"
+                      onClick={handleDownloadPayslip}
+                    >
                       <span className="material-icons text-xs">download</span>
                       PDF
                     </Button>
@@ -344,7 +348,11 @@ export function EmployeeDashboard() {
                         </p>
                       </div>
                     </div>
-                    <Button size="sm" className="flex items-center gap-1">
+                    <Button 
+                      size="sm" 
+                      className="flex items-center gap-1"
+                      onClick={handleDownloadTaxDoc}
+                    >
                       <span className="material-icons text-xs">download</span>
                       PDF
                     </Button>
