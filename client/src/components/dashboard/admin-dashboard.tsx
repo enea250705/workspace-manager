@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/utils";
+import { formatDate, calculateTotalWorkHours, formatHours } from "@/lib/utils";
 import { Link } from "wouter";
 import {
   BarChart,
@@ -31,6 +31,11 @@ export function AdminDashboard() {
 
   const { data: currentSchedule } = useQuery({
     queryKey: ["/api/schedules"],
+  });
+  
+  const { data: allShifts = [] } = useQuery({
+    queryKey: [`/api/schedules/${currentSchedule?.id}/shifts`],
+    enabled: !!currentSchedule?.id,
   });
 
   const pendingRequests = timeOffRequests.filter(
@@ -60,6 +65,11 @@ export function AdminDashboard() {
     (req: any) => req.status === "approved" && req.type === "vacation" && 
     new Date(req.endDate) >= new Date()
   ).length;
+  
+  // Calcola il totale delle ore programmate utilizzando la funzione utility
+  const totalScheduledHours = calculateTotalWorkHours(
+    allShifts.filter((shift: any) => shift.type === "work")
+  );
 
   // Weekly hours data for chart
   const shiftDistributionData = [
@@ -120,7 +130,7 @@ export function AdminDashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-gray-500 text-sm">Ore Programmate</p>
-                <p className="text-2xl font-medium">186</p>
+                <p className="text-2xl font-medium">{formatHours(totalScheduledHours)}</p>
               </div>
               <div className="bg-green-100 p-2 rounded-lg">
                 <span className="material-icons text-success">schedule</span>
