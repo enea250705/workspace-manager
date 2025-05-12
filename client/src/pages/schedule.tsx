@@ -56,10 +56,16 @@ export default function Schedule() {
       
       // Passo 2: Forza il caricamento solo dello schedule specificato tramite fetch diretto
       fetch(`/api/schedules/${newScheduleId}`)
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Impossibile caricare il nuovo schedule');
+          }
+          return response.json();
+        })
         .then(scheduleData => {
+          console.log("Schedule caricato con successo:", scheduleData);
           // Imposta il nuovo schedule direttamente nella cache
-          queryClient.setQueryData(["/api/schedules", { startDate: scheduleData.startDate }], scheduleData);
+          queryClient.setQueryData(["/api/schedules"], scheduleData);
           
           // Aggiorna la data selezionata in base allo schedule caricato
           try {
@@ -69,9 +75,12 @@ export default function Schedule() {
             console.error("Errore nell'impostare la data di inizio:", e);
           }
 
-          // Forza un refresh dei dati per schedules and shifts
-          queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-          queryClient.invalidateQueries({ queryKey: [`/api/schedules/${newScheduleId}/shifts`] });
+          // Carica i turni vuoti per il nuovo schedule
+          // Inizialmente non ci sono turni, quindi impostiamo un array vuoto
+          queryClient.setQueryData([`/api/schedules/${newScheduleId}/shifts`], []);
+          
+          // Aggiorniamo anche la lista completa degli schedule
+          queryClient.invalidateQueries({ queryKey: ["/api/schedules/all"] });
           
           // Completa il caricamento
           setIsLoadingNewSchedule(false);
@@ -348,18 +357,23 @@ export default function Schedule() {
           // Forza un completo reset dello stato e cambia la data selezionata
           setForceResetGrid(true);
           
-          // Forza un refresh completo della pagina e carica esplicitamente il nuovo schedule appena creato
-          // Questa soluzione garantisce che si visualizzi SOLO il nuovo schedule con una tabella completamente vuota
+          // Mostra una conferma che lo schedule è stato creato
           toast({
             title: "Nuova pianificazione creata",
             description: "Caricamento della nuova pianificazione in corso...",
           });
           
-          // Breve ritardo per garantire che il database sia aggiornato
+          // Aspetta un breve momento per permettere alla risposta di essere registrata nel database
           setTimeout(() => {
-            // Forza un hard reload per cancellare completamente lo stato e la cache
-            window.location.href = `/schedule?date=${format(customStartDate!, "yyyy-MM-dd")}&newSchedule=${data.id}&refreshed=true`;
-          }, 500);
+            console.log("Caricamento dello schedule ID:", data.id);
+            
+            // Cancella prima tutti i dati di cache
+            queryClient.clear();
+            
+            // Simula un riavvio completo dell'applicazione con un hard refresh
+            // Passiamo il nuovo ID come parametro URL per assicurare che si carichi il nuovo schedule
+            window.location.href = `/schedule?newSchedule=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&clear=true`;
+          }, 700);
         } catch (err) {
           console.error("Errore nella gestione dello schedule:", err);
         }
