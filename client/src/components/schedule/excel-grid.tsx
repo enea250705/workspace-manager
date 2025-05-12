@@ -170,13 +170,14 @@ export function ExcelGrid({
     
     // Condizioni per il reset completo della griglia (VERSIONE MIGLIORATA)
     // Inclusi più casi per garantire sempre un reset quando necessario
+    // Limitiamo le condizioni di reset per evitare cicli infiniti
     const shouldReset = 
-      forceResetGrid || 
+      (forceResetGrid && Object.keys(gridData).length === 0) || // Solo se la griglia è vuota
       forceEmptyFromUrl || 
       resetFromUrl || 
-      Object.keys(gridData).length === 0 ||
-      (scheduleIdFromUrl && scheduleId?.toString() === scheduleIdFromUrl) ||
-      (newScheduleParam && scheduleId?.toString() === newScheduleParam);
+      (Object.keys(gridData).length === 0 && weekDays.length > 0 && users.length > 0) ||
+      (scheduleIdFromUrl && scheduleId?.toString() === scheduleIdFromUrl && Object.keys(gridData).length === 0) ||
+      (newScheduleParam && scheduleId?.toString() === newScheduleParam && Object.keys(gridData).length === 0);
     
     if (shouldReset) {
       // Log dettagliato delle condizioni di reset
