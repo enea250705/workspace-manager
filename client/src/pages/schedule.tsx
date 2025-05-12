@@ -471,17 +471,49 @@ export default function Schedule() {
             // Aggiungi un timestamp per evitare cache del browser
             const timestamp = Date.now();
             
-            // FASE 4: REDIRECT CON PARAMETRI MIGLIORATI
-            // Usa parametri URL più espliciti
-            window.location.href = `/schedule?reset=true&scheduleId=${data.id}&newSchedule=${data.id}&date=${format(customStartDate!, "yyyy-MM-dd")}&forceEmpty=true&refreshed=true&ts=${timestamp}`;
+            // FASE 4: REDIRECT CON PARAMETRI MIGLIORATI E GESTIONE ERRORI MIGLIORATA
+            // Usa parametri URL più espliciti e assicurati che data.id esista
+            if (data && data.id) {
+              // Parametri più sicuri e verificati
+              window.location.href = `/schedule?id=${data.id}&reset=true&ts=${timestamp}`;
+            } else {
+              console.error("❌ ID dello schedule mancante nella risposta:", data);
+              // Se non c'è data.id, torna alla pagina principale dei turni
+              window.location.href = `/schedule`;
+              // Mostra messaggio di successo comunque (perché la creazione è avvenuta)
+              toast({
+                title: "Pianificazione creata",
+                description: "La nuova pianificazione è stata creata correttamente.",
+              });
+            }
           }, 1000);
         } catch (err) {
           console.error("❌ Errore nella gestione dello schedule:", err);
-          toast({
-            title: "Errore di elaborazione",
-            description: "Problema nel caricamento del nuovo turno. Riprova tra qualche secondo.",
-            variant: "destructive"
-          });
+          
+          // Se lo schedule è stato creato ma c'è un errore nel reindirizzamento
+          if (data && data.id) {
+            toast({
+              title: "Pianificazione creata",
+              description: "La pianificazione è stata creata, ma si è verificato un errore nel caricamento. Ricarica la pagina.",
+              action: (
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    window.location.href = `/schedule?id=${data.id}`;
+                  }}
+                >
+                  Ricarica
+                </Button>
+              )
+            });
+          } else {
+            // Errore completo nella creazione
+            toast({
+              title: "Errore di elaborazione",
+              description: "Problema nel caricamento del nuovo turno. Riprova tra qualche secondo.",
+              variant: "destructive"
+            });
+          }
         }
       },
       onError: (error) => {
