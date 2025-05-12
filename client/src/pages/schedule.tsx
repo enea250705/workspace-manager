@@ -130,13 +130,7 @@ export default function Schedule() {
   // State for creating a new schedule
   const [creatingNewSchedule, setCreatingNewSchedule] = useState(false);
   
-  // State for managing existing schedule data
-  const [existingSchedule, setExistingSchedule] = useState<{
-    id: number;
-    startDate: Date | string;
-    endDate: Date | string;
-    isPublished: boolean;
-  } | null>(null);
+
   
   // State for week selector dialog
   const [showWeekSelector, setShowWeekSelector] = useState(false);
