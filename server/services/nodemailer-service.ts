@@ -63,19 +63,49 @@ export interface EmailParams {
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
     if (DEV_MODE) {
-      // In modalità sviluppo, mostra l'email in console invece di inviarla realmente
+      // In modalità test, usiamo Ethereal per visualizzare l'email
       console.log('================================');
-      console.log('📧 SIMULAZIONE INVIO EMAIL 📧');
+      console.log('📧 MODALITÀ TEST ETHEREAL 📧');
       console.log('================================');
-      console.log(`📧 A: ${params.to}`);
-      console.log(`📧 Da: ${SENDER_EMAIL}`);
-      console.log(`📧 Oggetto: ${params.subject}`);
-      console.log('--------------------------------');
-      console.log('📧 Contenuto HTML:');
-      console.log(params.html);
-      console.log('================================');
-      console.log('✅ Email simulata con successo (non inviata realmente in modalità DEV)');
-      return true;
+      
+      // Assicurati che il transporter sia inizializzato
+      if (!transporter) {
+        await initTransporter();
+      }
+      
+      try {
+        // Invia l'email a Ethereal per visualizzarla
+        const info = await transporter.sendMail({
+          from: `"${SENDER_NAME}" <${SENDER_EMAIL}>`,
+          to: params.to,
+          subject: params.subject,
+          text: params.text || '',
+          html: params.html,
+        });
+        
+        // Mostra l'URL di anteprima
+        const previewURL = nodemailer.getTestMessageUrl(info);
+        console.log(`📧 A: ${params.to}`);
+        console.log(`📧 Da: ${SENDER_EMAIL}`);
+        console.log(`📧 Oggetto: ${params.subject}`);
+        console.log('--------------------------------');
+        console.log('📧 LINK DI ANTEPRIMA EMAIL:');
+        console.log(`👉 ${previewURL}`);
+        console.log('👆 APRI QUESTO LINK PER VISUALIZZARE L\'EMAIL 👆');
+        console.log('================================');
+        console.log('✅ Email inviata a servizio di test Ethereal (non inviata al destinatario reale)');
+        return true;
+      } catch (etherealError) {
+        // Se c'è un errore con Ethereal, fallback alla simulazione
+        console.error('❌ Errore con Ethereal:', etherealError);
+        console.log('--------------------------------');
+        console.log('📧 Fallback a simulazione semplice');
+        console.log('📧 Contenuto HTML:');
+        console.log(params.html);
+        console.log('================================');
+        console.log('✅ Email simulata con successo (non inviata realmente in modalità DEV)');
+        return true;
+      }
     } else {
       // In modalità produzione, usa Nodemailer per inviare l'email realmente
       console.log('📧 Invio email reale...');
@@ -129,7 +159,7 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
         <div style="text-align: center; margin-bottom: 20px;">
           <h2 style="color: #4a6cf7;">StaffSync</h2>
         </div>
-        <p>Gentile ${user.firstName} ${user.lastName},</p>
+        <p>Gentile ${user.name},</p>
         <p>Ti informiamo che è stato pubblicato un nuovo turno per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong>.</p>
         <p>Puoi visualizzare i tuoi turni accedendo alla piattaforma StaffSync.</p>
         <div style="text-align: center; margin-top: 30px;">
@@ -150,7 +180,7 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
   
   // Invia l'email
   const result = await sendEmail(emailParams);
-  console.log(`📧 Email di notifica turno inviata a ${user.firstName} ${user.lastName} (${user.email})`);
+  console.log(`📧 Email di notifica turno inviata a ${user.name} (${user.email})`);
   
   return result;
 }
@@ -169,7 +199,7 @@ export async function sendScheduleUpdateNotification(user: User, scheduleStartDa
         <div style="text-align: center; margin-bottom: 20px;">
           <h2 style="color: #4a6cf7;">StaffSync</h2>
         </div>
-        <p>Gentile ${user.firstName} ${user.lastName},</p>
+        <p>Gentile ${user.name},</p>
         <p>Ti informiamo che è stato aggiornato il turno per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong>.</p>
         <p>Puoi visualizzare i tuoi turni aggiornati accedendo alla piattaforma StaffSync.</p>
         <div style="text-align: center; margin-top: 30px;">
@@ -190,7 +220,7 @@ export async function sendScheduleUpdateNotification(user: User, scheduleStartDa
   
   // Invia l'email
   const result = await sendEmail(emailParams);
-  console.log(`📧 Email di notifica aggiornamento turno inviata a ${user.firstName} ${user.lastName} (${user.email})`);
+  console.log(`📧 Email di notifica aggiornamento turno inviata a ${user.name} (${user.email})`);
   
   return result;
 }
@@ -213,7 +243,7 @@ export async function sendDocumentNotification(user: User, documentType: string,
         <div style="text-align: center; margin-bottom: 20px;">
           <h2 style="color: #4a6cf7;">StaffSync</h2>
         </div>
-        <p>Gentile ${user.firstName} ${user.lastName},</p>
+        <p>Gentile ${user.name},</p>
         <p>Ti informiamo che è stato caricato un nuovo documento: <strong>${documentTypeTranslated}</strong> per il periodo <strong>${period}</strong>.</p>
         <p>Puoi visualizzare e scaricare il documento accedendo alla piattaforma StaffSync.</p>
         <div style="text-align: center; margin-top: 30px;">
@@ -234,7 +264,7 @@ export async function sendDocumentNotification(user: User, documentType: string,
   
   // Invia l'email
   const result = await sendEmail(emailParams);
-  console.log(`📧 Email di notifica documento inviata a ${user.firstName} ${user.lastName} (${user.email})`);
+  console.log(`📧 Email di notifica documento inviata a ${user.name} (${user.email})`);
   
   return result;
 }
@@ -265,7 +295,7 @@ export async function sendTimeOffApprovalNotification(user: User, type: string, 
         <div style="text-align: center; margin-bottom: 20px;">
           <h2 style="color: #4a6cf7;">StaffSync</h2>
         </div>
-        <p>Gentile ${user.firstName} ${user.lastName},</p>
+        <p>Gentile ${user.name},</p>
         <p>Ti informiamo che la tua richiesta di <strong>${typeTranslated}</strong> per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong> è stata <span style="color: green;"><strong>approvata</strong></span>.</p>
         <p>Puoi visualizzare lo stato di tutte le tue richieste accedendo alla piattaforma StaffSync.</p>
         <div style="text-align: center; margin-top: 30px;">
@@ -286,7 +316,7 @@ export async function sendTimeOffApprovalNotification(user: User, type: string, 
   
   // Invia l'email
   const result = await sendEmail(emailParams);
-  console.log(`📧 Email di notifica approvazione inviata a ${user.firstName} ${user.lastName} (${user.email})`);
+  console.log(`📧 Email di notifica approvazione inviata a ${user.name} (${user.email})`);
   
   return result;
 }
@@ -317,7 +347,7 @@ export async function sendTimeOffRejectionNotification(user: User, type: string,
         <div style="text-align: center; margin-bottom: 20px;">
           <h2 style="color: #4a6cf7;">StaffSync</h2>
         </div>
-        <p>Gentile ${user.firstName} ${user.lastName},</p>
+        <p>Gentile ${user.name},</p>
         <p>Ti informiamo che la tua richiesta di <strong>${typeTranslated}</strong> per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong> è stata <span style="color: red;"><strong>rifiutata</strong></span>.</p>
         <p>Per maggiori informazioni, contatta il tuo responsabile.</p>
         <p>Puoi visualizzare lo stato di tutte le tue richieste accedendo alla piattaforma StaffSync.</p>
@@ -339,7 +369,7 @@ export async function sendTimeOffRejectionNotification(user: User, type: string,
   
   // Invia l'email
   const result = await sendEmail(emailParams);
-  console.log(`📧 Email di notifica rifiuto inviata a ${user.firstName} ${user.lastName} (${user.email})`);
+  console.log(`📧 Email di notifica rifiuto inviata a ${user.name} (${user.email})`);
   
   return result;
 }

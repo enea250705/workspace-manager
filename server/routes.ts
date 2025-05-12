@@ -1129,7 +1129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user && user.email) {
         try {
           // Import del servizio email
-          const { sendTimeOffApprovalNotification } = await import('./services/email-service');
+          const { sendTimeOffApprovalNotification } = await import('./services/nodemailer-service');
           
           // Invia email di notifica
           await sendTimeOffApprovalNotification(user, request.type, request.startDate, request.endDate);
@@ -1367,7 +1367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Invia email di notifica
       if (user && user.email) {
         try {
-          const { sendDocumentNotification } = await import('./services/email-service');
+          const { sendDocumentNotification } = await import('./services/nodemailer-service');
           await sendDocumentNotification(user, document.type, document.period);
           console.log(`📧 Email di notifica documento inviata a ${user.name} (${user.email})`);
         } catch (emailError) {
