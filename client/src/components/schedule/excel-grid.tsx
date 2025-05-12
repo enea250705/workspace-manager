@@ -52,15 +52,24 @@ export function ExcelGrid({
   // Generazione degli slot di tempo (30 minuti) dalle 4:00 alle 24:00
   const timeSlots = generateTimeSlots(4, 24);
   
-  // Inizializza giorni della settimana
+  // Inizializza giorni della settimana con abbreviazioni più leggibili
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(startDate);
     date.setDate(date.getDate() + i);
+    
+    // Ottiene il nome completo del giorno e la sua abbreviazione
+    const fullName = format(date, "EEEE", { locale: it });
+    
+    // Usa abbreviazioni predefinite per i giorni della settimana (più facilmente leggibili)
+    const abbreviations = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
+    const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1; // Adatta l'indice (0=domenica)
+    
     return {
       date,
-      name: format(date, "EEEE", { locale: it }),
-      shortName: ["lun", "mar", "mer", "gio", "ven", "sab", "dom"][date.getDay() === 0 ? 6 : date.getDay() - 1],
-      formattedDate: format(date, "yyyy-MM-dd")
+      name: fullName,
+      shortName: abbreviations[dayIndex],
+      formattedDate: format(date, "yyyy-MM-dd"),
+      dayOfMonth: format(date, "d") // Giorno del mese come numero per visualizzazione mobile
     };
   });
   
