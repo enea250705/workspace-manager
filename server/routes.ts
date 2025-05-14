@@ -241,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secure: process.env.NODE_ENV === 'production', // Usa HTTPS in produzione
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Necessario per cross-domain in produzione
         httpOnly: true, // Il cookie è accessibile solo dal server
-        domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Dominio per il cookie in produzione
+        domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Rimuoviamo la restrizione di dominio
       }
     })
   );
