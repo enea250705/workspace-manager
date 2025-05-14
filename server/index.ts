@@ -20,7 +20,9 @@ const allowedOrigins = [
   'https://workspace-manager-git-main-enea250705.vercel.app', // Vercel deployment URL
   'https://workspace-manager-enea250705.vercel.app',          // Vercel deployment URL
   'https://client-vert-eight.vercel.app',       // Nuovo URL di deployment Vercel
-  'https://workforce-manager-client.vercel.app' // Aggiungi qualsiasi nuovo dominio qui
+  'https://workforce-manager-client.vercel.app',
+  'https://client-just123w1s-projects.vercel.app',
+  'https://client-just123w1-just123w1s-projects.vercel.app'
 ];
 
 app.use(cors({
