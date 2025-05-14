@@ -16,7 +16,8 @@ const allowedOrigins = [
   'https://davittorino-staff.vercel.app',       // Dominio alternativo
   'https://workspace-manager-2.onrender.com',   // Backend su Render
   'https://workspace-manager-git-main-enea250705.vercel.app', // Vercel deployment URL
-  'https://workspace-manager-enea250705.vercel.app'           // Vercel deployment URL
+  'https://workspace-manager-enea250705.vercel.app',          // Vercel deployment URL
+  'https://client-vert-eight.vercel.app'        // Nuovo URL di deployment Vercel
 ];
 
 app.use(cors({
