@@ -62,7 +62,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Login function
   const login = async (username: string, password: string) => {
     try {
-      const response = await apiRequest("POST", "/api/auth/login", { username, password });
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error("Login failed");
+      }
+      
       const data = await response.json();
       
       if (data.user) {
@@ -80,7 +92,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Logout function
   const logout = async () => {
     try {
-      await apiRequest("POST", "/api/auth/logout", {});
+      const response = await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
       setUser(null);
       
       // Clear all queries from the cache on logout
