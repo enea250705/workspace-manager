@@ -241,7 +241,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secure: true, // Sempre HTTPS in produzione
         sameSite: 'none', // Necessario per cross-domain
         httpOnly: true, // Il cookie è accessibile solo dal server
-        path: '/'
+        path: '/',
+        domain: process.env.COOKIE_DOMAIN || undefined // Usa il dominio specificato o undefined
       }
     })
   );
@@ -322,6 +323,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Log dei cookie impostati
     console.log(`Login riuscito per: ${(req.user as any).username}`);
     console.log(`Cookie di sessione impostato: ${req.sessionID}`);
+    console.log(`Headers della richiesta:`, req.headers);
+    
+    // Log dettagliato del cookie di sessione
+    const sessionCookie = req.cookies?.['connect.sid'] || 'non trovato';
+    console.log(`Cookie di sessione connect.sid: ${sessionCookie}`);
+    
+    // Imposta esplicitamente l'header per consentire credenziali
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Log di tutti i cookie impostati
+    console.log('Cookie impostati nella risposta:', res.getHeaders()['set-cookie']);
     
     // Restituisci immediatamente l'utente senza aggiornare lastLogin
     res.json({ user: req.user });
@@ -342,6 +354,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/me", (req, res) => {
     console.log(`Verifica autenticazione: ${req.isAuthenticated() ? 'autenticato' : 'non autenticato'}`);
     console.log(`Cookie di sessione: ${req.sessionID}`);
+    console.log(`Headers della richiesta:`, req.headers);
+    console.log(`Origin: ${req.headers.origin || 'non specificato'}`);
+    
+    // Log di tutti i cookie ricevuti
+    console.log('Cookie ricevuti:', req.headers.cookie);
+    
+    // Log dettagliato del cookie di sessione
+    const sessionCookie = req.cookies?.['connect.sid'] || 'non trovato';
+    console.log(`Cookie di sessione connect.sid: ${sessionCookie}`);
+    
+    // Log della sessione
+    console.log('Session data:', req.session);
+    
+    // Imposta esplicitamente l'header per consentire credenziali
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
     if (req.isAuthenticated()) {
       console.log(`Utente autenticato: ${(req.user as any).username}`);
       res.json({ user: req.user });

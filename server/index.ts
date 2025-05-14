@@ -3,10 +3,12 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser(process.env.SESSION_SECRET || "keyboard cat")); // Parse cookies with the same secret as session
 
 // Configurazione CORS per consentire richieste dal frontend su Vercel
 const allowedOrigins = [
@@ -36,7 +38,8 @@ app.use(cors({
   },
   credentials: true, // Importante per le sessioni/cookie
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'X-HTTP-Method-Override'],
+  exposedHeaders: ['Set-Cookie']
 }));
 
 app.use((req, res, next) => {
