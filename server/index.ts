@@ -13,7 +13,8 @@ const allowedOrigins = [
   'http://localhost:5173',                      // Sviluppo locale frontend
   'http://localhost:3000',                      // Sviluppo locale frontend (alternativo)
   'https://workforce-manager.vercel.app',       // Produzione su Vercel (aggiorna con il tuo dominio)
-  'https://davittorino-staff.vercel.app'        // Dominio alternativo
+  'https://davittorino-staff.vercel.app',       // Dominio alternativo
+  'https://workspace-manager-2.onrender.com'    // Backend su Render
 ];
 
 app.use(cors({
