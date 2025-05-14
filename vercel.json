@@ -1,8 +1,12 @@
 {
-  "buildCommand": "cd client && npm install && npm run build",
+  "version": 2,
+  "buildCommand": "cd client && npm install --legacy-peer-deps --no-audit && npm run build",
   "outputDirectory": "client/dist",
+  "installCommand": "echo Skipping root install",
   "framework": "vite",
-  "installCommand": "cd client && npm install",
+  "github": {
+    "silent": true
+  },
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
