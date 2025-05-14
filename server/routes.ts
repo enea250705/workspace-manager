@@ -389,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/users", isAdmin, (async (req, res) => {
+  app.post("/api/users", isAdmin, async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
       
@@ -407,10 +407,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.status(400).json({ message: "Invalid user data" });
     }
-  }) as any);
+  });
   
   // Bulk user creation
-  app.post("/api/users/bulk", isAdmin, (async (req, res) => {
+  app.post("/api/users/bulk", isAdmin, async (req, res) => {
     try {
       const { users } = req.body;
       
@@ -456,7 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating bulk users:", error);
       res.status(500).json({ message: "Error creating users" });
     }
-  }) as any);
+  });
   
   app.get("/api/users/:id", isAuthenticated, async (req, res) => {
     try {
@@ -476,7 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       res.status(500).json({ message: "Failed to get user" });
     }
-  } as any);
+  });
   
   app.patch("/api/users/:id", isAdmin, async (req, res) => {
     try {
@@ -498,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       res.status(500).json({ message: "Failed to update user" });
     }
-  } as any);
+  });
   
   // Schedule management routes
   // Ottieni tutte le programmazioni
