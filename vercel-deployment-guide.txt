@@ -1,0 +1,68 @@
+# Guida al Deploy del Frontend su Vercel
+
+## Prerequisiti
+- Account su Vercel (puoi registrarti con GitHub)
+- Repository GitHub con il codice del progetto
+- Backend già deployato su Render (https://workspace-manager-2.onrender.com)
+
+## Passaggi per il Deploy
+
+### 1. Accedi a Vercel
+- Vai su https://vercel.com/
+- Accedi con il tuo account GitHub
+
+### 2. Importa il Progetto
+- Clicca su "Add New" > "Project"
+- Seleziona il repository GitHub del progetto
+- Clicca su "Import"
+
+### 3. Configura il Progetto
+- **Framework Preset**: Seleziona "Vite"
+- **Root Directory**: Seleziona `client` (importante!)
+- **Build Command**: Lascia il valore predefinito (`npm run build`)
+- **Output Directory**: Lascia il valore predefinito (`dist`)
+
+### 4. Configura le Variabili d'Ambiente
+- Espandi la sezione "Environment Variables"
+- Aggiungi la seguente variabile:
+  - **Nome**: `VITE_API_URL`
+  - **Valore**: `https://workspace-manager-2.onrender.com`
+
+### 5. Deploy
+- Clicca su "Deploy"
+- Attendi il completamento del processo di build e deploy
+
+### 6. Verifica il Deploy
+- Una volta completato il deploy, Vercel fornirà un URL per accedere all'applicazione
+- Verifica che l'applicazione funzioni correttamente
+- Controlla che possa connettersi al backend su Render
+- Prova ad effettuare il login con le credenziali di admin
+
+### 7. Configura il Dominio Personalizzato (Opzionale)
+- Se hai un dominio personalizzato, puoi configurarlo nelle impostazioni del progetto
+- Vai su "Settings" > "Domains"
+- Aggiungi il tuo dominio e segui le istruzioni
+
+## Risoluzione dei Problemi
+
+### Errori CORS
+Se riscontri errori CORS:
+1. Verifica che il dominio Vercel sia incluso nella lista degli `allowedOrigins` nel backend
+2. Assicurati che il backend sia configurato per accettare richieste con credenziali (`credentials: true`)
+
+### Errori di Connessione al Backend
+Se l'applicazione non riesce a connettersi al backend:
+1. Verifica che la variabile d'ambiente `VITE_API_URL` sia configurata correttamente
+2. Controlla che il backend su Render sia attivo e funzionante
+3. Testa l'endpoint `/api/auth/me` del backend direttamente nel browser
+
+### Errori di Build
+Se riscontri errori durante la build:
+1. Verifica che la directory root sia impostata correttamente su `client`
+2. Controlla i log di build per identificare eventuali errori specifici
+3. Assicurati che tutte le dipendenze siano correttamente installate
+
+## Note Importanti
+- Il backend deve essere già deployato e funzionante su Render
+- La variabile d'ambiente `VITE_API_URL` deve puntare all'URL corretto del backend
+- Il dominio di Vercel deve essere incluso nella lista degli `allowedOrigins` nel backend 
