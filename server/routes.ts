@@ -351,6 +351,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  app.get("/api/auth/debug", (req, res) => {
+    console.log("Debug route hit");
+    console.log("Headers:", req.headers);
+    console.log("Cookies:", req.cookies);
+    console.log("Session ID:", req.sessionID);
+    console.log("Is authenticated:", req.isAuthenticated());
+    console.log("User:", req.user);
+    
+    res.json({
+      isAuthenticated: req.isAuthenticated(),
+      sessionID: req.sessionID,
+      cookies: req.cookies,
+      user: req.user || null,
+      headers: {
+        origin: req.headers.origin,
+        cookie: req.headers.cookie,
+        referer: req.headers.referer
+      }
+    });
+  });
+  
   app.get("/api/auth/me", (req, res) => {
     console.log(`Verifica autenticazione: ${req.isAuthenticated() ? 'autenticato' : 'non autenticato'}`);
     console.log(`Cookie di sessione: ${req.sessionID}`);
