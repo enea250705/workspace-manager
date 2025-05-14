@@ -15,7 +15,7 @@ import {
   insertTimeOffRequestSchema,
   insertDocumentSchema,
   insertNotificationSchema
-} from "@shared/schema";
+} from "../shared/schema.js";
 
 // Initialize session store
 const MemorySessionStore = MemoryStore(session);
@@ -41,7 +41,7 @@ async function generateAutomaticSchedule(
   // Calcola il numero di giorni nel periodo
   const start = parseISO(startDate);
   const end = parseISO(endDate);
-  const days = [];
+  const days: string[] = [];
   
   // Crea un array di tutte le date nel periodo
   let currentDate = start;
@@ -122,7 +122,7 @@ async function generateAutomaticSchedule(
     // In un sistema reale, si potrebbe usare un algoritmo più sofisticato
     
     // Creiamo un array di ore per slot, ad esempio [8, 9, 10, ..., 17] per 8:00-18:00
-    const timeSlots = [];
+    const timeSlots: number[] = [];
     for (let hour = startHourNum; hour < endHourNum; hour++) {
       timeSlots.push(hour);
     }
