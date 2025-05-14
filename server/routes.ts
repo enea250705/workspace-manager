@@ -234,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     session({
       secret: process.env.SESSION_SECRET || "keyboard cat",
       resave: false,
-      saveUninitialized: false,
+      saveUninitialized: true,
       store: storage.sessionStore,
       cookie: {
         maxAge: 86400000, // 24 ore
@@ -330,7 +330,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`Cookie di sessione connect.sid: ${sessionCookie}`);
     
     // Imposta esplicitamente l'header per consentire credenziali
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Expose-Headers', 'Set-Cookie');
+    
+    // Ensure the cookie is properly set
+    res.cookie('connect.sid', req.sessionID, {
+      maxAge: 86400000,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      httpOnly: true,
+      path: '/'
+    });
     
     // Log di tutti i cookie impostati
     console.log('Cookie impostati nella risposta:', res.getHeaders()['set-cookie']);
@@ -372,6 +383,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Enhanced debug route for authentication troubleshooting
+  app.get("/api/auth/debug-full", (req, res) => {
+    console.log("Enhanced debug route hit");
+    console.log("Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("Cookies:", req.cookies);
+    console.log("Session ID:", req.sessionID);
+    console.log("Session:", req.session);
+    console.log("Is authenticated:", req.isAuthenticated());
+    console.log("User:", req.user);
+    
+    // Set explicit headers for CORS and credentials
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Expose-Headers', 'Set-Cookie');
+    
+    // Set a test cookie to see if it works
+    res.cookie('test-cookie', 'test-value', {
+      maxAge: 86400000,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      httpOnly: true,
+      path: '/'
+    });
+    
+    res.json({
+      isAuthenticated: req.isAuthenticated(),
+      sessionID: req.sessionID,
+      cookies: req.cookies,
+      user: req.user || null,
+      headers: {
+        origin: req.headers.origin,
+        cookie: req.headers.cookie,
+        referer: req.headers.referer,
+        host: req.headers.host,
+        'user-agent': req.headers['user-agent']
+      },
+      session: req.session
+    });
+  });
+  
   app.get("/api/auth/me", (req, res) => {
     console.log(`Verifica autenticazione: ${req.isAuthenticated() ? 'autenticato' : 'non autenticato'}`);
     console.log(`Cookie di sessione: ${req.sessionID}`);
@@ -388,8 +439,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Log della sessione
     console.log('Session data:', req.session);
     
-    // Imposta esplicitamente l'header per consentire credenziali
+    // Imposta esplicitamente gli header per consentire credenziali
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Expose-Headers', 'Set-Cookie');
     
     if (req.isAuthenticated()) {
       console.log(`Utente autenticato: ${(req.user as any).username}`);
