@@ -2,62 +2,12 @@ import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
-import cors from "cors";
 import cookieParser from "cookie-parser";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser(process.env.SESSION_SECRET || "keyboard cat")); // Parse cookies with the same secret as session
-
-// Configurazione CORS per consentire richieste dal frontend su Vercel
-const allowedOrigins = [
-  'http://localhost:5173',                      // Sviluppo locale frontend
-  'http://localhost:3000',                      // Sviluppo locale frontend (alternativo)
-  'https://workforce-manager.vercel.app',       // Produzione su Vercel (aggiorna con il tuo dominio)
-  'https://davittorino-staff.vercel.app',       // Dominio alternativo
-  'https://workspace-manager-2.onrender.com',   // Backend su Render
-  'https://workspace-manager-git-main-enea250705.vercel.app', // Vercel deployment URL
-  'https://workspace-manager-enea250705.vercel.app',          // Vercel deployment URL
-  'https://client-vert-eight.vercel.app',       // Nuovo URL di deployment Vercel
-  'https://workforce-manager-client.vercel.app',
-  'https://client-just123w1s-projects.vercel.app',
-  'https://client-just123w1-just123w1s-projects.vercel.app'
-];
-
-app.use(cors({
-  origin: function(origin, callback) {
-    // Consenti richieste senza origin (come app mobile o Postman)
-    if (!origin) {
-      console.log('Richiesta senza origin consentita');
-      return callback(null, true);
-    }
-    
-    console.log(`Richiesta CORS da origin: ${origin}`);
-    
-    // Opzione 1: Consenti tutte le origini in produzione (più permissivo)
-    // return callback(null, true);
-    
-    // Opzione 2: Controlla contro la lista di origini consentite
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-      console.log(`Origin consentito: ${origin}`);
-      callback(null, true);
-    } else {
-      // In produzione, prova a consentire tutti i domini .vercel.app
-      if (origin.endsWith('.vercel.app')) {
-        console.log(`Origin Vercel consentito: ${origin}`);
-        return callback(null, true);
-      }
-      
-      console.log(`Origin bloccato dal CORS: ${origin}`);
-      callback(new Error('Non consentito dal CORS'));
-    }
-  },
-  credentials: true, // Importante per le sessioni/cookie
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'X-HTTP-Method-Override'],
-  exposedHeaders: ['Set-Cookie']
-}));
 
 app.use((req, res, next) => {
   const start = Date.now();
