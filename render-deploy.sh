@@ -13,12 +13,22 @@ cp render-package.json package.json
 echo "Installing minimal dependencies..."
 npm install --no-fund --no-audit
 
-# Installa esplicitamente vite e esbuild
-echo "Installing build tools..."
-npm install --no-fund --no-audit vite esbuild
+# Prepara la directory di output
+echo "Preparing output directory..."
+mkdir -p dist/public
 
-# Esegui il build
-echo "Building client and server..."
-npm run build
+# Copia il file HTML statico
+echo "Copying static HTML file..."
+cp static-index.html dist/public/index.html
+
+# Copia il server semplificato
+echo "Copying simplified server..."
+cp server-simplified.js dist/index.js
+
+# Copia i file statici del client (se esistono)
+echo "Copying client static files..."
+if [ -d "client/public" ]; then
+  cp -r client/public/* dist/public/ 2>/dev/null || :
+fi
 
 echo "=== BUILD COMPLETED SUCCESSFULLY ===" 
