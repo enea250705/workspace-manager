@@ -242,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sameSite: 'none', // Necessario per cross-domain
         httpOnly: true, // Il cookie è accessibile solo dal server
         path: '/',
-        domain: process.env.COOKIE_DOMAIN || undefined // Usa il dominio specificato o undefined
+        domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Usa il dominio corretto per Render
       }
     }) as any
   );
@@ -340,7 +340,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'none',
       httpOnly: true,
-      path: '/'
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
     });
     
     // Log di tutti i cookie impostati
@@ -404,7 +405,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'none',
       httpOnly: true,
-      path: '/'
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
     });
     
     res.json({
