@@ -238,7 +238,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       store: storage.sessionStore,
       cookie: {
         maxAge: 86400000, // 24 ore
-        secure: false
+        secure: process.env.NODE_ENV === 'production', // Usa HTTPS in produzione
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Necessario per cross-domain in produzione
+        httpOnly: true, // Il cookie è accessibile solo dal server
+        domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Dominio per il cookie in produzione
       }
     })
   );

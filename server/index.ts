@@ -8,35 +8,28 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// CORS configuration
+// Configurazione CORS per consentire richieste dal frontend su Vercel
 const allowedOrigins = [
-  // Development origins
-  'http://localhost:3000',
-  'http://localhost:5000',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:5000',
-  
-  // Production origins - update these with your actual domains
-  'https://workforce-manager.vercel.app',
-  'https://workforce-manager-frontend.vercel.app',
-  'https://da-vittorino-staff.vercel.app'
+  'http://localhost:5173',                      // Sviluppo locale frontend
+  'http://localhost:3000',                      // Sviluppo locale frontend (alternativo)
+  'https://workforce-manager.vercel.app',       // Produzione su Vercel (aggiorna con il tuo dominio)
+  'https://davittorino-staff.vercel.app'        // Dominio alternativo
 ];
 
-// Configure CORS
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl requests)
+    // Consenti richieste senza origin (come app mobile o Postman)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-      return callback(new Error(msg), false);
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      console.log(`Origin bloccato dal CORS: ${origin}`);
+      callback(new Error('Non consentito dal CORS'));
     }
-    
-    return callback(null, true);
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  credentials: true, // Importante per le sessioni/cookie
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -90,15 +83,12 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // In production, listen on all interfaces (0.0.0.0) instead of just localhost
+  // Configura il server per ascoltare su tutte le interfacce
   const port = process.env.PORT || 5000;
-  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
-  
   server.listen({
     port,
-    host,
+    host: "0.0.0.0", // Ascolta su tutte le interfacce di rete
   }, () => {
-    log(`Server running in ${app.get('env')} mode`);
-    log(`Listening on http://${host}:${port}`);
+    log(`Server in esecuzione sulla porta ${port} in modalità ${app.get('env')}`);
   });
 })();

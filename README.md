@@ -1,64 +1,59 @@
-# Workforce Manager
+# StaffSync - Sistema di Gestione del Personale
 
-## Deployment Instructions
+## Preparazione per il Deploy
 
-This application is split into two parts:
-- Backend: Deployed on Render
-- Frontend: Deployed on Vercel
+Abbiamo configurato l'applicazione per il deploy su:
+- **Backend**: Render.com
+- **Frontend**: Vercel
 
-### Backend Deployment (Render)
+### Modifiche principali:
 
-1. Create a new account on [Render](https://render.com/) if you don't have one.
-2. Connect your GitHub repository to Render.
-3. Create a new Web Service and select your repository.
-4. Use the following settings:
-   - **Name**: workforce-manager-backend
-   - **Environment**: Node
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm run start`
-5. Add the following environment variables:
-   - `NODE_ENV`: production
-   - `SESSION_SECRET`: [your-session-secret]
-   - `DATABASE_URL`: [your-database-url]
-   - `SMTP_HOST`: [your-smtp-host]
-   - `SMTP_PORT`: [your-smtp-port]
-   - `SMTP_USER`: [your-smtp-username]
-   - `SMTP_PASS`: [your-smtp-password]
-   - `EMAIL_FROM`: [your-email-address]
-6. Click "Create Web Service"
+1. **Backend (server)**:
+   - Aggiunta configurazione CORS per supportare richieste cross-origin
+   - Configurazione dei cookie di sessione per funzionare tra domini diversi
+   - Modificato il server per ascoltare su tutte le interfacce di rete
+   - Creato file `render.yaml` per la configurazione del deploy su Render
 
-Alternatively, you can use the `render.yaml` file in this repository for deployment.
+2. **Frontend (client)**:
+   - Aggiunta variabile d'ambiente per l'URL dell'API
+   - Modificato il client per utilizzare l'URL dell'API configurato
+   - Creato file `vercel.json` per la configurazione del deploy su Vercel
 
-### Frontend Deployment (Vercel)
+3. **Documentazione**:
+   - Creato file `DEPLOY.md` con istruzioni dettagliate per il deploy
+   - Aggiornato README con informazioni sul deploy
 
-1. Create a new account on [Vercel](https://vercel.com/) if you don't have one.
-2. Connect your GitHub repository to Vercel.
-3. Create a new project and select your repository.
-4. Configure the project with the following settings:
-   - **Framework Preset**: Vite
-   - **Root Directory**: client
-   - **Build Command**: `npm install && npm run build`
-   - **Output Directory**: dist
-5. Add the following environment variables:
-   - `VITE_API_URL`: https://workforce-manager-backend.onrender.com
-   - `VITE_WS_URL`: wss://workforce-manager-backend.onrender.com
-6. Click "Deploy"
+## Istruzioni per il Deploy
 
-## Development Setup
+Per istruzioni dettagliate sul deploy, consulta il file [DEPLOY.md](./DEPLOY.md).
 
-1. Clone the repository
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Set up environment variables (copy `.env.example` to `.env` and fill in the values)
-4. Start the development server:
-   ```
-   npm run dev
-   ```
+## Struttura del Progetto
 
-## Project Structure
+- `client/`: Applicazione frontend React
+- `server/`: API backend Node.js/Express
+- `shared/`: Codice condiviso tra frontend e backend
+- `render.yaml`: Configurazione per il deploy su Render
+- `vercel.json`: Configurazione per il deploy su Vercel
 
-- `/client`: Frontend React application
-- `/server`: Backend Express server
-- `/shared`: Shared types and utilities 
+## Sviluppo Locale
+
+1. Clona il repository
+2. Installa le dipendenze: `npm install`
+3. Avvia il server di sviluppo: `npm run dev`
+4. In un altro terminale, avvia il client: `cd client && npm run dev`
+
+## Variabili d'Ambiente
+
+### Backend (.env)
+```
+DATABASE_URL=...
+EMAIL_USER=...
+EMAIL_APP_PASSWORD=...
+SESSION_SECRET=...
+NODE_ENV=production
+```
+
+### Frontend (client/.env)
+```
+VITE_API_URL=https://staffsync-backend.onrender.com
+``` 

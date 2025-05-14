@@ -19,29 +19,68 @@ import { RecentActivities } from "./recent-activities";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
+// Define interfaces for our data types
+interface User {
+  id: number;
+  name: string;
+  isActive: boolean;
+  role: string;
+  email?: string;
+}
+
+interface TimeOffRequest {
+  id: number;
+  userId: number;
+  type: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
+interface Schedule {
+  id: number;
+  startDate: string;
+  endDate: string;
+  isPublished: boolean;
+}
+
+interface Shift {
+  id: number;
+  userId: number;
+  employeeId?: number;
+  scheduleId: number;
+  day: string;
+  date?: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  notes?: string;
+  area?: string;
+}
+
 export function AdminDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [isTestingEmail, setIsTestingEmail] = useState(false);
 
-  const { data: users = [] } = useQuery({
+  const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
 
-  const { data: timeOffRequests = [] } = useQuery({
+  const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
     queryKey: ["/api/time-off-requests"],
   });
 
-  const { data: pendingRequests = [] } = useQuery({
+  const { data: pendingRequests = [] } = useQuery<TimeOffRequest[]>({
     queryKey: ["/api/time-off-requests/pending"],
   });
 
-  const { data: currentSchedule } = useQuery({
+  const { data: currentSchedule } = useQuery<Schedule | null>({
     queryKey: ["/api/schedules"],
   });
   
-  const { data: allShifts = [] } = useQuery({
+  const { data: allShifts = [] } = useQuery<Shift[]>({
     queryKey: [`/api/schedules/${currentSchedule?.id}/shifts`],
     enabled: !!currentSchedule?.id,
   });
@@ -65,34 +104,6 @@ export function AdminDashboard() {
     },
   });
 
-  // Mutation per testare l'invio email
-  const testEmailMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/test/email", {}),
-    onSuccess: (data) => {
-      toast({
-        title: "Test email completato",
-        description: data.message || "Email di test inviata con successo",
-        variant: "default"
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Errore nel test email",
-        description: "Non è stato possibile inviare l'email di test. Controlla la console per dettagli.",
-        variant: "destructive"
-      });
-      console.error("Errore invio email:", error);
-    },
-    onSettled: () => {
-      setIsTestingEmail(false);
-    }
-  });
-
-  const handleTestEmail = () => {
-    setIsTestingEmail(true);
-    testEmailMutation.mutate();
-  };
-
   // Calcola le date della settimana corrente
   const today = new Date();
   const startOfWeek = new Date(today);
@@ -101,26 +112,28 @@ export function AdminDashboard() {
   endOfWeek.setDate(today.getDate() - today.getDay() + 7); // Domenica
   
   // Current stats
-  const activeEmployees = users.filter((user: any) => user.isActive).length;
+  const activeEmployees = users.filter((user) => user.isActive).length;
   
   // Conta i dipendenti in ferie nella settimana corrente
-  const employeesOnVacation = timeOffRequests.filter((req: any) => {
-    // Verifica che sia approvata e sia di tipo vacanza
-    if (req.status !== "approved" || req.type !== "vacation") return false;
-    
-    const startDate = new Date(req.startDate);
-    const endDate = new Date(req.endDate);
-    
-    // Verifica se la richiesta di ferie si sovrappone alla settimana corrente
-    return (
-      (startDate <= endOfWeek && endDate >= startOfWeek) || 
-      (endDate >= startOfWeek && startDate <= endOfWeek)
-    );
-  }).reduce((acc: Set<number>, req: any) => {
-    // Usa un Set per evitare di contare più volte lo stesso dipendente
-    acc.add(req.userId);
-    return acc;
-  }, new Set()).size;
+  const employeesOnVacation = timeOffRequests
+    .filter((req) => {
+      // Verifica che sia approvata e sia di tipo vacanza
+      if (req.status !== "approved" || req.type !== "vacation") return false;
+      
+      const startDate = new Date(req.startDate);
+      const endDate = new Date(req.endDate);
+      
+      // Verifica se la richiesta di ferie si sovrappone alla settimana corrente
+      return (
+        (startDate <= endOfWeek && endDate >= startOfWeek) || 
+        (endDate >= startOfWeek && startDate <= endOfWeek)
+      );
+    })
+    .reduce((acc: Set<number>, req: TimeOffRequest) => {
+      // Usa un Set per evitare di contare più volte lo stesso dipendente
+      acc.add(req.userId);
+      return acc;
+    }, new Set<number>()).size;
 
   // Calcola le ore totali per fasce orarie
   const shiftDistributionData = (() => {
@@ -134,7 +147,7 @@ export function AdminDashboard() {
     
     // Conta le ore per fasce orarie
     const morningHours = calculateTotalWorkHours(
-      allShifts.filter((shift: any) => 
+      allShifts.filter((shift) => 
         shift.type === "work" && 
         shift.startTime >= "04:00" && 
         shift.startTime < "12:00"
@@ -142,7 +155,7 @@ export function AdminDashboard() {
     );
     
     const afternoonHours = calculateTotalWorkHours(
-      allShifts.filter((shift: any) => 
+      allShifts.filter((shift) => 
         shift.type === "work" && 
         shift.startTime >= "12:00" && 
         shift.startTime < "18:00"
@@ -150,7 +163,7 @@ export function AdminDashboard() {
     );
     
     const eveningHours = calculateTotalWorkHours(
-      allShifts.filter((shift: any) => 
+      allShifts.filter((shift) => 
         shift.type === "work" && 
         shift.startTime >= "18:00"
       )
@@ -214,7 +227,7 @@ export function AdminDashboard() {
                 <p className="text-gray-500 text-sm">Ore Programmate</p>
                 <p className="text-2xl font-medium">{
                   calculateTotalWorkHours(
-                    allShifts.filter((shift: any) => shift.type === "work")
+                    allShifts.filter((shift) => shift.type === "work")
                   ).toFixed(0)
                 }</p>
               </div>
@@ -268,7 +281,7 @@ export function AdminDashboard() {
               </div>
             ) : (
               <div className="divide-y">
-                {pendingRequests.slice(0, 3).map((request: any) => (
+                {pendingRequests.slice(0, 3).map((request) => (
                   <div key={request.id} className="py-3">
                     <div className="flex justify-between">
                       <div>
@@ -282,7 +295,7 @@ export function AdminDashboard() {
                         <p className="text-xs text-gray-500">
                           Da:{" "}
                           <span className="font-medium">
-                            {users.find((u: any) => u.id === request.userId)?.name || "Dipendente"}
+                            {users.find((u) => u.id === request.userId)?.name || "Dipendente"}
                           </span>
                         </p>
                         <p className="text-xs text-gray-500">

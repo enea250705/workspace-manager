@@ -1,17 +1,18 @@
 services:
   - type: web
-    name: workforce-manager-simplified
+    name: staffsync-backend
     env: node
-    plan: free
-    buildCommand: bash ./render-deploy.sh
+    buildCommand: npm install && npm run build
     startCommand: npm run start
-    nodeVersion: 18.x
     envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_APP_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
       - key: NODE_ENV
         value: production
-      - key: SESSION_SECRET
-        value: da_vittorino_workforce_manager_secret_key_2024
-      - key: PORT
-        value: 10000
-    healthCheckPath: /api/health
-    autoDeploy: true 
+    healthCheckPath: /api/auth/me 
