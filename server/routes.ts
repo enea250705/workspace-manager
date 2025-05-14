@@ -238,10 +238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       store: storage.sessionStore,
       cookie: {
         maxAge: 86400000, // 24 ore
-        secure: false, // Disabilitato per test, anche in produzione
-        sameSite: 'lax', // Più permissivo
+        secure: process.env.NODE_ENV === 'production', // Usa HTTPS in produzione
+        sameSite: 'none', // Necessario per cross-domain in produzione
         httpOnly: true, // Il cookie è accessibile solo dal server
-        domain: undefined // Nessuna restrizione di dominio
       }
     })
   );

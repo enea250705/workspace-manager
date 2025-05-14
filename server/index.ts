@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { registerRoutes } from "./routes.js";
+import { setupVite, serveStatic, log } from "./vite.js";
 import cors from "cors";
 
 const app = express();
@@ -14,13 +14,17 @@ const allowedOrigins = [
   'http://localhost:3000',                      // Sviluppo locale frontend (alternativo)
   'https://workforce-manager.vercel.app',       // Produzione su Vercel (aggiorna con il tuo dominio)
   'https://davittorino-staff.vercel.app',       // Dominio alternativo
-  'https://workspace-manager-2.onrender.com'    // Backend su Render
+  'https://workspace-manager-2.onrender.com',   // Backend su Render
+  'https://workspace-manager-git-main-enea250705.vercel.app', // Vercel deployment URL
+  'https://workspace-manager-enea250705.vercel.app'           // Vercel deployment URL
 ];
 
 app.use(cors({
   origin: function(origin, callback) {
     // Consenti richieste senza origin (come app mobile o Postman)
     if (!origin) return callback(null, true);
+    
+    console.log(`Richiesta CORS da origin: ${origin}`);
     
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
       callback(null, true);
