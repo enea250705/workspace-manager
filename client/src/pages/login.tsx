@@ -36,9 +36,13 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const API_URL = import.meta.env.VITE_API_URL || '';
 
+  console.log("Login component inizializzato, API_URL:", API_URL);
+  console.log("Cookie disponibili:", document.cookie);
+
   // Se l'utente è già autenticato, reindirizza alla dashboard
   useEffect(() => {
     if (isAuthenticated) {
+      console.log("Utente già autenticato, reindirizzo alla dashboard");
       navigate("/");
     }
   }, [isAuthenticated, navigate]);
@@ -53,14 +57,17 @@ export default function Login() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log("Tentativo di login con:", values.username);
     setIsLoading(true);
     
     try {
       // Login utilizzando l'URL API completo
+      console.log(`Invio richiesta di login a ${API_URL}/api/auth/login`);
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           username: values.username,
@@ -69,21 +76,48 @@ export default function Login() {
         credentials: 'include'
       });
       
+      console.log("Risposta login:", response.status, response.statusText);
+      
       if (!response.ok) {
+        console.error("Login fallito con status:", response.status);
         throw new Error('Credenziali non valide');
       }
       
+      // Log dei cookie ricevuti
+      console.log("Cookie dopo login:", document.cookie);
+      
       const data = await response.json();
+      console.log("Dati login ricevuti:", data);
       
       if (data.user) {
+        console.log("Login riuscito per:", data.user.username);
+        
+        // Prova a verificare subito l'autenticazione
+        try {
+          const checkResponse = await fetch(`${API_URL}/api/auth/me`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+          
+          console.log("Verifica immediata auth:", checkResponse.status, checkResponse.statusText);
+          const checkData = await checkResponse.json();
+          console.log("Dati verifica auth:", checkData);
+        } catch (checkError) {
+          console.error("Errore nella verifica immediata:", checkError);
+        }
+        
         // Ricarica la pagina per aggiornare lo stato di autenticazione
+        console.log("Reindirizzo alla dashboard");
         window.location.href = '/';
         return;
       }
       
       throw new Error('Errore durante l\'accesso');
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Errore completo login:", error);
       toast({
         title: "Errore di accesso",
         description: "Credenziali non valide. Riprova.",
