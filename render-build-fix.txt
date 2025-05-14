@@ -1,0 +1,70 @@
+# Risoluzione Problemi di Build su Render
+
+## Problema: Errore "vite: not found"
+
+Questo errore si verifica perché il comando `vite` non è disponibile globalmente durante il processo di build.
+
+## Soluzione 1: Usa npx nei comandi di build
+
+Modifica il file `package.json`:
+
+```json
+"scripts": {
+  "build": "npx vite build && npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist"
+}
+```
+
+## Soluzione 2: Usa npm ci invece di npm install
+
+Modifica il build command su Render:
+
+```
+npm ci && npm run build
+```
+
+Il comando `npm ci` installa le dipendenze esattamente come specificate nel package-lock.json, il che può risolvere problemi di compatibilità.
+
+## Soluzione 3: Ignora le vulnerabilità durante il build
+
+Se continui a ricevere errori relativi a vulnerabilità, puoi aggiungere questo flag:
+
+```
+npm ci --no-audit && npm run build
+```
+
+## Soluzione 4: Legacy peer dependencies
+
+Se hai problemi con dipendenze incompatibili:
+
+```
+npm ci --legacy-peer-deps && npm run build
+```
+
+## Soluzione 5: Installa vite globalmente nel build step
+
+Puoi modificare il build command su Render:
+
+```
+npm install -g vite && npm ci && npm run build
+```
+
+## Soluzione 6: Modifica il file render.yaml
+
+```yaml
+services:
+  - type: web
+    name: staffsync-backend
+    env: node
+    buildCommand: npm ci --legacy-peer-deps && npm run build
+    startCommand: npm run start
+    envVars:
+      # ... altre variabili ...
+```
+
+## Soluzione 7: Usa un Node.js Environment avanzato
+
+Su Render, seleziona una versione specifica di Node.js (16.x o superiore) che sia compatibile con tutte le tue dipendenze.
+
+## Verifica del successo
+
+Dopo aver applicato una di queste soluzioni, controlla i log di build su Render per verificare che il processo di build sia completato con successo. 

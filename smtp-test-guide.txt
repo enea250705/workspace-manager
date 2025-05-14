@@ -1,0 +1,63 @@
+# Guida al Test della Configurazione SMTP
+
+## Prerequisiti
+- Backend deployato su Render
+- Variabili d'ambiente EMAIL_USER e EMAIL_APP_PASSWORD configurate
+
+## Test Automatico
+
+1. Accedi all'applicazione come amministratore
+2. Vai alla dashboard
+3. Cerca il pulsante "Invia Email di Test" (se disponibile)
+4. Clicca sul pulsante e verifica che l'email venga inviata
+
+## Test Manuale (API)
+
+Se il pulsante di test non è disponibile, puoi testare l'API direttamente:
+
+1. Usa un client API come Postman o cURL
+2. Invia una richiesta POST all'endpoint di test:
+   ```
+   POST https://staffsync-backend.onrender.com/api/test/email
+   ```
+3. Assicurati di includere i cookie di sessione se l'endpoint richiede autenticazione
+4. Verifica la risposta dell'API e controlla la tua casella email
+
+## Test via Browser (per amministratori)
+
+1. Accedi all'applicazione come amministratore
+2. Apri la console del browser (F12)
+3. Esegui questo comando JavaScript:
+   ```javascript
+   fetch('/api/test/email', {
+     method: 'POST',
+     credentials: 'include',
+     headers: {
+       'Content-Type': 'application/json'
+     }
+   }).then(res => res.json()).then(console.log)
+   ```
+4. Verifica la risposta nella console e controlla la tua casella email
+
+## Verifica della Ricezione
+
+1. Controlla la casella di posta dell'indirizzo configurato come amministratore
+2. Se non vedi l'email, controlla la cartella spam/posta indesiderata
+3. Verifica che l'oggetto dell'email contenga "Test Email - Da Vittorino"
+
+## Risoluzione dei Problemi
+
+Se l'email non viene inviata:
+
+1. Verifica i log di Render per errori specifici
+2. Controlla che le variabili d'ambiente EMAIL_USER e EMAIL_APP_PASSWORD siano configurate correttamente
+3. Assicurati che la password per app di Gmail sia valida e generata correttamente
+4. Verifica che l'account Gmail non abbia restrizioni di sicurezza che bloccano app meno sicure
+5. Controlla che il servizio Gmail SMTP sia accessibile dal server Render
+
+## Impostazioni Gmail Consigliate
+
+1. Attiva l'autenticazione a due fattori per l'account Gmail
+2. Genera una password per app specifica per questa applicazione
+3. Assicurati che non ci siano blocchi o restrizioni sull'account Gmail
+4. Considera di aumentare i limiti di invio se prevedi di inviare molte email 

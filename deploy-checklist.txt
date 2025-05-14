@@ -1,0 +1,49 @@
+# Checklist per il Deploy di StaffSync
+
+## Preparazione
+- [✓] Repository Git configurato
+- [✓] File di configurazione render.yaml creato
+- [✓] File di configurazione vercel.json creato
+- [✓] Variabili d'ambiente identificate
+
+## Deploy Backend (Render)
+- [ ] Accedi a Render.com
+- [ ] Crea nuovo Web Service
+- [ ] Collega repository GitHub (enea250705/workspace-manager)
+- [ ] Configura servizio:
+  - [ ] Nome: staffsync-backend
+  - [ ] Runtime: Node
+  - [ ] Build Command: npm ci && npm run build
+  - [ ] Start Command: npm run start
+- [ ] Configura variabili d'ambiente (vedi render-env-variables.txt)
+- [ ] Avvia deploy
+- [ ] Verifica deploy:
+  - [ ] Controlla URL: https://staffsync-backend.onrender.com
+  - [ ] Testa endpoint: https://staffsync-backend.onrender.com/api/auth/me
+
+## Deploy Frontend (Vercel)
+- [ ] Accedi a Vercel.com
+- [ ] Importa repository GitHub (enea250705/workspace-manager)
+- [ ] Configura progetto:
+  - [ ] Framework: Vite
+  - [ ] Build Command: cd client && npm install && npm run build
+  - [ ] Output Directory: client/dist
+- [ ] Configura variabili d'ambiente (vedi vercel-env-variables.txt)
+- [ ] Avvia deploy
+- [ ] Verifica deploy:
+  - [ ] Accedi all'applicazione
+  - [ ] Verifica connessione al backend
+
+## Verifica Finale
+- [ ] Test login/logout
+- [ ] Test funzionalità email
+- [ ] Test funzionalità CRUD
+- [ ] Verifica che i cookie di sessione funzionino correttamente
+
+## Risoluzione Problemi
+- [ ] Controlla i log di Render per errori backend
+- [ ] Controlla i log di Vercel per errori frontend
+- [ ] Verifica configurazione CORS
+- [ ] Verifica configurazione cookie di sessione
+- [ ] Verifica connessione al database 
+- [ ] Se ci sono errori di build, prova a usare `npm ci --legacy-peer-deps` nel build command 

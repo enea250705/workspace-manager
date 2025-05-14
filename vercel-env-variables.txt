@@ -1,0 +1,5 @@
+# Variabili d'ambiente per Vercel
+# Copia e incolla questi valori nella sezione "Environment Variables" del tuo progetto Vercel
+
+# URL del backend (aggiorna con l'URL effettivo del tuo servizio su Render)
+VITE_API_URL=https://staffsync-backend.onrender.com 

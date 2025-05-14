@@ -1,0 +1,15 @@
+# Variabili d'ambiente per Render
+# Copia e incolla questi valori nella sezione "Environment" del tuo servizio Render
+
+# Database
+DATABASE_URL=postgresql://neondb_owner:npg_ST1xy8lAVqLF@ep-cool-bar-a4i0caol-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
+
+# Email/SMTP
+EMAIL_USER=gestione.davittorino@gmail.com
+EMAIL_APP_PASSWORD=qzzi vhfh ljmp zvxc
+
+# Sicurezza
+SESSION_SECRET=sEsjSIwbtR2uJ8/4i7CKK7H4rouVp9YHVfKdpdoxtIeBZTxXPzfvVtwwK37jVOQaDd8984h5eAhO3Rg43tGIYA==
+
+# Ambiente
+NODE_ENV=production 
