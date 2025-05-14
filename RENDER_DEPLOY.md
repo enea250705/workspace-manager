@@ -7,10 +7,12 @@ Questo file contiene istruzioni specifiche per il deploy dell'applicazione su Re
 Il repository è già configurato per il deploy su Render con i seguenti file:
 
 - `render.yaml`: Configurazione principale per Render
-- `render-build.sh`: Script personalizzato per il build
+- `render-deploy.sh`: Script personalizzato per il build
+- `render-package.json`: Package.json semplificato per il deploy
 - `.nvmrc` e `.node-version`: Specificano la versione di Node.js
 - `.npmrc`: Configurazione npm per il build
 - `Procfile`: Definisce il comando per avviare l'applicazione
+- `vite.config.js`: Configurazione Vite semplificata
 
 ## Variabili d'Ambiente
 
@@ -35,6 +37,17 @@ EMAIL_FROM=Da Vittorino Staff <davittorino.staff@gmail.com>
 4. Render rileverà automaticamente il file `render.yaml` e configurerà il servizio
 5. Aggiungi le variabili d'ambiente elencate sopra
 6. Clicca su "Create Web Service"
+
+## Come Funziona il Deploy
+
+Il processo di build su Render utilizza lo script `render-deploy.sh` che:
+
+1. Sostituisce il package.json con una versione semplificata (`render-package.json`)
+2. Installa solo le dipendenze necessarie
+3. Installa esplicitamente vite e esbuild come strumenti di build
+4. Esegue il build del client e del server
+
+Questo approccio risolve i problemi comuni di build su Render.
 
 ## Risoluzione dei Problemi
 

@@ -3,7 +3,7 @@ services:
     name: workforce-manager-backend
     env: node
     plan: free
-    buildCommand: bash ./render-build.sh
+    buildCommand: bash ./render-deploy.sh
     startCommand: npm run start
     nodeVersion: 18.x
     envVars:
