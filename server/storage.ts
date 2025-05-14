@@ -72,7 +72,6 @@ export class MemStorage implements IStorage {
   private documents: Map<number, Document>;
   private notifications: Map<number, Notification>;
   private messages: Map<number, Message>;
-  sessionStore: any;
   
   private userCurrentId: number;
   private scheduleCurrentId: number;
@@ -102,20 +101,10 @@ export class MemStorage implements IStorage {
     // Creazione utente amministratore predefinito
     this.createUser({
       username: "admin",
-      password: "admin123",
-      name: "Admin User",
-      email: "admin@staffsync.com",
+      password: "davittorino2025@",
+      name: "Admin",
+      email: "admin@davittorino.it",
       role: "admin",
-      isActive: true,
-    });
-
-    // Creazione di un utente dipendente di esempio
-    this.createUser({
-      username: "employee",
-      password: "employee123",
-      name: "Dipendente Demo",
-      email: "dipendente@staffsync.com",
-      role: "employee",
       isActive: true,
     });
   }
@@ -526,27 +515,12 @@ export class DatabaseStorage implements IStorage {
     if (!adminExists) {
       await this.createUser({
         username: "admin",
-        password: "admin123",
-        name: "Amministratore",
-        email: "admin@azienda.it",
+        password: "davittorino2025@",
+        name: "Admin",
+        email: "admin@davittorino.it",
         role: "admin",
         position: null,
         phone: null,
-        isActive: true
-      });
-    }
-    
-    // Check if employee exists
-    const employeeExists = await this.getUserByUsername("employee");
-    if (!employeeExists) {
-      await this.createUser({
-        username: "employee",
-        password: "employee123",
-        name: "Dipendente Demo",
-        email: "dipendente@azienda.it",
-        role: "employee",
-        position: "Cameriere",
-        phone: "+39123456789",
         isActive: true
       });
     }

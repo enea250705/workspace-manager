@@ -16,10 +16,14 @@ import {
 } from "recharts";
 import { apiRequest } from "@/lib/queryClient";
 import { RecentActivities } from "./recent-activities";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export function AdminDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
 
   const { data: users = [] } = useQuery({
     queryKey: ["/api/users"],
@@ -27,6 +31,10 @@ export function AdminDashboard() {
 
   const { data: timeOffRequests = [] } = useQuery({
     queryKey: ["/api/time-off-requests"],
+  });
+
+  const { data: pendingRequests = [] } = useQuery({
+    queryKey: ["/api/time-off-requests/pending"],
   });
 
   const { data: currentSchedule } = useQuery({
@@ -38,16 +46,13 @@ export function AdminDashboard() {
     enabled: !!currentSchedule?.id,
   });
 
-  const pendingRequests = timeOffRequests.filter(
-    (req: any) => req.status === "pending"
-  );
-
   // Mutations for approving/rejecting requests
   const approveMutation = useMutation({
     mutationFn: (requestId: number) =>
       apiRequest("POST", `/api/time-off-requests/${requestId}/approve`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-off-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-off-requests/pending"] });
     },
   });
 
@@ -56,8 +61,37 @@ export function AdminDashboard() {
       apiRequest("POST", `/api/time-off-requests/${requestId}/reject`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-off-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-off-requests/pending"] });
     },
   });
+
+  // Mutation per testare l'invio email
+  const testEmailMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/test/email", {}),
+    onSuccess: (data) => {
+      toast({
+        title: "Test email completato",
+        description: data.message || "Email di test inviata con successo",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore nel test email",
+        description: "Non è stato possibile inviare l'email di test. Controlla la console per dettagli.",
+        variant: "destructive"
+      });
+      console.error("Errore invio email:", error);
+    },
+    onSettled: () => {
+      setIsTestingEmail(false);
+    }
+  });
+
+  const handleTestEmail = () => {
+    setIsTestingEmail(true);
+    testEmailMutation.mutate();
+  };
 
   // Calcola le date della settimana corrente
   const today = new Date();
@@ -146,9 +180,6 @@ export function AdminDashboard() {
                 <span className="material-icons text-primary">people</span>
               </div>
             </div>
-            <div className="mt-4 text-xs text-gray-500">
-              <span className="text-success">+2</span> rispetto al mese scorso
-            </div>
           </CardContent>
         </Card>
         
@@ -223,7 +254,7 @@ export function AdminDashboard() {
         {/* Pending Approvals */}
         <Card>
           <CardHeader className="border-b px-4 py-3 flex justify-between items-center">
-            <CardTitle className="text-base font-medium">Approvazioni in Attesa</CardTitle>
+            <CardTitle className="text-base font-medium">Richieste in Attesa</CardTitle>
             <Link href="/requests">
               <Button variant="link" size="sm" className="h-auto p-0">
                 Gestisci

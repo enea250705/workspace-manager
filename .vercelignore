@@ -1,0 +1,25 @@
+# Development files
+.git
+.github
+.vscode
+node_modules
+
+# Files not needed for production
+README.md
+*.log
+.env.example
+.gitignore
+.editorconfig
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Don't upload source maps to Vercel
+*.js.map
+*.css.map
+
+# Exclude source since we're building the project
+client/src
+!dist/
+!.env 

@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
@@ -23,7 +23,7 @@ export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
-    allowedHosts: true,
+    allowedHosts: [] as string[],
   };
 
   const vite = await createViteServer({
@@ -31,7 +31,7 @@ export async function setupVite(app: Express, server: Server) {
     configFile: false,
     customLogger: {
       ...viteLogger,
-      error: (msg, options) => {
+      error: (msg: any, options: any) => {
         viteLogger.error(msg, options);
         process.exit(1);
       },
@@ -41,13 +41,12 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
+  app.use("*", async (req: Request, res: Response, next: NextFunction) => {
     const url = req.originalUrl;
 
     try {
       const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "..",
+        process.cwd(),
         "client",
         "index.html",
       );
@@ -68,18 +67,51 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
-
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+  // First try the standard dist/public path
+  const distPath = path.resolve(process.cwd(), "server", "public");
+  
+  // Vercel paths may be different, so we check multiple options
+  const possiblePaths = [
+    distPath,
+    path.resolve(process.cwd(), "dist/public"),
+    path.resolve(process.cwd(), "dist"),
+    path.resolve(process.cwd(), "public")
+  ];
+  
+  // Find the first path that exists
+  const validPath = possiblePaths.find(p => fs.existsSync(p));
+  
+  if (!validPath) {
+    const error = `ERROR: Could not find any valid build directory. Checked: ${possiblePaths.join(', ')}`;
+    log(error, "server");
+    throw new Error(error);
   }
-
-  app.use(express.static(distPath));
-
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  
+  log(`Using static files from: ${validPath}`, "server");
+  app.use(express.static(validPath));
+  
+  // We also set up a path for the index.html
+  let indexHtmlPath = path.resolve(validPath, "index.html");
+  
+  // If index.html doesn't exist in the validPath, try to find it
+  if (!fs.existsSync(indexHtmlPath)) {
+    const possibleIndexPaths = possiblePaths.map(p => path.resolve(p, "index.html"));
+    const validIndexPath = possibleIndexPaths.find(p => fs.existsSync(p));
+    
+    if (validIndexPath) {
+      indexHtmlPath = validIndexPath;
+      log(`Found index.html at: ${indexHtmlPath}`, "server");
+    } else {
+      log(`WARNING: Could not find index.html in any directory`, "server");
+    }
+  }
+  
+  // Fallback to index.html for client-side routing
+  app.use("*", (_req: Request, res: Response) => {
+    if (fs.existsSync(indexHtmlPath)) {
+      res.sendFile(indexHtmlPath);
+    } else {
+      res.status(404).send("Not found - Build files missing");
+    }
   });
 }

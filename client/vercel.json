@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "buildCommand": "cd .. && npm install && npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "regions": ["cdg1"],
+  "github": {
+    "silent": true
+  }
+} 

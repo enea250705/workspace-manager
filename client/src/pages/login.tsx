@@ -97,9 +97,9 @@ export default function Login() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-2">
-            <span className="material-icons text-4xl text-primary">schedule</span>
+            <img src="/logo.png" alt="Logo" className="h-12 w-auto" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 font-condensed">StaffSync</h1>
+          <h1 className="text-2xl font-bold text-gray-900 font-condensed">Da Vittorino Gestione</h1>
           <p className="mt-2 text-sm text-gray-600">
             Sistema di Gestione Personale
           </p>
@@ -181,8 +181,6 @@ export default function Login() {
         <div className="text-center text-sm text-gray-500">
           <p>
             Utilizzare le credenziali fornite dal tuo amministratore.
-            <br />
-            Per test: username <span className="font-medium">admin</span> / password <span className="font-medium">admin123</span>
           </p>
         </div>
       </div>

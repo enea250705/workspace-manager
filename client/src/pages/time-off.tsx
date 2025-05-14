@@ -47,7 +47,7 @@ export default function TimeOff() {
           {isAdmin ? (
             <Tabs defaultValue="approve" className="w-full">
               <TabsList className="w-full mb-6 flex flex-wrap">
-                <TabsTrigger value="approve" className="flex-1">Approvazioni</TabsTrigger>
+                <TabsTrigger value="approve" className="flex-1">Richieste</TabsTrigger>
                 <TabsTrigger value="request" className="flex-1">Nuova richiesta</TabsTrigger>
                 <TabsTrigger value="history" className="flex-1">Cronologia personale</TabsTrigger>
               </TabsList>

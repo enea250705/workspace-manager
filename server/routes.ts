@@ -1102,6 +1102,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Invia email di notifica all'amministratore
+      try {
+        // Import del servizio email
+        const { sendTimeOffRequestNotificationToAdmin } = await import('./services/nodemailer-service');
+        
+        // Invia email di notifica all'amministratore
+        await sendTimeOffRequestNotificationToAdmin(
+          req.user as any, 
+          request.type, 
+          request.startDate, 
+          request.endDate,
+          request.reason || ""
+        );
+        console.log(`📧 Email di notifica nuova richiesta inviata all'amministratore`);
+      } catch (emailError) {
+        console.error(`❌ Errore nell'invio email all'amministratore:`, emailError);
+      }
+      
       res.status(201).json(request);
     } catch (err) {
       res.status(400).json({ message: "Invalid request data" });
@@ -1278,7 +1296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user && user.email) {
         try {
           // Import del servizio email
-          const { sendTimeOffRejectionNotification } = await import('./services/email-service');
+          const { sendTimeOffRejectionNotification } = await import('./services/nodemailer-service');
           
           // Invia email di notifica
           await sendTimeOffRejectionNotification(user, request.type, request.startDate, request.endDate);
@@ -1318,6 +1336,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (err) {
       res.status(500).json({ message: "Failed to get documents" });
+    }
+  });
+  
+  // Endpoint di test per verificare l'invio email (solo per admin)
+  app.post("/api/test/email", isAdmin, async (req, res) => {
+    try {
+      console.log("🧪 Richiesta test email ricevuta");
+      
+      // Importa il servizio email
+      const { testEmailService } = await import('./services/nodemailer-service');
+      
+      // Esegui il test
+      const result = await testEmailService();
+      
+      // Rispondi con il risultato
+      res.json({ 
+        success: result, 
+        timestamp: new Date().toISOString(),
+        message: result ? "Email di test inviata con successo" : "Errore nell'invio dell'email di test"
+      });
+    } catch (err) {
+      console.error("❌ Errore durante il test email:", err);
+      res.status(500).json({ 
+        success: false,
+        error: String(err),
+        timestamp: new Date().toISOString()
+      });
     }
   });
   

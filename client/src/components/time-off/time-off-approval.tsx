@@ -218,12 +218,12 @@ export function TimeOffApproval() {
     return (
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle>Richieste in attesa di approvazione</CardTitle>
+          <CardTitle>Richieste in Attesa</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center text-gray-500 py-8">
             <span className="material-icons text-4xl mb-2">check_circle</span>
-            <p>Non ci sono richieste in attesa di approvazione.</p>
+            <p>Non ci sono richieste in attesa.</p>
           </div>
         </CardContent>
       </Card>
@@ -234,7 +234,7 @@ export function TimeOffApproval() {
     <>
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle>Richieste in attesa di approvazione</CardTitle>
+          <CardTitle>Richieste in Attesa</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">

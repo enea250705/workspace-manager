@@ -122,7 +122,7 @@ export function RequestApproval() {
   return (
     <Card className="shadow-sm">
       <CardHeader className="px-4 py-3 border-b">
-        <CardTitle className="text-base font-medium">Richieste in Attesa di Approvazione</CardTitle>
+        <CardTitle className="text-base font-medium">Richieste in Attesa</CardTitle>
       </CardHeader>
       <CardContent className="p-4">
         {isLoading ? (

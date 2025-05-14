@@ -279,7 +279,9 @@ export function DocumentList() {
           {selectedDocument && (
             <div className="h-full max-h-[calc(80vh-80px)] overflow-auto">
               <iframe
-                src={`data:application/pdf;base64,${selectedDocument.fileData}`}
+                src={selectedDocument.fileData.startsWith('data:application/pdf;base64,')
+                  ? selectedDocument.fileData
+                  : `data:application/pdf;base64,${selectedDocument.fileData}`}
                 className="w-full h-full min-h-[500px]"
                 title="Anteprima PDF"
               />

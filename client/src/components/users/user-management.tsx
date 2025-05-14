@@ -109,6 +109,37 @@ export function UserManagement() {
     setIsEditUserDialogOpen(true);
   };
   
+  // Handle change password
+  const handleChangePassword = (user: User) => {
+    setSelectedUser(user);
+    setNewPassword("");
+    setIsChangePasswordDialogOpen(true);
+  };
+  
+  // Password change mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: number, password: string }) => {
+      const response = await apiRequest("PATCH", `/api/users/${userId}`, { password });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setIsChangePasswordDialogOpen(false);
+      toast({
+        title: "Password modificata",
+        description: "La password dell'utente è stata modificata con successo.",
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to change password:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante la modifica della password.",
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Format last login date
   const formatLastLogin = (lastLogin: string | Date | null | undefined) => {
     if (!lastLogin) return "Mai";
@@ -314,7 +345,15 @@ export function UserManagement() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 ml-2"
+                            className="h-8 w-8"
+                            onClick={() => handleChangePassword(user)}
+                          >
+                            <Key className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => toggleUserStatus(user)}
                           >
                             {user.isActive ? (
@@ -349,6 +388,10 @@ export function UserManagement() {
                           <DropdownMenuItem onClick={() => handleEditUser(user)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Modifica
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleChangePassword(user)}>
+                            <Key className="h-4 w-4 mr-2" />
+                            Cambia Password
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => toggleUserStatus(user)}>
                             {user.isActive ? (

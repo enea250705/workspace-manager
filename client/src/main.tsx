@@ -14,10 +14,10 @@ robotoFontLink.rel = "stylesheet";
 document.head.appendChild(robotoFontLink);
 
 // Add page title and meta description
-document.title = "StaffSync - Sistema di Gestione Personale";
+document.title = "Da Vittorino Gestione - Sistema di Gestione Personale";
 const metaDesc = document.createElement("meta");
 metaDesc.name = "description";
-metaDesc.content = "Sistema avanzato di gestione personale, pianificazione turni, ferie e documentazione aziendale. Ottimizza la tua forza lavoro con StaffSync.";
+metaDesc.content = "Sistema avanzato di gestione personale, pianificazione turni, ferie e documentazione aziendale. Da Vittorino Gestione.";
 document.head.appendChild(metaDesc);
 
 // Initialize the React application

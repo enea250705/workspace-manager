@@ -14,12 +14,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { WeekSelectorDialog } from "@/components/schedule/week-selector-dialog";
 import { ScheduleAutoGenerator } from "@/components/schedule/auto-generator/auto-generator";
 import { ExcelGrid } from "@/components/schedule/excel-grid";
-import { ExportToPdfDialog } from "@/components/schedule/export-to-pdf";
 
 // Date utilities
-import { format, startOfWeek, addDays, isBefore, parseISO } from "date-fns";
+import { format, startOfWeek as startOfWeekFn, addDays, isBefore, parseISO, endOfWeek as endOfWeekFn, isSameDay } from "date-fns";
 import { it } from "date-fns/locale";
-import { calculateWorkHours, formatHours } from "@/lib/utils";
+import { calculateTotalWorkHours, formatHours, generateTimeSlots } from "@/lib/utils";
 
 export default function Schedule() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -28,9 +27,9 @@ export default function Schedule() {
   const queryClient = useQueryClient();
   const [selectedWeek, setSelectedWeek] = useState(() => {
     const now = new Date();
-    return startOfWeek(now, { weekStartsOn: 1 }); // Start week on Monday
+    return startOfWeekFn(now, { weekStartsOn: 1 }); // Start week on Monday
   });
-
+  
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate("/login");
@@ -148,7 +147,6 @@ export default function Schedule() {
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showExportPdfDialog, setShowExportPdfDialog] = useState(false);
   
   // QUERY MIGLIORATA: Fetch existing schedule data for the selected week
   // Manteniamo una scheduleId corrente per garantire il caricamento corretto
@@ -352,7 +350,7 @@ export default function Schedule() {
     setForceResetGrid(true);
     
     // Imposta date predefinite per il nuovo calendario (a partire dalla prossima settimana)
-    const nextWeekStart = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 7);
+    const nextWeekStart = addDays(startOfWeekFn(new Date(), { weekStartsOn: 1 }), 7);
     setCustomStartDate(nextWeekStart);
     setCustomEndDate(addDays(nextWeekStart, 6));
     setSelectedWeek(nextWeekStart);
@@ -514,152 +512,7 @@ export default function Schedule() {
       return [];
     }
   };
-
-  // Funzione per aprire il dialogo di esportazione PDF di tutte le settimane
-  const handleExportAllToPdf = () => {
-    setShowExportPdfDialog(true);
-  };
   
-  // Handle PDF export per la settimana corrente
-  const handleExportPdf = () => {
-    if (!existingSchedule || !users || !shifts) return;
-    
-    // Create PDF content
-    let pdfContent = `
-      <html>
-      <head>
-        <title>Pianificazione Turni</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          h1 { color: #333; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-          .header { display: flex; justify-content: space-between; }
-          .working { background-color: #e6f7ff; }
-          .vacation { background-color: #f6ffed; }
-          .leave { background-color: #fff2e8; }
-          .legend { margin: 10px 0; display: flex; gap: 15px; }
-          .legend-item { display: flex; align-items: center; font-size: 12px; }
-          .legend-color { display: inline-block; width: 16px; height: 16px; margin-right: 5px; border: 1px solid #ccc; }
-          .name-cell { width: 150px; }
-          .total-cell { width: 80px; }
-        </style>
-      </head>
-      <body>
-        <h1>Pianificazione Turni: ${format(new Date(existingSchedule.startDate), "d MMMM", { locale: it })} - ${format(new Date(existingSchedule.endDate), "d MMMM yyyy", { locale: it })}</h1>
-        
-        <div class="header">
-          <div>
-            <p>Data: ${format(new Date(), "dd/MM/yyyy")}</p>
-            <p>Stato: ${existingSchedule.isPublished ? 'Pubblicato' : 'Bozza'}</p>
-          </div>
-        </div>
-        
-        <div class="legend">
-          <div class="legend-item"><span class="legend-color working"></span> In servizio (X)</div>
-          <div class="legend-item"><span class="legend-color vacation"></span> Ferie (F)</div>
-          <div class="legend-item"><span class="legend-color leave"></span> Permesso (P)</div>
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th class="name-cell">Dipendente</th>
-              <th>Lunedì</th>
-              <th>Martedì</th>
-              <th>Mercoledì</th>
-              <th>Giovedì</th>
-              <th>Venerdì</th>
-              <th>Sabato</th>
-              <th>Domenica</th>
-              <th class="total-cell">Totale Ore</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-    
-    // Add employee rows with shift summary
-    users
-      .filter((user: any) => user.role === "employee" && user.isActive)
-      .forEach((user: any) => {
-        let userTotalHours = 0;
-        
-        pdfContent += `
-          <tr>
-            <td class="name-cell">${user.fullName || user.username}</td>
-        `;
-        
-        // Add days of week
-        ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'].forEach(day => {
-          // Mappatura tra il nome del giorno e il formato yyyy-MM-dd
-          const dayIndex = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'].indexOf(day);
-          if (dayIndex === -1) return;
-          
-          const dateObj = new Date(existingSchedule.startDate);
-          dateObj.setDate(dateObj.getDate() + dayIndex);
-          const formattedDate = format(dateObj, "yyyy-MM-dd");
-          
-          const userShifts = shifts.filter((s: any) => s.userId === user.id && s.day === formattedDate);
-          let daySummary = '-';
-          let cellClass = '';
-          
-          if (userShifts.length > 0) {
-            // Sort shifts by start time
-            userShifts.sort((a: any, b: any) => {
-              return a.startTime.localeCompare(b.startTime);
-            });
-            
-            // Get first and last shift
-            const firstShift = userShifts[0];
-            const lastShift = userShifts[userShifts.length - 1];
-            
-            // Determine shift type for cell color
-            if (firstShift.type === 'work') {
-              cellClass = 'working';
-              daySummary = `${firstShift.startTime} - ${lastShift.endTime}`;
-              
-              // Calculate hours for this day using utility function
-              let dayHours = 0;
-              userShifts.forEach(shift => {
-                dayHours += calculateWorkHours(shift.startTime, shift.endTime);
-              });
-              
-              // Add to total
-              userTotalHours += dayHours;
-            } else if (firstShift.type === 'vacation') {
-              cellClass = 'vacation';
-              daySummary = 'Ferie';
-            } else if (firstShift.type === 'leave') {
-              cellClass = 'leave';
-              daySummary = 'Permesso';
-            }
-          }
-          
-          pdfContent += `<td class="${cellClass}">${daySummary}</td>`;
-        });
-        
-        // Add total hours with proper formatting
-        pdfContent += `<td class="total-cell">${formatHours(userTotalHours)}</td></tr>`;
-      });
-    
-    pdfContent += `
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-    
-    // Create a blob and download
-    const blob = new Blob([pdfContent], { type: 'text/html' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `pianificazione_${format(new Date(existingSchedule.startDate), "yyyy-MM-dd")}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -715,15 +568,6 @@ export default function Schedule() {
               forceResetGrid={forceResetGrid || isLoadingNewSchedule}
             />
             
-            {/* Dialogo di esportazione PDF */}
-            <ExportToPdfDialog
-              open={showExportPdfDialog}
-              onOpenChange={setShowExportPdfDialog}
-              schedules={allSchedules || []}
-              users={users || []}
-              fetchShifts={fetchShiftsForSchedule}
-            />
-            
             {/* Pulsanti di azione posizionati sotto la tabella */}
             <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mt-6 pt-4 border-t border-gray-200">
               <Button
@@ -743,24 +587,6 @@ export default function Schedule() {
               >
                 <span className="material-icons text-xs sm:text-sm mr-1">add</span>
                 Nuovo turno settimanale
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportPdf}
-                className="text-xs sm:text-sm"
-              >
-                <span className="material-icons text-xs sm:text-sm mr-1">download</span>
-                Esporta PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportAllToPdf}
-                className="text-xs sm:text-sm"
-              >
-                <span className="material-icons text-xs sm:text-sm mr-1">file_download</span>
-                Esporta tutte le settimane
               </Button>
             </div>
           </div>

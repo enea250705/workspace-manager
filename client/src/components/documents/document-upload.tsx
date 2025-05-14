@@ -62,8 +62,13 @@ export function DocumentUpload({ users }: { users: any[] }) {
       return new Promise((resolve, reject) => {
         reader.onloadend = async () => {
           try {
-            // Remove the data:application/pdf;base64, prefix
-            const base64Data = (reader.result as string).split(",")[1];
+            // Assicurati che il risultato sia una stringa
+            const fileResult = reader.result as string;
+            
+            // Estrai il dato base64, rimuovendo il prefisso se presente
+            const base64Data = fileResult.includes('base64,')
+              ? fileResult.split('base64,')[1]
+              : fileResult;
             
             const payload = {
               type: data.type,

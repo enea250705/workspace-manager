@@ -15,7 +15,7 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 // Indirizzo email del mittente (deve essere verificato su SendGrid)
-const SENDER_EMAIL = 'admin@ilirionai.it';
+const SENDER_EMAIL = process.env.EMAIL_USER || 'gestione.davittorino@gmail.com';
 
 /**
  * Interfaccia per i parametri di invio email
@@ -98,13 +98,13 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name || user.username},</p>
         <p>Ti informiamo che è stato pubblicato un nuovo turno di lavoro per il periodo <strong>${startDate} - ${endDate}</strong>.</p>
-        <p>Puoi visualizzare i dettagli del tuo turno accedendo alla piattaforma StaffSync.</p>
+        <p>Puoi visualizzare i dettagli del tuo turno accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/my-schedule" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Turno</a>
+          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/my-schedule" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Turno</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.
@@ -127,13 +127,13 @@ export async function sendScheduleUpdateNotification(user: User, scheduleStartDa
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name || user.username},</p>
         <p>Ti informiamo che è stato <strong>aggiornato</strong> il tuo turno di lavoro per il periodo <strong>${startDate} - ${endDate}</strong>.</p>
-        <p>Si prega di verificare le modifiche accedendo alla piattaforma StaffSync.</p>
+        <p>Si prega di verificare le modifiche accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/my-schedule" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Turno</a>
+          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/my-schedule" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Turno</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.
@@ -163,13 +163,13 @@ export async function sendDocumentNotification(user: User, documentType: string,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name || user.username},</p>
         <p>Ti informiamo che è stato caricato un nuovo documento: <strong>${documentName}</strong> per il periodo <strong>${period}</strong>.</p>
-        <p>Puoi visualizzare e scaricare il documento accedendo alla piattaforma StaffSync.</p>
+        <p>Puoi visualizzare e scaricare il documento accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/my-documents" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Documento</a>
+          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/my-documents" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Documento</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.
@@ -199,13 +199,13 @@ export async function sendTimeOffApprovalNotification(user: User, type: string, 
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name || user.username},</p>
         <p>Ti informiamo che la tua richiesta di <strong>${typeLabel.toLowerCase()}</strong> per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong> è stata <span style="color: green;"><strong>approvata</strong></span>.</p>
-        <p>Puoi visualizzare lo stato di tutte le tue richieste accedendo alla piattaforma StaffSync.</p>
+        <p>Puoi visualizzare lo stato di tutte le tue richieste accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/time-off" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Le Mie Richieste</a>
+          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/time-off" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Le Mie Richieste</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.
@@ -231,17 +231,18 @@ export async function sendTimeOffRejectionNotification(user: User, type: string,
   
   return sendEmail({
     to: user.email || user.username,
-    subject: `${typeLabel} non approvata`,
+    subject: `${typeLabel} rifiutata`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name || user.username},</p>
-        <p>Ti informiamo che la tua richiesta di <strong>${typeLabel.toLowerCase()}</strong> per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong> è stata <span style="color: red;"><strong>non approvata</strong></span>.</p>
+        <p>Ti informiamo che la tua richiesta di <strong>${typeLabel.toLowerCase()}</strong> per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong> è stata <span style="color: red;"><strong>rifiutata</strong></span>.</p>
         <p>Per maggiori informazioni, contatta il tuo responsabile.</p>
+        <p>Puoi visualizzare lo stato di tutte le tue richieste accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/time-off" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Le Mie Richieste</a>
+          <a href="${process.env.APP_URL || 'https://staffsync.replit.app'}/time-off" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Le Mie Richieste</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.

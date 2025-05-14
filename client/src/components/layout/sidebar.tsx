@@ -15,7 +15,7 @@ const adminItems: SidebarItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard", role: "all" },
   { href: "/users", label: "Gestione Utenti", icon: "people", role: "admin" },
   { href: "/schedule", label: "Pianificazione Turni", icon: "event_note", role: "admin" },
-  { href: "/requests", label: "Approvazioni", icon: "approval", badge: 0, role: "admin" },
+  { href: "/requests", label: "Richieste", icon: "approval", badge: 0, role: "admin" },
   { href: "/documents", label: "Documenti", icon: "description", role: "admin" },
 ];
 
@@ -38,7 +38,7 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
   useEffect(() => {
     if (user?.role === "admin" && isAuthenticated) {
       // Fetch pending requests
-      fetch("/api/time-off-requests", {
+      fetch("/api/time-off-requests/pending", {
         credentials: "include",
       })
         .then((res) => res.json())
@@ -101,8 +101,8 @@ export function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: {
       >
         <div className="p-4 sm:p-5 border-b flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="material-icons text-primary text-xl sm:text-2xl">schedule</span>
-            <h1 className="font-condensed text-xl sm:text-2xl font-bold text-primary">StaffSync</h1>
+            <img src="/logo.png" alt="Logo" className="w-6 h-6" />
+            <h1 className="font-condensed text-xl sm:text-2xl font-bold text-primary">Da Vittorino Gestione</h1>
           </div>
           <button 
             id="mobile-menu-toggle" 

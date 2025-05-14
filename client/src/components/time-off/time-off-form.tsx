@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const formSchema = z.object({
   type: z.string(),
@@ -44,6 +45,8 @@ export function TimeOffRequestForm() {
   const queryClient = useQueryClient();
   const [isStartDateOpen, setIsStartDateOpen] = useState(false);
   const [isEndDateOpen, setIsEndDateOpen] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -89,9 +92,23 @@ export function TimeOffRequestForm() {
         startDate: format(data.startDate, "yyyy-MM-dd"),
         endDate: format(data.endDate, "yyyy-MM-dd"),
       };
+      
+      // Salva i dati di debug
+      setDebugInfo({
+        requestData: payload,
+        timestamp: new Date().toISOString(),
+      });
+      
       return apiRequest("POST", "/api/time-off-requests", payload);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      // Aggiorna le informazioni di debug con la risposta
+      setDebugInfo(prev => ({
+        ...prev,
+        response: response,
+        success: true,
+      }));
+      
       toast({
         title: "Richiesta inviata",
         description: "La tua richiesta è stata inviata con successo",
@@ -103,7 +120,14 @@ export function TimeOffRequestForm() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/time-off-requests"] });
     },
-    onError: () => {
+    onError: (error) => {
+      // Aggiorna le informazioni di debug con l'errore
+      setDebugInfo(prev => ({
+        ...prev,
+        error: error,
+        success: false,
+      }));
+      
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'invio della richiesta",
@@ -388,6 +412,43 @@ export function TimeOffRequestForm() {
                 </FormItem>
               )}
             />
+            
+            {/* Aggiungi il bottone di debug (visibile solo in development) */}
+            <div className="mt-2 text-right">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowDebugInfo(!showDebugInfo)}
+                className="text-xs"
+              >
+                {showDebugInfo ? "Nascondi Debug" : "Mostra Debug"}
+              </Button>
+            </div>
+            
+            {/* Mostra informazioni di debug quando disponibili e richieste */}
+            {showDebugInfo && (
+              <div className="border rounded p-2 text-xs overflow-auto max-h-[200px] bg-slate-50">
+                <h4 className="font-semibold">Stato del form:</h4>
+                <pre>{JSON.stringify(form.getValues(), null, 2)}</pre>
+                
+                {debugInfo && (
+                  <>
+                    <h4 className="font-semibold mt-2">Debug Invio Richiesta:</h4>
+                    <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+                  </>
+                )}
+                
+                <h4 className="font-semibold mt-2">Stato Environment:</h4>
+                <pre>
+                  {JSON.stringify({
+                    browser: navigator.userAgent,
+                    screen: `${window.innerWidth}x${window.innerHeight}`,
+                    timestamp: new Date().toISOString(),
+                  }, null, 2)}
+                </pre>
+              </div>
+            )}
             
             <Button
               type="submit"

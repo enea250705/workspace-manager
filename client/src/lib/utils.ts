@@ -47,19 +47,13 @@ export function generateTimeSlots(startHour: number, endHour: number, interval: 
  * @returns Stringa formattata con ore e minuti
  */
 export function formatHours(hours: number): string {
-  if (isNaN(hours) || hours < 0) return "0h";
-  
-  // Arrotonda a 2 decimali per evitare errori di precisione
-  hours = Math.round(hours * 100) / 100;
+  if (isNaN(hours) || hours === 0) return "0h";
   
   const wholeHours = Math.floor(hours);
   const minutes = Math.round((hours - wholeHours) * 60);
   
   if (minutes === 0) {
     return `${wholeHours}h`;
-  } else if (minutes === 60) {
-    // Gestisce il caso in cui i minuti arrotondati sono 60
-    return `${wholeHours + 1}h`;
   } else {
     return `${wholeHours}h ${minutes}m`;
   }
@@ -92,29 +86,69 @@ export function convertToHours(timeStr: string): number {
  * @returns Ore di lavoro in formato decimale
  */
 export function calculateWorkHours(startTime: string, endTime: string): number {
-  const startHours = convertToHours(startTime);
-  const endHours = convertToHours(endTime);
+  if (!startTime || !endTime) return 0;
   
-  // Se l'orario di fine è prima dell'orario di inizio, significa che si attraversa la mezzanotte
-  // In questo caso, aggiungiamo 24 ore all'orario di fine
-  if (endHours < startHours) {
-    return (endHours + 24) - startHours;
+  const startParts = startTime.split(':');
+  const endParts = endTime.split(':');
+  
+  if (startParts.length !== 2 || endParts.length !== 2) return 0;
+  
+  const startHour = parseInt(startParts[0], 10);
+  const startMinute = parseInt(startParts[1], 10);
+  const endHour = parseInt(endParts[0], 10);
+  const endMinute = parseInt(endParts[1], 10);
+  
+  if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) return 0;
+  
+  // Calcola i minuti totali per ogni orario
+  const startTotalMinutes = (startHour * 60) + startMinute;
+  const endTotalMinutes = (endHour * 60) + endMinute;
+  
+  // Gestisci il caso di attraversamento della mezzanotte
+  let diffMinutes = endTotalMinutes - startTotalMinutes;
+  if (diffMinutes < 0) {
+    diffMinutes += 24 * 60; // Aggiungi un giorno in minuti
   }
   
-  return endHours - startHours;
+  // Converti i minuti in ore con precisione a 2 decimali
+  const hours = Math.floor(diffMinutes / 60);
+  const minutes = diffMinutes % 60;
+  const decimalHours = hours + (minutes / 60);
+  
+  // Arrotonda a 2 decimali per evitare problemi di precisione floating point
+  return Math.round(decimalHours * 100) / 100;
 }
 
 /**
- * Calcola le ore totali di lavoro per un insieme di turni
- * @param shifts Array di turni con startTime e endTime in formato "HH:MM"
- * @returns Ore totali di lavoro in formato decimale
+ * Calcola le ore di lavoro totali da un array di turni
+ * @param shifts Array di turni con orari di inizio e fine
+ * @returns Ore totali in formato decimale (es. 7.5 per 7 ore e 30 minuti)
  */
-export function calculateTotalWorkHours(shifts: Array<{startTime: string, endTime: string, type?: string}>): number {
-  if (!shifts || !Array.isArray(shifts) || shifts.length === 0) return 0;
+export function calculateTotalWorkHours(shifts: any[]): number {
+  if (!shifts || shifts.length === 0) return 0;
   
-  return shifts
-    .filter(shift => !shift.type || shift.type === 'work') // Considera solo i turni di lavoro se è specificato il tipo
-    .reduce((total, shift) => {
-      return total + calculateWorkHours(shift.startTime, shift.endTime);
-    }, 0);
+  return shifts.reduce((total, shift) => {
+    // Estrai le ore e i minuti dagli orari di inizio e fine
+    const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+    const [endHour, endMinute] = shift.endTime.split(':').map(Number);
+    
+    // Calcola i minuti totali per ogni orario
+    const startTotalMinutes = startHour * 60 + startMinute;
+    const endTotalMinutes = endHour * 60 + endMinute;
+    
+    // Calcola la differenza in minuti
+    let diffMinutes = endTotalMinutes - startTotalMinutes;
+    
+    // Se l'orario di fine è prima dell'orario di inizio, assumiamo che il turno vada oltre la mezzanotte
+    if (diffMinutes < 0) {
+      diffMinutes += 24 * 60; // Aggiungi 24 ore in minuti
+    }
+    
+    // Converti i minuti in ore decimali (es. 90 minuti = 1.5 ore)
+    const hours = diffMinutes / 60;
+    
+    console.log(`Calcolo ore per turno ${shift.startTime}-${shift.endTime}: ${hours} ore`);
+    
+    return total + hours;
+  }, 0);
 }

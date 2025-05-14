@@ -14,8 +14,13 @@ export function downloadPdf(filename: string, base64Data: string): void {
   // Create a link element
   const link = document.createElement("a");
   
+  // Verifica se il dato base64 contiene già il prefisso
+  const dataUrl = base64Data.startsWith('data:application/pdf;base64,') 
+    ? base64Data 
+    : `data:application/pdf;base64,${base64Data}`;
+  
   // Set the href attribute to a data URL that represents the PDF file
-  link.href = `data:application/pdf;base64,${base64Data}`;
+  link.href = dataUrl;
   
   // Set the download attribute to specify the filename
   link.download = filename;

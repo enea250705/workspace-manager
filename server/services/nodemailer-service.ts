@@ -12,7 +12,7 @@ let transporter: nodemailer.Transporter;
 // Indirizzo email del mittente
 // Utilizza l'indirizzo configurato nelle variabili d'ambiente
 const SENDER_EMAIL = process.env.EMAIL_USER || 'admin@ilirionai.it';
-const SENDER_NAME = 'StaffSync';
+const SENDER_NAME = 'Da Vittorino';
 
 // Inizializza il transporter in modalità developement o production
 async function initTransporter() {
@@ -33,18 +33,22 @@ async function initTransporter() {
     
     console.log('🔧 Account di test Ethereal creato:', testAccount.user);
   } else {
-    // Configurazione del server SMTP personalizzato
+    // Configurazione per Gmail SMTP
     transporter = nodemailer.createTransport({
-      host: 'authsmtp.securemail.pro',
-      port: 465,
-      secure: true, // true per 465, false per altre porte
+      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // true per 465, false per altre porte come 587
       auth: {
         user: process.env.EMAIL_USER || '',
-        pass: process.env.EMAIL_PASSWORD || '',
+        pass: process.env.EMAIL_APP_PASSWORD || '', // Usa una password per app specifica di Google
       },
+      tls: {
+        rejectUnauthorized: false // Necessario in alcuni ambienti
+      }
     });
     
-    console.log('🔧 Server SMTP configurato con indirizzo:', process.env.EMAIL_USER);
+    console.log('🔧 Server SMTP Gmail configurato con indirizzo:', process.env.EMAIL_USER);
   }
 }
 
@@ -116,36 +120,85 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       console.log(`📧 Destinatario: ${params.to}`);
       console.log(`📧 Mittente: ${SENDER_EMAIL}`);
       console.log(`📧 Oggetto: ${params.subject}`);
+      console.log(`📧 Configurazione SMTP:`, {
+        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER || '(non configurato)',
+          pass: process.env.EMAIL_APP_PASSWORD ? '(password configurata)' : '(password non configurata)'
+        }
+      });
 
       // Assicurati che il transporter sia inizializzato
       if (!transporter) {
+        console.log('⚠️ Transporter non inizializzato, tentativo di inizializzazione...');
         await initTransporter();
       }
 
-      // Invia l'email
-      const info = await transporter.sendMail({
-        from: `"${SENDER_NAME}" <${SENDER_EMAIL}>`,
-        to: params.to,
-        subject: params.subject,
-        text: params.text || '',
-        html: params.html,
-      });
+      try {
+        // Aggiungi intestazioni anti-spam
+        const enhancedHtml = `
+          ${params.html}
+          
+          <!-- Testo semplice per migliorare consegna email -->
+          <div style="font-size: 0px; color: #FFFFFF; display: none;">
+            Questo messaggio è stato inviato da Da Vittorino, un sistema di gestione del personale. 
+            Non è spam ma una comunicazione importante riguardante il tuo lavoro.
+          </div>
+        `;
+        
+        // Crea versione testuale per migliorare consegna
+        const textVersion = params.text || 
+          `Notifica da Da Vittorino: ${params.subject}\n\n` +
+          `Questa è una comunicazione importante dal sistema di gestione del personale.\n` +
+          `Accedi al portale per visualizzare tutti i dettagli: https://staffsync.replit.app\n\n` +
+          `Non rispondere a questa email automatica.`;
+        
+        // Invia l'email con intestazioni migliorate
+        const info = await transporter.sendMail({
+          from: `"${SENDER_NAME}" <${SENDER_EMAIL}>`,
+          to: params.to,
+          subject: `${params.subject} - Da Vittorino`, // Aggiunto nome per chiarezza
+          text: textVersion,
+          html: enhancedHtml,
+          headers: {
+            'X-Priority': '1', // Imposta alta priorità
+            'X-Mailer': 'Da Vittorino Staff Management', // Identifica il sistema
+            'Precedence': 'Bulk', // Indica che è una notifica di massa
+            'List-Unsubscribe': `<mailto:${SENDER_EMAIL}?subject=unsubscribe>` // Opzione disiscrizione
+          }
+        });
 
-      console.log('📧 Email inviata con successo:', info.messageId);
-      
-      // Se in modalità dev con Ethereal, mostra l'URL per visualizzare l'email
-      if (DEV_MODE) {
-        console.log('📧 URL anteprima:', nodemailer.getTestMessageUrl(info));
+        console.log('✅ Email inviata con successo:', info.messageId);
+        console.log('📧 Dettagli risposta server:', info.response);
+        
+        // Se in modalità dev con Ethereal, mostra l'URL per visualizzare l'email
+        if (DEV_MODE) {
+          console.log('📧 URL anteprima:', nodemailer.getTestMessageUrl(info));
+        }
+        
+        return true;
+      } catch (sendError) {
+        console.error('❌ Errore specifico nell\'invio email:', sendError);
+        console.error('Dettagli errore:', (sendError as Error).message);
+        console.error('Stack:', (sendError as Error).stack);
+        
+        // Verifica le credenziali
+        console.log('🔍 Verifica credenziali email:');
+        console.log(`- EMAIL_USER configurato: ${process.env.EMAIL_USER ? 'Sì' : 'No'}`);
+        console.log(`- EMAIL_APP_PASSWORD configurato: ${process.env.EMAIL_APP_PASSWORD ? 'Sì' : 'No'}`);
+        console.log(`- SENDER_EMAIL: ${SENDER_EMAIL}`);
+        
+        return false;
       }
-      
-      return true;
     }
   } catch (error) {
-    console.error('❌ Errore nell\'invio email:', error);
+    console.error('❌ Errore generale nell\'invio email:', error);
     console.error('Dettagli errore:', (error as Error).message);
     console.error('Stack:', (error as Error).stack);
-    // Anche in caso di errore, restituiamo true per evitare che l'applicazione si blocchi
-    return true;
+    return false;
   }
 }
 
@@ -265,7 +318,7 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
     // Crea la tabella HTML dei turni
     shiftsTable = `
       <div style="margin-top: 25px; margin-bottom: 25px;">
-        <h3 style="color: #4a6cf7; margin-bottom: 15px;">I tuoi turni:</h3>
+        <h3 style="color: #8B0000; margin-bottom: 15px;">I tuoi turni:</h3>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0;">
           <thead>
             <tr style="background-color: #f3f4f6;">
@@ -303,7 +356,7 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
         const shiftType = typeTranslation[firstShift.type] || firstShift.type;
         
         // Assegna colore in base al tipo
-        const typeColor = firstShift.type === 'work' ? '#4a6cf7' : 
+        const typeColor = firstShift.type === 'work' ? '#8B0000' : 
                           firstShift.type === 'vacation' ? '#e8aa33' : 
                           firstShift.type === 'leave' ? '#10b981' : 
                           firstShift.type === 'sick' ? '#ef4444' : '#6b7280';
@@ -351,16 +404,16 @@ export async function sendScheduleNotification(user: User, scheduleStartDate: st
   const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name},</p>
         <p>Ti informiamo che è stato pubblicato un nuovo turno per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong>.</p>
         
         ${shiftsTable}
         
-        <p>Puoi visualizzare ulteriori dettagli dei tuoi turni accedendo alla piattaforma StaffSync.</p>
+        <p>Puoi visualizzare ulteriori dettagli dei tuoi turni accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="https://staffsync.replit.app/my-schedule" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Turni</a>
+          <a href="https://staffsync.replit.app/my-schedule" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Turni</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.
@@ -394,13 +447,13 @@ export async function sendScheduleUpdateNotification(user: User, scheduleStartDa
   const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name},</p>
         <p>Ti informiamo che è stato aggiornato il turno per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong>.</p>
-        <p>Puoi visualizzare i tuoi turni aggiornati accedendo alla piattaforma StaffSync.</p>
+        <p>Puoi visualizzare i tuoi turni aggiornati accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="https://staffsync.replit.app/my-schedule" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Turni</a>
+          <a href="https://staffsync.replit.app/my-schedule" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Turni</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.
@@ -438,13 +491,13 @@ export async function sendDocumentNotification(user: User, documentType: string,
   const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name},</p>
         <p>Ti informiamo che è stato caricato un nuovo documento: <strong>${documentTypeTranslated}</strong> per il periodo <strong>${period}</strong>.</p>
-        <p>Puoi visualizzare e scaricare il documento accedendo alla piattaforma StaffSync.</p>
+        <p>Puoi visualizzare e scaricare il documento accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="https://staffsync.replit.app/my-documents" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Documento</a>
+          <a href="https://staffsync.replit.app/my-documents" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Visualizza Documento</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.
@@ -490,13 +543,13 @@ export async function sendTimeOffApprovalNotification(user: User, type: string, 
   const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name},</p>
         <p>Ti informiamo che la tua richiesta di <strong>${typeTranslated}</strong> per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong> è stata <span style="color: green;"><strong>approvata</strong></span>.</p>
-        <p>Puoi visualizzare lo stato di tutte le tue richieste accedendo alla piattaforma StaffSync.</p>
+        <p>Puoi visualizzare lo stato di tutte le tue richieste accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="https://staffsync.replit.app/time-off" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Le Mie Richieste</a>
+          <a href="https://staffsync.replit.app/time-off" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Le Mie Richieste</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.
@@ -542,14 +595,14 @@ export async function sendTimeOffRejectionNotification(user: User, type: string,
   const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #4a6cf7;">StaffSync</h2>
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
         </div>
         <p>Gentile ${user.name},</p>
         <p>Ti informiamo che la tua richiesta di <strong>${typeTranslated}</strong> per il periodo <strong>${formattedStartDate} - ${formattedEndDate}</strong> è stata <span style="color: red;"><strong>rifiutata</strong></span>.</p>
         <p>Per maggiori informazioni, contatta il tuo responsabile.</p>
-        <p>Puoi visualizzare lo stato di tutte le tue richieste accedendo alla piattaforma StaffSync.</p>
+        <p>Puoi visualizzare lo stato di tutte le tue richieste accedendo alla piattaforma.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="https://staffsync.replit.app/time-off" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Le Mie Richieste</a>
+          <a href="https://staffsync.replit.app/time-off" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Le Mie Richieste</a>
         </div>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           Questa è un'email automatica, ti preghiamo di non rispondere.
@@ -569,4 +622,132 @@ export async function sendTimeOffRejectionNotification(user: User, type: string,
   console.log(`📧 Email di notifica rifiuto inviata a ${user.name} (${user.email})`);
   
   return result;
+}
+
+/**
+ * Invia una notifica all'amministratore quando un dipendente fa una richiesta di ferie/permessi
+ */
+export async function sendTimeOffRequestNotificationToAdmin(user: User, type: string, startDate: string, endDate: string, reason: string): Promise<boolean> {
+  // Formatta le date per la visualizzazione (dd/mm/yyyy)
+  const formattedStartDate = new Date(startDate).toLocaleDateString('it-IT');
+  const formattedEndDate = new Date(endDate).toLocaleDateString('it-IT');
+  
+  // Traduci il tipo di richiesta
+  let typeTranslated = '';
+  if (type === 'vacation') {
+    typeTranslated = 'ferie';
+  } else if (type === 'leave') {
+    typeTranslated = 'permesso';
+  } else if (type === 'sick') {
+    typeTranslated = 'malattia';
+  } else {
+    typeTranslated = type;
+  }
+  
+  // Email dell'amministratore (la stessa usata come mittente)
+  const adminEmail = process.env.EMAIL_USER || 'gestione.davittorino@gmail.com';
+  
+  // Crea il contenuto HTML dell'email
+  const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #8B0000;">Da Vittorino</h2>
+        </div>
+        <h3 style="color: #333;">Nuova richiesta di ${typeTranslated}</h3>
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+          <p><strong>Dipendente:</strong> ${user.name} (${user.email})</p>
+          <p><strong>Tipo richiesta:</strong> ${typeTranslated}</p>
+          <p><strong>Periodo:</strong> ${formattedStartDate} - ${formattedEndDate}</p>
+          <p><strong>Motivazione:</strong> ${reason || 'Nessuna motivazione specificata'}</p>
+        </div>
+        <p>Puoi approvare o rifiutare questa richiesta accedendo alla piattaforma.</p>
+        <div style="text-align: center; margin-top: 30px;">
+          <a href="https://staffsync.replit.app/time-off" style="background-color: #8B0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Gestisci Richieste</a>
+        </div>
+        <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
+          Questa è un'email automatica generata dal sistema.
+        </p>
+      </div>
+  `;
+  
+  // Parametri email
+  const emailParams: EmailParams = {
+    to: adminEmail,
+    subject: `Nuova richiesta di ${typeTranslated} da ${user.name}`,
+    html: htmlContent
+  };
+  
+  // Invia l'email
+  const result = await sendEmail(emailParams);
+  console.log(`📧 Email di notifica nuova richiesta inviata all'amministratore (${adminEmail})`);
+  
+  return result;
+}
+
+/**
+ * Funzione di test per verificare la configurazione dell'email
+ * Da usare solo in fase di debug
+ */
+export async function testEmailService(): Promise<boolean> {
+  console.log('🧪 AVVIO TEST SERVIZIO EMAIL');
+  console.log('📋 Verifica configurazione:');
+  console.log(`- DEV_MODE: ${DEV_MODE ? 'Attivo' : 'Disattivo'}`);
+  console.log(`- EMAIL_USER: ${process.env.EMAIL_USER || '(non configurato)'}`);
+  console.log(`- EMAIL_APP_PASSWORD: ${process.env.EMAIL_APP_PASSWORD ? '(configurato)' : '(non configurato)'}`);
+  console.log(`- SENDER_EMAIL: ${SENDER_EMAIL}`);
+  console.log(`- SENDER_NAME: ${SENDER_NAME}`);
+  
+  try {
+    // Reinizializza il transporter per sicurezza
+    console.log('🔄 Reinizializzazione transporter...');
+    await initTransporter();
+    
+    // Invia email di test all'indirizzo dell'amministratore
+    const adminEmail = process.env.EMAIL_USER || 'gestione.davittorino@gmail.com';
+    
+    console.log(`📧 Tentativo di invio email di test a ${adminEmail}...`);
+    
+    // Crea il contenuto HTML dell'email
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #8B0000;">Da Vittorino - TEST EMAIL</h2>
+        </div>
+        <h3 style="color: #333;">Test invio email</h3>
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+          <p>Questa è un'email di test per verificare il corretto funzionamento del servizio di invio email.</p>
+          <p><strong>Data e ora:</strong> ${new Date().toLocaleString('it-IT')}</p>
+          <p><strong>Configurazione:</strong></p>
+          <ul>
+            <li>DEV_MODE: ${DEV_MODE ? 'Attivo' : 'Disattivo'}</li>
+            <li>EMAIL_USER: ${process.env.EMAIL_USER ? 'Configurato' : 'Non configurato'}</li>
+            <li>EMAIL_APP_PASSWORD: ${process.env.EMAIL_APP_PASSWORD ? 'Configurato' : 'Non configurato'}</li>
+          </ul>
+        </div>
+        <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
+          Questa è un'email automatica di test.
+        </p>
+      </div>
+    `;
+    
+    // Parametri email
+    const emailParams: EmailParams = {
+      to: adminEmail,
+      subject: `Test servizio email - ${new Date().toLocaleString('it-IT')}`,
+      html: htmlContent
+    };
+    
+    // Invia l'email
+    const result = await sendEmail(emailParams);
+    
+    console.log(result ? '✅ Test completato con successo!' : '❌ Test fallito!');
+    return result;
+  } catch (error) {
+    console.error('❌ Errore durante il test del servizio email:', error);
+    if (error instanceof Error) {
+      console.error('Dettagli errore:', error.message);
+      console.error('Stack:', error.stack);
+    }
+    return false;
+  }
 }

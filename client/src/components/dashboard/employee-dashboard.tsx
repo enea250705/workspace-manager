@@ -120,7 +120,9 @@ export function EmployeeDashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-gray-500 text-sm">Ore Programmate</p>
-                <p className="text-2xl font-medium">{formatHours(totalHoursThisWeek)}</p>
+                <p className="text-2xl font-medium">
+                  {formatHours(Math.round(totalHoursThisWeek * 100) / 100)}
+                </p>
               </div>
               <div className="bg-blue-100 p-2 rounded-lg">
                 <span className="material-icons text-primary">schedule</span>
@@ -192,7 +194,7 @@ export function EmployeeDashboard() {
                       {day.charAt(0).toUpperCase() + day.slice(1)}
                     </h3>
                     <div className="text-xs text-gray-500 font-medium">
-                      {formatHours(calculateTotalWorkHours(shifts.filter((shift: any) => shift.type === "work")))}
+                      {formatHours(Math.round(calculateTotalWorkHours(shifts.filter((shift: any) => shift.type === "work")) * 100) / 100)}
                     </div>
                   </div>
                   
@@ -481,22 +483,6 @@ export function EmployeeDashboard() {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Schedule Overview Notification */}
-      {mySchedule && mySchedule.isPublished && (
-        <Card className="bg-blue-50 border border-blue-200">
-          <CardContent className="p-4 flex items-start">
-            <span className="material-icons text-primary mr-3 mt-1">notifications</span>
-            <div>
-              <h3 className="font-medium mb-1">Orario Settimanale Pubblicato</h3>
-              <p className="text-sm text-gray-700">
-                Il tuo orario per la settimana {formatDate(mySchedule.startDate)} - {formatDate(mySchedule.endDate)} è stato pubblicato.
-                Visualizzalo nella sezione "I Miei Turni".
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
