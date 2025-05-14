@@ -233,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "keyboard cat",
-      resave: false,
+      resave: true,
       saveUninitialized: true,
       store: storage.sessionStore,
       cookie: {
