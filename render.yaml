@@ -2,8 +2,10 @@ services:
   - type: web
     name: workforce-manager-backend
     env: node
-    buildCommand: npm install && npm run build
+    plan: free
+    buildCommand: bash ./render-build.sh
     startCommand: npm run start
+    nodeVersion: 18.x
     envVars:
       - key: NODE_ENV
         value: production
