@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
@@ -238,18 +238,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       store: storage.sessionStore,
       cookie: {
         maxAge: 86400000, // 24 ore
-        secure: true, // Sempre HTTPS in produzione
+        secure: process.env.NODE_ENV === 'production', // HTTPS solo in produzione
         sameSite: 'none', // Necessario per cross-domain
         httpOnly: true, // Il cookie è accessibile solo dal server
         path: '/',
         domain: process.env.COOKIE_DOMAIN || undefined // Usa il dominio specificato o undefined
       }
-    })
+    }) as any
   );
   
   // Setup passport for authentication
-  app.use(passport.initialize());
-  app.use(passport.session());
+  app.use(passport.initialize() as any);
+  app.use(passport.session() as any);
   
   // Configure passport local strategy
   passport.use(
@@ -773,7 +773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getAllUsers();
       
       // Import email service
-      const { sendScheduleNotification } = await import('./services/nodemailer-service');
+      const { sendScheduleNotification } = await import('./services/nodemailer-service.js');
       
       // Create notifications and send emails to all users
       for (const user of users) {
@@ -1159,7 +1159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Invia email di notifica all'amministratore
       try {
         // Import del servizio email
-        const { sendTimeOffRequestNotificationToAdmin } = await import('./services/nodemailer-service');
+        const { sendTimeOffRequestNotificationToAdmin } = await import('./services/nodemailer-service.js');
         
         // Invia email di notifica all'amministratore
         await sendTimeOffRequestNotificationToAdmin(
@@ -1210,7 +1210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user && user.email) {
         try {
           // Import del servizio email
-          const { sendTimeOffApprovalNotification } = await import('./services/nodemailer-service');
+          const { sendTimeOffApprovalNotification } = await import('./services/nodemailer-service.js');
           
           // Invia email di notifica
           await sendTimeOffApprovalNotification(user, request.type, request.startDate, request.endDate);
@@ -1350,7 +1350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user && user.email) {
         try {
           // Import del servizio email
-          const { sendTimeOffRejectionNotification } = await import('./services/nodemailer-service');
+          const { sendTimeOffRejectionNotification } = await import('./services/nodemailer-service.js');
           
           // Invia email di notifica
           await sendTimeOffRejectionNotification(user, request.type, request.startDate, request.endDate);
@@ -1399,7 +1399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("🧪 Richiesta test email ricevuta");
       
       // Importa il servizio email
-      const { testEmailService } = await import('./services/nodemailer-service');
+      const { testEmailService } = await import('./services/nodemailer-service.js');
       
       // Esegui il test
       const result = await testEmailService();
@@ -1475,7 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Invia email di notifica
       if (user && user.email) {
         try {
-          const { sendDocumentNotification } = await import('./services/nodemailer-service');
+          const { sendDocumentNotification } = await import('./services/nodemailer-service.js');
           await sendDocumentNotification(user, document.type, document.period);
           console.log(`📧 Email di notifica documento inviata a ${user.name} (${user.email})`);
         } catch (emailError) {
