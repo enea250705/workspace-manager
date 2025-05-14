@@ -34,6 +34,7 @@ export default function Login() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const API_URL = import.meta.env.VITE_API_URL || '';
 
   // Se l'utente è già autenticato, reindirizza alla dashboard
   useEffect(() => {
@@ -55,8 +56,8 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      // Login diretto usando fetch invece di utilizzare la funzione login dal contesto
-      const response = await fetch('/api/auth/login', {
+      // Login utilizzando l'URL API completo
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

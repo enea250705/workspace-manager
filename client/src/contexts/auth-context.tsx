@@ -35,12 +35,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
+  const API_URL = import.meta.env.VITE_API_URL || '';
 
   // Check if user is already logged in
   useEffect(() => {
     async function checkAuth() {
       try {
-        const response = await fetch("/api/auth/me", {
+        const response = await fetch(`${API_URL}/api/auth/me`, {
           credentials: "include",
         });
         const data = await response.json();
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     checkAuth();
-  }, []);
+  }, [API_URL]);
 
   // Login function
   const login = async (username: string, password: string) => {
