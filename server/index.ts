@@ -19,19 +19,34 @@ const allowedOrigins = [
   'https://workspace-manager-2.onrender.com',   // Backend su Render
   'https://workspace-manager-git-main-enea250705.vercel.app', // Vercel deployment URL
   'https://workspace-manager-enea250705.vercel.app',          // Vercel deployment URL
-  'https://client-vert-eight.vercel.app'        // Nuovo URL di deployment Vercel
+  'https://client-vert-eight.vercel.app',       // Nuovo URL di deployment Vercel
+  'https://workforce-manager-client.vercel.app' // Aggiungi qualsiasi nuovo dominio qui
 ];
 
 app.use(cors({
   origin: function(origin, callback) {
     // Consenti richieste senza origin (come app mobile o Postman)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('Richiesta senza origin consentita');
+      return callback(null, true);
+    }
     
     console.log(`Richiesta CORS da origin: ${origin}`);
     
+    // Opzione 1: Consenti tutte le origini in produzione (più permissivo)
+    // return callback(null, true);
+    
+    // Opzione 2: Controlla contro la lista di origini consentite
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      console.log(`Origin consentito: ${origin}`);
       callback(null, true);
     } else {
+      // In produzione, prova a consentire tutti i domini .vercel.app
+      if (origin.endsWith('.vercel.app')) {
+        console.log(`Origin Vercel consentito: ${origin}`);
+        return callback(null, true);
+      }
+      
       console.log(`Origin bloccato dal CORS: ${origin}`);
       callback(new Error('Non consentito dal CORS'));
     }
