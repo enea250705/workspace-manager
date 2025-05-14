@@ -241,6 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secure: true, // Sempre HTTPS in produzione
         sameSite: 'none', // Necessario per cross-domain
         httpOnly: true, // Il cookie è accessibile solo dal server
+        path: '/'
       }
     })
   );
@@ -253,22 +254,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log(`Tentativo di autenticazione per l'utente: ${username}`);
         const user = await storage.getUserByUsername(username);
         
         if (!user) {
+          console.log(`Utente non trovato: ${username}`);
           return done(null, false, { message: "Incorrect username" });
         }
         
         if (user.password !== password) {
+          console.log(`Password errata per l'utente: ${username}`);
           return done(null, false, { message: "Incorrect password" });
         }
         
         if (!user.isActive) {
+          console.log(`Account disabilitato per l'utente: ${username}`);
           return done(null, false, { message: "User account is disabled" });
         }
         
+        console.log(`Autenticazione riuscita per l'utente: ${username}`);
         return done(null, user);
       } catch (err) {
+        console.error(`Errore durante l'autenticazione: ${err}`);
         return done(err);
       }
     })
@@ -276,15 +283,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Serialize user for session
   passport.serializeUser((user: any, done) => {
+    console.log(`Serializzazione utente: ${user.username} (ID: ${user.id})`);
     done(null, user.id);
   });
   
   // Deserialize user from session
   passport.deserializeUser(async (id: number, done) => {
     try {
+      console.log(`Deserializzazione utente ID: ${id}`);
       const user = await storage.getUser(id);
       done(null, user);
     } catch (err) {
+      console.error(`Errore durante la deserializzazione: ${err}`);
       done(err);
     }
   });
@@ -292,8 +302,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: Function) => {
     if (req.isAuthenticated()) {
+      console.log(`Accesso autenticato: ${(req.user as any).username} (${req.path})`);
       return next();
     }
+    console.log(`Accesso non autenticato respinto: ${req.path}`);
     res.status(401).json({ message: "Unauthorized" });
   };
   
@@ -307,22 +319,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Authentication routes
   app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {
+    // Log dei cookie impostati
+    console.log(`Login riuscito per: ${(req.user as any).username}`);
+    console.log(`Cookie di sessione impostato: ${req.sessionID}`);
+    
     // Restituisci immediatamente l'utente senza aggiornare lastLogin
-    // (questo verrà gestito in modo diverso per evitare errori)
     res.json({ user: req.user });
   });
   
   app.post("/api/auth/logout", (req, res, next) => {
+    console.log(`Logout per l'utente: ${(req.user as any)?.username || 'sconosciuto'}`);
     req.logout((err) => {
-      if (err) return next(err);
+      if (err) {
+        console.error(`Errore durante il logout: ${err}`);
+        return next(err);
+      }
+      console.log("Logout completato con successo");
       res.json({ success: true });
     });
   });
   
   app.get("/api/auth/me", (req, res) => {
+    console.log(`Verifica autenticazione: ${req.isAuthenticated() ? 'autenticato' : 'non autenticato'}`);
+    console.log(`Cookie di sessione: ${req.sessionID}`);
     if (req.isAuthenticated()) {
+      console.log(`Utente autenticato: ${(req.user as any).username}`);
       res.json({ user: req.user });
     } else {
+      console.log("Nessun utente autenticato");
       res.json({ user: null });
     }
   });
